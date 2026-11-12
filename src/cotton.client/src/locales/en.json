@@ -1432,6 +1432,17 @@
       "loadFailed": "Failed to load the shared file.",
       "copyLink": "Failed to copy link to clipboard.",
       "fileTooLargePreview": "File is too large to preview ({{size}}). Please download the file to view it."
+    },
+    "dropBox": {
+      "ready": "Drop files here",
+      "progress": "Uploading files",
+      "success": "Files uploaded",
+      "thanks": "Thank you for uploading your files.",
+      "uploaded": "{{completed}} of {{total}} files uploaded",
+      "more": "Upload more files",
+      "add": "Add files",
+      "select": "Choose files",
+      "failed": "This file could not be uploaded. Please try again."
     }
   },
   "login": {
@@ -2422,7 +2433,8 @@
         },
         "invalidDuration": "Choose a duration from 1 minute to 10 years.",
         "create": "Create link",
-        "link": "Public link"
+        "link": "Public link",
+        "hideFolderContent": "Hide folder content"
       }
     },
     "preview": {

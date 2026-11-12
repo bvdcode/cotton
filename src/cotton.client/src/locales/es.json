@@ -1634,6 +1634,17 @@
       "loadFailed": "No se pudo cargar el archivo compartido.",
       "copyLink": "No se pudo copiar el enlace al portapapeles.",
       "fileTooLargePreview": "El archivo es demasiado grande para la vista previa ({{size}}). Descárgalo para verlo."
+    },
+    "dropBox": {
+      "ready": "Arrastra los archivos aquí",
+      "progress": "Subiendo archivos",
+      "success": "Archivos subidos",
+      "thanks": "Gracias por subir tus archivos.",
+      "uploaded": "{{completed}} de {{total}} archivos subidos",
+      "more": "Subir más archivos",
+      "add": "Añadir archivos",
+      "select": "Elegir archivos",
+      "failed": "No se pudo subir este archivo. Inténtalo de nuevo."
     }
   },
   "login": {
@@ -2609,7 +2620,8 @@
         },
         "invalidDuration": "Elige una duración entre 1 minuto y 10 años.",
         "create": "Crear enlace",
-        "link": "Enlace público"
+        "link": "Enlace público",
+        "hideFolderContent": "Ocultar contenido de la carpeta"
       }
     },
     "preview": {

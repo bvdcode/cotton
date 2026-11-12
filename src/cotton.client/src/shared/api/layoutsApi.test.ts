@@ -225,7 +225,7 @@ describe("layoutsApi reads", () => {
     expect(get).toHaveBeenLastCalledWith(
       `/layouts/nodes/${nodeId}/share-link`,
       {
-        params: { expireAfterMinutes: 1440, allowUpload: false },
+        params: { expireAfterMinutes: 1440, allowUpload: false, hideFolderContent: false },
       },
     );
 
@@ -248,7 +248,7 @@ describe("layoutsApi reads", () => {
     expect(get).toHaveBeenLastCalledWith(
       `/layouts/nodes/${nodeId}/share-link`,
       {
-        params: { expireAfterMinutes: 60, allowUpload: true },
+        params: { expireAfterMinutes: 60, allowUpload: true, hideFolderContent: false },
       },
     );
 

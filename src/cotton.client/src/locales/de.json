@@ -1631,6 +1631,17 @@
       "loadFailed": "Die geteilte Datei konnte nicht geladen werden.",
       "copyLink": "Der Link konnte nicht in die Zwischenablage kopiert werden.",
       "fileTooLargePreview": "Die Datei ist zu groß für die Vorschau ({{size}}). Bitte lade die Datei herunter, um sie anzusehen."
+    },
+    "dropBox": {
+      "ready": "Dateien hier ablegen",
+      "progress": "Dateien werden hochgeladen",
+      "success": "Dateien hochgeladen",
+      "thanks": "Vielen Dank für das Hochladen Ihrer Dateien.",
+      "uploaded": "{{completed}} von {{total}} Dateien hochgeladen",
+      "more": "Weitere Dateien hochladen",
+      "add": "Dateien hinzufügen",
+      "select": "Dateien auswählen",
+      "failed": "Diese Datei konnte nicht hochgeladen werden. Bitte erneut versuchen."
     }
   },
   "login": {
@@ -2606,7 +2617,8 @@
         },
         "invalidDuration": "Eine Dauer von 1 Minute bis 10 Jahren wählen.",
         "create": "Link erstellen",
-        "link": "Öffentlicher Link"
+        "link": "Öffentlicher Link",
+        "hideFolderContent": "Ordnerinhalt ausblenden"
       }
     },
     "preview": {

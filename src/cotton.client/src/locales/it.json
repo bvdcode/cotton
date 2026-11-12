@@ -1637,6 +1637,17 @@
       "loadFailed": "Impossibile caricare il file condiviso.",
       "copyLink": "Impossibile copiare il link negli appunti.",
       "fileTooLargePreview": "Il file è troppo grande per l'anteprima ({{size}}). Scarichi il file per visualizzarlo."
+    },
+    "dropBox": {
+      "ready": "Trascina qui i file",
+      "progress": "Caricamento dei file",
+      "success": "File caricati",
+      "thanks": "Grazie per aver caricato i file.",
+      "uploaded": "{{completed}} di {{total}} file caricati",
+      "more": "Carica altri file",
+      "add": "Aggiungi file",
+      "select": "Scegli file",
+      "failed": "Impossibile caricare questo file. Riprova."
     }
   },
   "login": {
@@ -2612,7 +2623,8 @@
         },
         "invalidDuration": "Scegli una durata da 1 minuto a 10 anni.",
         "create": "Crea link",
-        "link": "Link pubblico"
+        "link": "Link pubblico",
+        "hideFolderContent": "Nascondi il contenuto della cartella"
       }
     },
     "preview": {

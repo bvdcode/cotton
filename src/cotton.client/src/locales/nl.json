@@ -1636,6 +1636,17 @@
       "loadFailed": "Het gedeelde bestand kon niet worden geladen.",
       "copyLink": "Link kon niet naar het klembord worden gekopieerd.",
       "fileTooLargePreview": "Bestand is te groot voor een voorvertoning ({{size}}). Download het bestand om het te bekijken."
+    },
+    "dropBox": {
+      "ready": "Sleep bestanden hierheen",
+      "progress": "Bestanden uploaden",
+      "success": "Bestanden geüpload",
+      "thanks": "Bedankt voor het uploaden van je bestanden.",
+      "uploaded": "{{completed}} van {{total}} bestanden geüpload",
+      "more": "Meer bestanden uploaden",
+      "add": "Bestanden toevoegen",
+      "select": "Bestanden kiezen",
+      "failed": "Dit bestand kon niet worden geüpload. Probeer het opnieuw."
     }
   },
   "login": {
@@ -2611,7 +2622,8 @@
         },
         "invalidDuration": "Kies een duur van 1 minuut tot 10 jaar.",
         "create": "Link maken",
-        "link": "Openbare link"
+        "link": "Openbare link",
+        "hideFolderContent": "Mapinhoud verbergen"
       }
     },
     "preview": {

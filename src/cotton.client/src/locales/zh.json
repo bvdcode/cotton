@@ -1644,6 +1644,17 @@
       "loadFailed": "加载分享文件失败。",
       "copyLink": "复制链接到剪贴板失败。",
       "fileTooLargePreview": "文件过大，无法预览（{{size}}）。请下载文件后查看。"
+    },
+    "dropBox": {
+      "ready": "将文件拖到此处",
+      "progress": "正在上传文件",
+      "success": "文件已上传",
+      "thanks": "感谢您上传文件。",
+      "uploaded": "已上传 {{completed}} / {{total}} 个文件",
+      "more": "上传更多文件",
+      "add": "添加文件",
+      "select": "选择文件",
+      "failed": "无法上传此文件。请重试。"
     }
   },
   "login": {
@@ -2619,7 +2630,8 @@
         },
         "invalidDuration": "请选择 1 分钟到 10 年之间的有效期。",
         "create": "创建链接",
-        "link": "公开链接"
+        "link": "公开链接",
+        "hideFolderContent": "隐藏文件夹内容"
       }
     },
     "preview": {

@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -39,6 +38,8 @@ import {
   type ShareLinkTarget,
 } from "@shared/utils/shareLinkOptions";
 
+import { ShareLinkDialogTitle } from "./ShareLinkDialogTitle";
+
 interface ShareLinkDialogProps {
   target: ShareLinkTarget;
   onClose: () => void;
@@ -56,6 +57,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
     ),
   );
   const [allowUpload, setAllowUpload] = useState(false);
+  const [hideFolderContent, setHideFolderContent] = useState(false);
   const [name, setName] = useState("");
   const [duration, setDuration] = useState(initialDuration.value);
   const [unit, setUnit] = useState<ShareLinkDurationUnit>(initialDuration.unit);
@@ -94,6 +96,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
             minutes,
             name.trim(),
             allowUpload,
+            hideFolderContent,
           );
           break;
       }
@@ -161,66 +164,37 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
         },
       }}
     >
-      <DialogTitle
-        id={titleId}
-        aria-label={`${t("share.options.title")} · ${target.name}`}
-      >
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={{ xs: 0.25, sm: 1 }}
-          sx={{ alignItems: { xs: "flex-start", sm: "center" }, minWidth: 0 }}
-        >
-          <Typography
-            component="span"
-            variant="inherit"
-            noWrap
-            sx={{ flexShrink: 0, maxWidth: { xs: "100%", sm: "75%" } }}
-          >
-            {t("share.options.title")}
-          </Typography>
-          <Typography
-            component="span"
-            color="text.secondary"
-            aria-hidden
-            sx={{ display: { xs: "none", sm: "inline" } }}
-          >
-            ·
-          </Typography>
-          <Tooltip title={target.name}>
-            <Typography
-              component="span"
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                minWidth: 0,
-                maxWidth: "100%",
-                display: { xs: "-webkit-box", sm: "block" },
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                whiteSpace: { xs: "normal", sm: "nowrap" },
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {target.name}
-            </Typography>
-          </Tooltip>
-        </Stack>
-      </DialogTitle>
+      <ShareLinkDialogTitle id={titleId} name={target.name} />
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {target.kind === "folder" && (
-            <FormControlLabel
-              label={t("share.options.allowUpload")}
-              control={
-                <Switch
-                  checked={allowUpload}
-                  disabled={locked}
-                  onChange={(_, checked) => setAllowUpload(checked)}
-                />
-              }
-            />
+            <Stack>
+              <FormControlLabel
+                label={t("share.options.allowUpload")}
+                control={
+                  <Switch
+                    checked={allowUpload}
+                    disabled={locked}
+                    onChange={(_, checked) => {
+                      setAllowUpload(checked);
+                      if (!checked) {
+                        setHideFolderContent(false);
+                      }
+                    }}
+                  />
+                }
+              />
+              <FormControlLabel
+                label={t("share.options.hideFolderContent")}
+                control={
+                  <Switch
+                    checked={hideFolderContent}
+                    disabled={locked || !allowUpload}
+                    onChange={(_, checked) => setHideFolderContent(checked)}
+                  />
+                }
+              />
+            </Stack>
           )}
           {error && (
             <Collapse in appear timeout={reducedMotion ? 0 : "auto"}>

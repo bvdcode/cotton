@@ -1639,6 +1639,17 @@
       "loadFailed": "Nie udało się załadować udostępnionego pliku.",
       "copyLink": "Nie udało się skopiować linku do schowka.",
       "fileTooLargePreview": "Plik jest zbyt duży, aby wyświetlić podgląd ({{size}}). Aby go wyświetlić, należy pobrać plik."
+    },
+    "dropBox": {
+      "ready": "Przeciągnij pliki tutaj",
+      "progress": "Przesyłanie plików",
+      "success": "Pliki przesłane",
+      "thanks": "Dziękujemy za przesłanie plików.",
+      "uploaded": "Przesłano {{completed}} z {{total}} plików",
+      "more": "Prześlij więcej plików",
+      "add": "Dodaj pliki",
+      "select": "Wybierz pliki",
+      "failed": "Nie udało się przesłać pliku. Spróbuj ponownie."
     }
   },
   "login": {
@@ -2630,7 +2641,8 @@
         },
         "invalidDuration": "Wybierz okres od 1 minuty do 10 lat.",
         "create": "Utwórz link",
-        "link": "Link publiczny"
+        "link": "Link publiczny",
+        "hideFolderContent": "Ukryj zawartość folderu"
       }
     },
     "preview": {

@@ -28,6 +28,7 @@ export interface SharedNodeContentDto {
 
 export interface SharedNodeInfoDto extends UploadServerParams {
   allowUpload: boolean;
+  hideFolderContent: boolean;
   token: string;
   nodeId: Guid;
   name: string;

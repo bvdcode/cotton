@@ -82,6 +82,41 @@ describe("ShareLinkDialog", () => {
     },
   );
 
+  it("allows hidden content only with uploads and sends both permissions", async () => {
+    render(
+      <ShareLinkDialog
+        target={{ kind: "folder", id: "folder", name: "Uploads" }}
+        onClose={vi.fn()}
+      />,
+    );
+    const uploads = screen.getByRole("switch", {
+      name: "share.options.allowUpload",
+    });
+    const hidden = screen.getByRole("switch", {
+      name: "share.options.hideFolderContent",
+    });
+    expect(hidden).toBeDisabled();
+    fireEvent.click(uploads);
+    fireEvent.click(hidden);
+    expect(hidden).toBeChecked();
+    fireEvent.click(uploads);
+    expect(hidden).not.toBeChecked();
+    expect(hidden).toBeDisabled();
+    fireEvent.click(uploads);
+    fireEvent.click(hidden);
+    fireEvent.click(
+      screen.getByRole("button", { name: "share.options.create" }),
+    );
+    await screen.findByRole("textbox", { name: "share.options.link" });
+    expect(layoutsApi.getNodeShareLink).toHaveBeenCalledWith(
+      "folder",
+      1440,
+      "",
+      true,
+      true,
+    );
+  });
+
   it("only offers uploads for folder links and sends the selected permission", async () => {
     render(
       <ShareLinkDialog
@@ -103,6 +138,7 @@ describe("ShareLinkDialog", () => {
       1440,
       "",
       true,
+      false,
     );
     expect(permission).toBeDisabled();
   });
@@ -176,6 +212,7 @@ describe("ShareLinkDialog", () => {
       "folder-1",
       null,
       "",
+      false,
       false,
     );
     fireEvent.click(
