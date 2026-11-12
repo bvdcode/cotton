@@ -16,6 +16,8 @@ namespace Cotton.Server.Models.Dto
 
         public bool AllowUpload { get; set; }
 
+        public bool HideFolderContent { get; set; }
+
         public Guid NodeId { get; set; }
 
         public string Name { get; set; } = null!;

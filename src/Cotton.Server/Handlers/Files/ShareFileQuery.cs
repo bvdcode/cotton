@@ -186,7 +186,7 @@ namespace Cotton.Server.Handlers.Files
             string html = SharePageHtml.Create(
                 baseAppUrl: baseAppUrl,
                 token: token,
-                fileName: nodeShareToken.Name,
+                fileName: nodeShareToken.HideFolderContent ? string.Empty : nodeShareToken.Name,
                 hasPreview: false);
             return new ShareFileResult(new ContentResult { Content = html, ContentType = "text/html; charset=utf-8" });
         }

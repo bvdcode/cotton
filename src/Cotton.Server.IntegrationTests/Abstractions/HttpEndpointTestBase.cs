@@ -40,8 +40,12 @@ namespace Cotton.Server.IntegrationTests.Abstractions
                 ["JwtSettings:Key"] = "T3wNTuKqmTXKjJKXHJRGUpG9sdrmpSX4"
             };
 
-            _factory = new TestAppFactory(overrides);
+            _factory = new TestAppFactory(overrides, ConfigureTestServices);
             _client = _factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        }
+
+        protected virtual void ConfigureTestServices(IServiceCollection services)
+        {
         }
 
         [TearDown]

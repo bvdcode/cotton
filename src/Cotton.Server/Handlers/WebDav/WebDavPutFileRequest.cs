@@ -8,6 +8,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
+using Cotton.Server.Notifications;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
@@ -44,7 +45,8 @@ namespace Cotton.Server.Handlers.WebDav
         CommittedMutationEffects _effects,
         ISyncChangeRecorder _syncChanges,
         ILayoutMutationGate _layoutGate,
-        ILogger<WebDavPutFileRequestHandler> _logger)
+        ILogger<WebDavPutFileRequestHandler> _logger,
+        IMediator _mediator)
         : IRequestHandler<WebDavPutFileRequest, WebDavPutFileResult>
     {
         private record PutTarget(
@@ -98,6 +100,8 @@ namespace Cotton.Server.Handlers.WebDav
                 chunkCount: content.Chunks.Count,
                 nodeFileId: resultNodeFile!.Id,
                 ct);
+            await _effects.RunAsync(nameof(FileUploadedNotification), () => _mediator.Publish(
+                new FileUploadedNotification(request.UserId, resultNodeFile.NodeId, resultNodeFile.Id), CancellationToken.None));
             return new WebDavPutFileResult(true, finalTarget.Created, null, resultNodeFile.Id);
         }
 

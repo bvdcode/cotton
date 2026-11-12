@@ -9,6 +9,7 @@ using Cotton.Models.Enums;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Models;
+using Cotton.Server.Notifications;
 using Cotton.Server.Services;
 using Cotton.Server.Extensions;
 using Cotton.Validators;
@@ -42,7 +43,8 @@ namespace Cotton.Server.Handlers.Files
         ILayoutMutationGate _layoutGate,
         ISchedulerFactory _scheduler,
         IEventNotificationService _notifications,
-        CommittedMutationEffects _effects)
+        CommittedMutationEffects _effects,
+        IMediator _mediator)
         : IRequestHandler<UpdateFileContentRequest, UpdateFileContentResult>
     {
         public async Task<UpdateFileContentResult> Handle(
@@ -151,6 +153,8 @@ namespace Cotton.Server.Handlers.Files
             await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileUpdatedAsync),
                 () => _notifications.NotifyFileUpdatedAsync(file, CancellationToken.None));
 
+            await _effects.RunAsync(nameof(FileUploadedNotification), () => _mediator.Publish(
+                new FileUploadedNotification(request.UserId, file.NodeId, file.Id), CancellationToken.None));
             return new UpdateFileContentResult(
                 UpdateFileContentStatus.Updated,
                 file);

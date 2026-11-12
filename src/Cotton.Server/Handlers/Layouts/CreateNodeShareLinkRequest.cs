@@ -6,6 +6,7 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
+using EasyExtensions.AspNetCore.Exceptions;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,8 @@ namespace Cotton.Server.Handlers.Layouts
         Guid NodeId,
         int? ExpireAfterMinutes,
         string? CustomToken,
-        bool AllowUpload = false) : IRequest<CreateNodeShareLinkResult>;
+        bool AllowUpload = false,
+        bool HideFolderContent = false) : IRequest<CreateNodeShareLinkResult>;
 
     public class CreateNodeShareLinkRequestHandler(
         CottonDbContext _dbContext,
@@ -28,6 +30,10 @@ namespace Cotton.Server.Handlers.Layouts
             CreateNodeShareLinkRequest request,
             CancellationToken ct)
         {
+            if (request.HideFolderContent && !request.AllowUpload)
+            {
+                throw new BadRequestException("Hiding folder content requires file uploads to be enabled.");
+            }
             DateTime? expiresAt = ShareLinkExpiration.FromMinutes(request.ExpireAfterMinutes);
 
             Node? node = await _dbContext.Nodes
@@ -69,6 +75,7 @@ namespace Cotton.Server.Handlers.Layouts
                 ExpiresAt = expiresAt,
                 Token = token,
                 AllowUpload = request.AllowUpload,
+                HideFolderContent = request.HideFolderContent,
             };
 
             await _dbContext.NodeShareTokens.AddAsync(shareToken, ct);

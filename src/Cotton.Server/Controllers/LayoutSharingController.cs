@@ -38,7 +38,8 @@ namespace Cotton.Server.Controllers
             [FromRoute] Guid nodeId,
             [FromQuery] ShareLinkExpirationOptions expiration,
             [FromQuery] string? customToken = "",
-            [FromQuery] bool allowUpload = false)
+            [FromQuery] bool allowUpload = false,
+            [FromQuery] bool hideFolderContent = false)
         {
             Guid userId = User.GetUserId();
             CreateNodeShareLinkRequest request = new(
@@ -46,7 +47,8 @@ namespace Cotton.Server.Controllers
                 nodeId,
                 expiration.ExpireAfterMinutes,
                 customToken,
-                allowUpload);
+                allowUpload,
+                hideFolderContent);
             CreateNodeShareLinkResult result = await _mediator.Send(
                 request,
                 HttpContext.RequestAborted);
@@ -86,9 +88,10 @@ namespace Cotton.Server.Controllers
             {
                 Token = nodeShareToken.Token,
                 NodeId = nodeShareToken.NodeId,
-                Name = nodeShareToken.Name,
+                Name = nodeShareToken.HideFolderContent ? string.Empty : nodeShareToken.Name,
                 ExpiresAt = nodeShareToken.ExpiresAt,
                 AllowUpload = nodeShareToken.AllowUpload,
+                HideFolderContent = nodeShareToken.HideFolderContent,
                 MaxChunkSizeBytes = settings.GetServerSettings().MaxChunkSizeBytes,
                 SupportedHashAlgorithm = Hasher.SupportedHashAlgorithmName.Name!,
             });

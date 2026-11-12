@@ -44,7 +44,7 @@ namespace Cotton.Server.IntegrationTests
             signer.SignPendingChanges(db);
             Assert.Multiple(() =>
             {
-                Assert.That(entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue, Is.EqualTo(2));
+                Assert.That(entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue, Is.EqualTo(NodeShareTokenIntegrityDescriptor.LatestVersion));
                 Assert.That(retained.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue, Is.EqualTo(1));
                 Assert.That(retained.Property(DatabaseIntegrityColumns.MacProperty).CurrentValue, Is.EqualTo(untouchedMac));
             });
@@ -58,7 +58,7 @@ namespace Cotton.Server.IntegrationTests
             NodeShareToken share = CreateShare();
             NodeShareTokenIntegrityDescriptor descriptor = new();
             DatabaseIntegrityProtector protector = CreateProtector();
-            byte[] mac = version == 1 ? LegacyMac() : protector.Sign(share, descriptor);
+            byte[] mac = ComputeLegacyMac(descriptor.ForVersion(version).BuildCanonicalPayload(share));
             share.AllowUpload = true;
             using CottonDbContext db = CreateDbContext();
             EntityEntry entry = AttachLegacyRow(db, share, mac);
@@ -83,6 +83,24 @@ namespace Cotton.Server.IntegrationTests
             entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = version;
             Assert.Throws<DatabaseIntegrityException>(() => CreateVerifier(CreateProtector(), new NodeShareTokenIntegrityDescriptor())
                 .RequireValid(db, share, "test.share-version"));
+        }
+
+        [TestCase(1)]
+        [TestCase(2)]
+        [TestCase(3)]
+        public void HiddenContentCannotBeChangedWithoutResigning(int version)
+        {
+            NodeShareToken share = CreateShare();
+            NodeShareTokenIntegrityDescriptor descriptor = new();
+            byte[] mac = ComputeLegacyMac(descriptor.ForVersion(version).BuildCanonicalPayload(share));
+            using CottonDbContext db = CreateDbContext();
+            EntityEntry entry = AttachLegacyRow(db, share, mac);
+            entry.Property(DatabaseIntegrityColumns.VersionProperty).CurrentValue = version;
+            entry.Property(DatabaseIntegrityColumns.VersionProperty).OriginalValue = version;
+            DatabaseIntegrityVerifier verifier = CreateVerifier(CreateProtector(), descriptor);
+            Assert.DoesNotThrow(() => verifier.RequireValid(db, share, "test.share-original"));
+            share.HideFolderContent = true;
+            Assert.Throws<DatabaseIntegrityException>(() => verifier.RequireValid(db, share, "test.share-hidden"));
         }
 
         private static NodeShareToken CreateShare()

@@ -26,6 +26,9 @@ namespace Cotton.Database.Models
         [Column("allow_upload")]
         public bool AllowUpload { get; set; }
 
+        [Column("hide_folder_content")]
+        public bool HideFolderContent { get; set; }
+
         [Column("expires_at")]
         public DateTime? ExpiresAt { get; set; }
 

@@ -24,7 +24,8 @@ namespace Cotton.Server.Handlers.Layouts
                 await entry.ReloadAsync(ct);
             }
             SharedNodeAccess? access = await mediator.Send(new ResolveSharedNodeAccessQuery(request.Token), ct);
-            if (access is null || !access.AllowUpload)
+            if (access is null || !access.AllowUpload
+                || (access.HideFolderContent && request.NodeId != access.NodeId))
             {
                 throw new EntityNotFoundException<NodeShareToken>("Upload is not available for this shared folder.");
             }
