@@ -82,16 +82,20 @@ export const SharedFolderDropBox = ({ info }: { info: SharedNodeInfoDto }) => {
               sx={{ width: "100%", textAlign: "left" }}
               aria-live="polite"
             >
-              <Typography variant="body2">
-                {t("dropBox.uploaded", {
-                  completed: batch.completed,
-                  total: batch.tasks.length,
-                })}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={batch.progress * 100}
-              />
+              {batch.tasks.length > 1 && (
+                <>
+                  <Typography variant="body2">
+                    {t("dropBox.uploaded", {
+                      completed: batch.completed,
+                      total: batch.tasks.length,
+                    })}
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={batch.progress * 100}
+                  />
+                </>
+              )}
               <Stack
                 spacing={1.5}
                 sx={{ maxHeight: "18rem", overflow: "auto" }}
