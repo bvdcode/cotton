@@ -11,7 +11,6 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using EasyExtensions.AspNetCore.Exceptions;
-using EasyExtensions.Helpers;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using FileVersionDto = Cotton.Files.FileVersionDto;
@@ -37,8 +36,6 @@ namespace Cotton.Server.Services
         ILayoutMutationGate _layoutGate,
         ILogger<FileVersionService> _logger)
     {
-        private const int VersionDownloadTokenLength = 16;
-
         public static bool IsHistoricalVersion(NodeFile file)
             => file.OriginalNodeFileId != Guid.Empty && file.Id != file.OriginalNodeFileId;
 
@@ -183,34 +180,16 @@ namespace Cotton.Server.Services
                 versionId);
         }
 
-        public async Task<string> CreateVersionDownloadLinkAsync(
+        public async Task<NodeFile> GetDownloadVersionAsync(
             Guid userId,
             Guid nodeFileId,
             Guid versionId,
-            int expireAfterMinutes,
             CancellationToken ct = default)
         {
-            const int maxExpireMinutes = 60 * 24 * 365;
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(expireAfterMinutes, maxExpireMinutes, nameof(expireAfterMinutes));
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expireAfterMinutes, nameof(expireAfterMinutes));
-
             NodeFile current = await LoadCurrentFileOrThrowAsync(userId, nodeFileId, tracking: false, ct);
             NodeFile version = await LoadHistoricalVersionOrThrowAsync(userId, GetLineageId(current), versionId, tracking: false, ct);
 
-            DownloadToken token = new()
-            {
-                FileName = version.Name,
-                DeleteAfterUse = false,
-                CreatedByUserId = userId,
-                NodeFileId = version.Id,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(expireAfterMinutes),
-                Token = StringHelpers.CreateRandomString(VersionDownloadTokenLength),
-            };
-
-            await _dbContext.DownloadTokens.AddAsync(token, ct);
-            await _dbContext.SaveChangesAsync(ct);
-
-            return Routes.V1.Files + $"/{version.Id}/download?token={token.Token}";
+            return version;
         }
 
         public async Task<long> DeleteLineageVersionsAsync(

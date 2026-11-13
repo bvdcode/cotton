@@ -9,7 +9,7 @@ import i18n from "../../../i18n";
 import { useLightboxSharing } from "./useLightboxSharing";
 
 vi.mock("@shared/api/filesApi", () => ({
-  filesApi: { getDownloadLink: vi.fn() },
+  filesApi: { getShareLink: vi.fn() },
 }));
 vi.mock("@shared/ui/notifications", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -25,8 +25,8 @@ const slide: SlideWithTitle = {
 describe("gallery sharing", () => {
   beforeEach(() => {
     useUserPreferencesStore.getState().reset();
-    vi.mocked(filesApi.getDownloadLink).mockReset();
-    vi.mocked(filesApi.getDownloadLink).mockResolvedValue(
+    vi.mocked(filesApi.getShareLink).mockReset();
+    vi.mocked(filesApi.getShareLink).mockResolvedValue(
       "/api/v1/files/photo-id/download?token=year-share",
     );
     vi.stubGlobal("navigator", { share: vi.fn().mockResolvedValue(undefined) });
@@ -46,7 +46,7 @@ describe("gallery sharing", () => {
       const download = vi
         .fn()
         .mockResolvedValue(
-          "/api/v1/files/photo-id/download?token=one-day-download",
+          "/api/v1/files/photo-id/download?downloadToken=one-day-download",
         );
       const { result } = renderHook(() =>
         useLightboxSharing(download, (id, name) =>
@@ -56,7 +56,7 @@ describe("gallery sharing", () => {
 
       await act(() => result.current.handleCustomShare({ slide }));
 
-      expect(filesApi.getDownloadLink).toHaveBeenCalledExactlyOnceWith(
+      expect(filesApi.getShareLink).toHaveBeenCalledExactlyOnceWith(
         slide.fileId,
         minutes,
       );
@@ -86,12 +86,12 @@ describe("gallery sharing", () => {
     });
     await act(() => result.current.handleCustomShare({ slide }));
 
-    expect(filesApi.getDownloadLink).toHaveBeenNthCalledWith(
+    expect(filesApi.getShareLink).toHaveBeenNthCalledWith(
       1,
       slide.fileId,
       1440,
     );
-    expect(filesApi.getDownloadLink).toHaveBeenNthCalledWith(
+    expect(filesApi.getShareLink).toHaveBeenNthCalledWith(
       2,
       slide.fileId,
       525600,
@@ -121,12 +121,12 @@ describe("gallery sharing", () => {
         url: `${window.location.origin}/s/folder-token`,
       }),
     );
-    expect(filesApi.getDownloadLink).not.toHaveBeenCalled();
+    expect(filesApi.getShareLink).not.toHaveBeenCalled();
     expect(download).not.toHaveBeenCalled();
   });
 
   it("downloads the original without creating a share", async () => {
-    const url = "/api/v1/files/photo-id/download?token=one-day-download";
+    const url = "/api/v1/files/photo-id/download?downloadToken=one-day-download";
     const download = vi.fn().mockResolvedValue(url);
     const onShare = vi.fn().mockResolvedValue(undefined);
     const saveAs = vi.fn();
@@ -136,6 +136,6 @@ describe("gallery sharing", () => {
 
     expect(saveAs).toHaveBeenCalledExactlyOnceWith(url, slide.fileName);
     expect(onShare).not.toHaveBeenCalled();
-    expect(filesApi.getDownloadLink).not.toHaveBeenCalled();
+    expect(filesApi.getShareLink).not.toHaveBeenCalled();
   });
 });

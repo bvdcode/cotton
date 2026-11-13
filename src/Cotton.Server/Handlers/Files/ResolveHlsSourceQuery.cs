@@ -5,7 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Models.Enums;
-using Cotton.Server.Extensions;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Mediator;
@@ -16,11 +16,11 @@ namespace Cotton.Server.Handlers.Files
 {
     public record ResolveHlsSourceQuery(
         Guid NodeFileId,
-        string Token) : IRequest<ResolveHlsSourceResult>;
+        FileDownloadCredentials Credentials) : IRequest<ResolveHlsSourceResult>;
 
     public class ResolveHlsSourceQueryHandler(
         CottonDbContext _dbContext,
-        IDatabaseIntegrityVerifier _integrity,
+        IMediator _mediator,
         FileGraphIntegrityVerifier _fileGraphIntegrity)
         : IRequestHandler<ResolveHlsSourceQuery, ResolveHlsSourceResult>
     {
@@ -28,21 +28,19 @@ namespace Cotton.Server.Handlers.Files
             ResolveHlsSourceQuery request,
             CancellationToken ct)
         {
-            DownloadToken? downloadToken = await _dbContext.DownloadTokens
-                .FindActiveAsync(request.Token, request.NodeFileId, ct);
-            if (downloadToken is null)
+            FileDownloadAccess? access = await _mediator.Send(
+                new ResolveFileDownloadAccessQuery(request.NodeFileId, request.Credentials), ct);
+            if (access is null)
             {
                 return Failure(ResolveHlsSourceStatus.TokenNotFound);
             }
-
-            _integrity.RequireValid(_dbContext, downloadToken, "file.hls-token");
 
             NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == request.NodeFileId, ct);
+                .SingleOrDefaultAsync(x => x.Id == request.NodeFileId && x.OwnerId == access.UserId, ct);
             if (nodeFile is null)
             {
                 return Failure(ResolveHlsSourceStatus.FileNotFound);
@@ -68,7 +66,7 @@ namespace Cotton.Server.Handlers.Files
             return new ResolveHlsSourceResult(
                 ResolveHlsSourceStatus.Success,
                 nodeFile,
-                downloadToken);
+                access.ShareToken);
         }
 
         private static ResolveHlsSourceResult Failure(

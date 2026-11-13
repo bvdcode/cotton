@@ -84,7 +84,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
       let result: string;
       switch (target.kind) {
         case "file":
-          result = await filesApi.getDownloadLink(
+          result = await filesApi.getShareLink(
             target.id,
             minutes,
             name.trim(),

@@ -31,9 +31,9 @@ namespace Cotton.Server.Extensions
         public static void RegisterDeleteAfterUse(
             this HttpResponse response,
             CottonDbContext dbContext,
-            DownloadToken downloadToken)
+            DownloadToken? downloadToken)
         {
-            if (!downloadToken.DeleteAfterUse)
+            if (downloadToken is null || !downloadToken.DeleteAfterUse)
             {
                 return;
             }

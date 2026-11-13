@@ -40,7 +40,7 @@ it("serializes unlimited file and folder links as explicit empty nullable query 
   const get = vi
     .spyOn(httpClient, "get")
     .mockResolvedValue({ data: "/s/token" });
-  await filesApi.getDownloadLink("file", null);
+  await filesApi.getShareLink("file", null);
   await layoutsApi.getNodeShareLink("folder", null);
   for (const [url, options] of get.mock.calls) {
     expect(httpClient.getUri({ ...options, url })).toContain(
@@ -62,7 +62,7 @@ it.each([43200, null])(
       saved = { ...saved, ...patch };
       return saved;
     });
-    vi.spyOn(filesApi, "getDownloadLink").mockResolvedValue("/s/file-token");
+    vi.spyOn(filesApi, "getShareLink").mockResolvedValue("/s/file-token");
     vi.spyOn(layoutsApi, "getNodeShareLink").mockResolvedValue(
       "/s/folder-token",
     );
