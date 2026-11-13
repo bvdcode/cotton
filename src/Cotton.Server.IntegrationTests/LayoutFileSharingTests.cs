@@ -239,7 +239,8 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(html, Does.Contain("<meta name=\"twitter:image\""));
             Assert.That(html, Does.Contain("<meta name=\"twitter:card\" content=\"summary_large_image\""));
             Assert.That(html, Does.Contain("https://public.example/assets/images/social-preview.jpg"));
-            Assert.That(html, Does.Contain("https://public.example/share/"));
+            Assert.That(html, Does.Contain("content=\"0;url=/share/"));
+            Assert.That(html, Does.Not.Contain("https://public.example/share/"));
         }
 
         private static void AssertZipEntry(ZipArchive zip, string path, string expectedText)
