@@ -19,22 +19,23 @@ namespace Cotton.Server.Handlers.Layouts
     {
         public async Task<string> Handle(FindSharedUploadNameQuery request, CancellationToken ct)
         {
+            var fileKeys = db.NodeFiles
+                .Where(file => file.NodeId == request.NodeId && file.OwnerId == request.OwnerId)
+                .Select(file => file.NameKey);
+            var folderKeys = db.Nodes
+                .Where(node => node.ParentId == request.NodeId && node.OwnerId == request.OwnerId
+                    && node.Type == NodeType.Default)
+                .Select(node => node.NameKey);
+            HashSet<string> occupiedKeys = await fileKeys.Concat(folderKeys)
+                .ToHashSetAsync(StringComparer.Ordinal, ct);
             string candidate = request.Name;
             int number = 0;
-            while (await ExistsAsync(request, candidate, ct))
+            while (occupiedKeys.Contains(NameValidator.NormalizeAndGetNameKey(candidate)))
             {
+                ct.ThrowIfCancellationRequested();
                 candidate = AddSuffix(request.Name, ++number);
             }
             return candidate;
-        }
-
-        private async Task<bool> ExistsAsync(FindSharedUploadNameQuery request, string name, CancellationToken ct)
-        {
-            string key = NameValidator.NormalizeAndGetNameKey(name);
-            return await db.NodeFiles.AnyAsync(file => file.NodeId == request.NodeId
-                    && file.OwnerId == request.OwnerId && file.NameKey == key, ct)
-                || await db.Nodes.AnyAsync(node => node.ParentId == request.NodeId
-                    && node.OwnerId == request.OwnerId && node.Type == NodeType.Default && node.NameKey == key, ct);
         }
 
         private static string AddSuffix(string name, int number)
