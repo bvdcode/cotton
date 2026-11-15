@@ -58,6 +58,5 @@ namespace Cotton.Server.Handlers.Routines
                 }
             }
         }
-
     }
 }

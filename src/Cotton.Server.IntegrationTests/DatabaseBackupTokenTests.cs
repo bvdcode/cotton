@@ -41,6 +41,17 @@ namespace Cotton.Server.IntegrationTests
             }
         }
 
+        [Test]
+        public void Token_MatchesPublishedFormat()
+        {
+            CottonEncryptionSettings settings = new()
+            {
+                MasterEncryptionKey = Convert.ToBase64String(Enumerable.Range(0, 32).Select(value => (byte)value).ToArray())
+            };
+            using DatabaseBackupTokenService service = CreateService(settings);
+            Assert.That(service.Validate("ctb1.AAECAwQFBgcICQoLp--FfgNbo1Z12GcY78goQKZ6IHfh-9mB0nrWkVmjDT6JGaJIm1s"), Is.True);
+        }
+
         private static DatabaseBackupTokenService CreateService(CottonEncryptionSettings settings) =>
             new(settings, NullLogger<DatabaseBackupTokenService>.Instance);
     }

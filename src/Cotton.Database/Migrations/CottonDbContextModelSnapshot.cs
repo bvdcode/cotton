@@ -805,6 +805,10 @@ namespace Cotton.Database.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
 
+                    b.Property<bool>("HideFolderContent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("hide_folder_content");
+
                     b.Property<byte[]>("IntegrityMac")
                         .IsConcurrencyToken()
                         .HasColumnType("bytea")

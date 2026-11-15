@@ -11,6 +11,7 @@ using Cotton.Server.Extensions;
 using Cotton.Server.Jobs;
 using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models.Dto;
+using Cotton.Server.Notifications;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
@@ -88,6 +89,8 @@ namespace Cotton.Server.Handlers.Files
 
             await ValidateContentHashIfRequestedAsync(request, fileManifest, proposedHash, cancellationToken);
             NodeFile nodeFile;
+            string fileName = request.Name;
+            Guid? shareId = null;
             long addedBytes;
             await using (IAsyncDisposable layoutGate = await _layoutGate.EnterAsync(
                 preTransactionNode.LayoutId,
@@ -100,7 +103,15 @@ namespace Cotton.Server.Handlers.Files
             {
                 if (request.PublicShareToken is not null)
                 {
-                    await _mediator.Send(new RequireSharedUploadAccessQuery(request.PublicShareToken, request.NodeId), cancellationToken);
+                    SharedNodeAccess access = await _mediator.Send(
+                        new RequireSharedUploadAccessQuery(request.PublicShareToken, request.NodeId), cancellationToken);
+                    shareId = access.ShareId;
+                    if (access.HideFolderContent)
+                    {
+                        fileName = await _mediator.Send(
+                            new FindSharedUploadNameQuery(request.NodeId, request.UserId, request.Name), cancellationToken);
+                        nameKey = ValidateNameAndGetKey(fileName);
+                    }
                 }
                 Node node = await GetTargetNodeAsync(
                     request,
@@ -121,6 +132,7 @@ namespace Cotton.Server.Handlers.Files
                     node,
                     fileManifest,
                     request,
+                    fileName,
                     cancellationToken);
                 await tx.CommitAsync(cancellationToken);
             }
@@ -134,6 +146,8 @@ namespace Cotton.Server.Handlers.Files
             await _effects.RunAsync(nameof(ExtractFileMetadataJob), () => _scheduler.TriggerJobAsync<ExtractFileMetadataJob>());
             await _effects.RunAsync(nameof(IEventNotificationService.NotifyFileCreatedAsync),
                 () => _notifications.NotifyFileCreatedAsync(file, CancellationToken.None));
+            await _effects.RunAsync(nameof(FileUploadedNotification), () => _mediator.Publish(
+                new FileUploadedNotification(request.UserId, nodeFile.NodeId, nodeFile.Id, shareId), CancellationToken.None));
             return file;
         }
 
@@ -276,6 +290,7 @@ namespace Cotton.Server.Handlers.Files
             Node node,
             FileManifest fileManifest,
             CreateFileRequest request,
+            string fileName,
             CancellationToken ct)
         {
             NodeFile newNodeFile = new()
@@ -287,7 +302,7 @@ namespace Cotton.Server.Handlers.Files
                 FileManifestId = fileManifest.Id,
                 Metadata = CopyMetadata(request.Metadata),
             };
-            newNodeFile.SetName(request.Name);
+            newNodeFile.SetName(fileName);
             fileManifest.ResetFailedPreview();
 
             await _dbContext.NodeFiles.AddAsync(newNodeFile, ct);

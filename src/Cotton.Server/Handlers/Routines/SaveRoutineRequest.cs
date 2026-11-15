@@ -42,6 +42,49 @@ namespace Cotton.Server.Handlers.Routines
                 throw new EntityNotFoundException<Node>("Working folder not found.");
             }
             TimeZoneInfo timezone = settings.GetServerSettings().GetTimezoneInfo();
+            DateTime? startAt = ValidateSchedule(draft, timezone);
+            Routine routine = await GetRoutineAsync(request, ct);
+            routine.Name = name;
+            routine.Type = draft.Type;
+            routine.Enabled = draft.Enabled;
+            routine.TargetNodeId = draft.TargetNodeId;
+            routine.Interval = TimeSpan.FromHours(draft.IntervalHours);
+            routine.Settings = JsonSerializer.Serialize(draft.Settings);
+            routine.ScheduleKind = draft.ScheduleKind;
+            routine.CalendarSettings = draft.ScheduleKind switch
+            {
+                RoutineScheduleKind.Interval => null,
+                RoutineScheduleKind.Calendar => JsonSerializer.Serialize(draft.Calendar),
+                _ => throw new BadRequestException<Routine>("Unsupported routine schedule."),
+            };
+            routine.StartAt = startAt;
+            await db.SaveChangesAsync(ct);
+            if (!request.RoutineId.HasValue)
+            {
+                await effects.RunAsync(nameof(RunRoutinesJob), () => scheduler.TriggerJobAsync<RunRoutinesJob>());
+            }
+            return RoutineDto.FromEntity(routine, timezone);
+        }
+
+        private async Task<Routine> GetRoutineAsync(SaveRoutineRequest request, CancellationToken ct)
+        {
+            if (request.RoutineId.HasValue)
+            {
+                Routine routine = await db.Routines.SingleOrDefaultAsync(x => x.Id == request.RoutineId && x.OwnerId == request.UserId, ct)
+                    ?? throw new EntityNotFoundException<Routine>("Routine not found.");
+                if (await db.RoutineRuns.AnyAsync(x => x.RoutineId == routine.Id && x.Status == RoutineRunStatus.Running, ct))
+                {
+                    throw new BadRequestException<Routine>("The routine is running.");
+                }
+                return routine;
+            }
+            Routine created = new() { OwnerId = request.UserId };
+            db.Routines.Add(created);
+            return created;
+        }
+
+        private static DateTime? ValidateSchedule(RoutineDraftDto draft, TimeZoneInfo timezone)
+        {
             if (draft.ScheduleKind == RoutineScheduleKind.Calendar)
             {
                 if (draft.Calendar is null)
@@ -64,41 +107,7 @@ namespace Cotton.Server.Handlers.Routines
                 }
                 startAt = TimeZoneInfo.ConvertTimeToUtc(local, timezone);
             }
-            Routine routine;
-            if (request.RoutineId.HasValue)
-            {
-                routine = await db.Routines.SingleOrDefaultAsync(x => x.Id == request.RoutineId && x.OwnerId == request.UserId, ct)
-                    ?? throw new EntityNotFoundException<Routine>("Routine not found.");
-                if (await db.RoutineRuns.AnyAsync(x => x.RoutineId == routine.Id && x.Status == RoutineRunStatus.Running, ct))
-                {
-                    throw new BadRequestException<Routine>("The routine is running.");
-                }
-            }
-            else
-            {
-                routine = new Routine { OwnerId = request.UserId };
-                db.Routines.Add(routine);
-            }
-            routine.Name = name;
-            routine.Type = draft.Type;
-            routine.Enabled = draft.Enabled;
-            routine.TargetNodeId = draft.TargetNodeId;
-            routine.Interval = TimeSpan.FromHours(draft.IntervalHours);
-            routine.Settings = JsonSerializer.Serialize(draft.Settings);
-            routine.ScheduleKind = draft.ScheduleKind;
-            routine.CalendarSettings = draft.ScheduleKind switch
-            {
-                RoutineScheduleKind.Interval => null,
-                RoutineScheduleKind.Calendar => JsonSerializer.Serialize(draft.Calendar),
-                _ => throw new BadRequestException<Routine>("Unsupported routine schedule."),
-            };
-            routine.StartAt = startAt;
-            await db.SaveChangesAsync(ct);
-            if (!request.RoutineId.HasValue)
-            {
-                await effects.RunAsync(nameof(RunRoutinesJob), () => scheduler.TriggerJobAsync<RunRoutinesJob>());
-            }
-            return RoutineDto.FromEntity(routine, timezone);
+            return startAt;
         }
     }
 }

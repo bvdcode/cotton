@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
+using System.ComponentModel.DataAnnotations;
 
 namespace Cotton.Server.Controllers
 {
@@ -31,7 +32,6 @@ namespace Cotton.Server.Controllers
         IMediator _mediator,
         IStoragePipeline _storage,
         CottonDbContext _dbContext,
-        IDatabaseIntegrityVerifier _integrity,
         FileGraphIntegrityVerifier _fileGraphIntegrity,
         PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
@@ -105,35 +105,48 @@ namespace Cotton.Server.Controllers
             };
         }
 
+        [Authorize]
+        [HttpPost(Routes.V1.Files + "/{nodeFileId:guid}/download-token")]
+        public async Task<IActionResult> CreateDownloadToken(
+            [FromRoute] Guid nodeFileId,
+            [FromQuery, Range(1, ShareLinkExpiration.MaximumMinutes)]
+            int expireAfterMinutes = ShareLinkExpiration.DefaultMinutes)
+        {
+            string? link = await _mediator.Send(
+                new CreateFileDownloadTokenRequest(User.GetUserId(), nodeFileId, expireAfterMinutes),
+                HttpContext.RequestAborted);
+            return link is null ? CottonResult.NotFound("Node file not found") : Ok(link);
+        }
+
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/download")]
+        [HttpHead(Routes.V1.Files + "/{nodeFileId:guid}/download")]
         public async Task<IActionResult> DownloadFileByToken(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] string token,
+            [FromQuery] FileDownloadCredentials credentials,
             [FromQuery] bool download = true,
             [FromQuery] bool preview = false)
         {
-            if (string.IsNullOrWhiteSpace(token))
+            if (!credentials.IsValid)
             {
                 return this.ApiNotFound("File not found");
             }
 
             IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
                 _publicShareLookupFailures,
-                token);
+                credentials.Value);
             if (blocked is not null)
             {
                 return blocked;
             }
 
-            DownloadToken? downloadToken = await _dbContext.DownloadTokens.FindActiveAsync(token, nodeFileId);
-            if (downloadToken is null)
+            FileDownloadAccess? access = await _mediator.Send(
+                new ResolveFileDownloadAccessQuery(nodeFileId, credentials), HttpContext.RequestAborted);
+            if (access is null)
             {
-                return this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "File not found");
+                return this.ApiPublicShareNotFound(_publicShareLookupFailures, credentials.Value, "File not found");
             }
 
-            _integrity.RequireValid(_dbContext, downloadToken, "file.download-token");
-
-            NodeFile? nodeFile = await LoadDownloadNodeFileAsync(nodeFileId);
+            NodeFile? nodeFile = await LoadDownloadNodeFileAsync(nodeFileId, access.UserId);
             if (nodeFile is null || !CanServeTokenDownload(nodeFile))
             {
                 return CottonResult.NotFound("File not found");
@@ -144,17 +157,17 @@ namespace Cotton.Server.Controllers
 
             return servesPreview
                 ? ServeLargePreview(nodeFile)
-                : ServeTokenFileDownload(nodeFile, downloadToken, download);
+                : ServeTokenFileDownload(nodeFile, access.ShareToken, download);
         }
 
-        private Task<NodeFile?> LoadDownloadNodeFileAsync(Guid nodeFileId)
+        private Task<NodeFile?> LoadDownloadNodeFileAsync(Guid nodeFileId, Guid userId)
         {
             return _dbContext.NodeFiles
                 .Include(x => x.Node)
                 .Include(x => x.FileManifest)
                 .ThenInclude(x => x.FileManifestChunks)
                 .ThenInclude(x => x.Chunk)
-                .SingleOrDefaultAsync(x => x.Id == nodeFileId);
+                .SingleOrDefaultAsync(x => x.Id == nodeFileId && x.OwnerId == userId, HttpContext.RequestAborted);
         }
 
         private static bool CanServeTokenDownload(NodeFile nodeFile) =>
@@ -194,10 +207,13 @@ namespace Cotton.Server.Controllers
 
         private IActionResult ServeTokenFileDownload(
             NodeFile nodeFile,
-            DownloadToken downloadToken,
+            DownloadToken? downloadToken,
             bool download)
         {
-            Response.RegisterDeleteAfterUse(_dbContext, downloadToken);
+            if (!HttpMethods.IsHead(Request.Method))
+            {
+                Response.RegisterDeleteAfterUse(_dbContext, downloadToken);
+            }
             return FileDownloadResultFactory.Create(Response, _storage, nodeFile, download);
         }
     }

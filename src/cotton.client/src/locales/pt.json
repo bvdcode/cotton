@@ -1638,6 +1638,17 @@
       "loadFailed": "Falha ao carregar o arquivo compartilhado.",
       "copyLink": "Falha ao copiar o link para a área de transferência.",
       "fileTooLargePreview": "O arquivo é grande demais para visualização ({{size}}). Baixe o arquivo para visualizá-lo."
+    },
+    "dropBox": {
+      "ready": "Arraste os ficheiros para aqui",
+      "progress": "A enviar ficheiros",
+      "success": "Ficheiros enviados",
+      "thanks": "Obrigado por enviar os seus ficheiros.",
+      "uploaded": "{{completed}} de {{total}} ficheiros enviados",
+      "more": "Enviar mais ficheiros",
+      "add": "Adicionar ficheiros",
+      "select": "Escolher ficheiros",
+      "failed": "Não foi possível enviar este ficheiro. Tente novamente."
     }
   },
   "login": {
@@ -2613,7 +2624,8 @@
         },
         "invalidDuration": "Escolha uma duração de 1 minuto a 10 anos.",
         "create": "Criar link",
-        "link": "Link público"
+        "link": "Link público",
+        "hideFolderContent": "Ocultar conteúdo da pasta"
       }
     },
     "preview": {

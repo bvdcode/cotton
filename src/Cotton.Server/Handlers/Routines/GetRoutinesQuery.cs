@@ -38,5 +38,4 @@ namespace Cotton.Server.Handlers.Routines
             }).ToList();
         }
     }
-
 }

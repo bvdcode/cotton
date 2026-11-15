@@ -10,6 +10,7 @@ using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
 using Cotton.Server.Models;
+using Cotton.Server.Models.Requests;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -38,17 +39,17 @@ namespace Cotton.Server.Controllers
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/master.m3u8")]
         public async Task<IActionResult> HlsMasterPlaylistByToken(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] string token)
+            [FromQuery] FileDownloadCredentials credentials)
         {
-            HlsSourceLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
+            HlsSourceLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, credentials);
             if (lookup.Failure is not null)
             {
                 return lookup.Failure;
             }
 
-            string encodedToken = Uri.EscapeDataString(token);
+            string credentialQuery = credentials.ToQueryString();
             string PlaylistUrl(string qualityName) =>
-                Routes.V1.Files + $"/{nodeFileId}/hls/playlist.m3u8?token={encodedToken}&quality={qualityName}";
+                Routes.V1.Files + $"/{nodeFileId}/hls/playlist.m3u8?{credentialQuery}&quality={qualityName}";
 
             const string variantCodecs = "avc1.640029,mp4a.40.2";
             HlsManifestBuilder.HlsVariant[] variants =
@@ -84,7 +85,7 @@ namespace Cotton.Server.Controllers
             ];
 
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            Response.RegisterDeleteAfterUse(_dbContext, lookup.DownloadToken!);
+            Response.RegisterDeleteAfterUse(_dbContext, lookup.DownloadToken);
             return Content(
                 HlsManifestBuilder.BuildMaster(variants),
                 HlsManifestBuilder.ContentType,
@@ -94,10 +95,10 @@ namespace Cotton.Server.Controllers
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/playlist.m3u8")]
         public async Task<IActionResult> HlsVodPlaylistByToken(
             [FromRoute] Guid nodeFileId,
-            [FromQuery] string token,
+            [FromQuery] FileDownloadCredentials credentials,
             [FromQuery] string? quality = null)
         {
-            HlsSourceLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
+            HlsSourceLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, credentials);
             if (lookup.Failure is not null)
             {
                 return lookup.Failure;
@@ -105,15 +106,15 @@ namespace Cotton.Server.Controllers
 
             MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
             HlsRendition rendition = HlsRenditionProfile.Parse(quality);
-            string encodedToken = Uri.EscapeDataString(token);
+            string credentialQuery = credentials.ToQueryString();
             string qualityName = rendition.ToString().ToLowerInvariant();
             string manifest = HlsManifestBuilder.Build(
                 probe?.DurationSeconds ?? 0,
                 segmentIndex => Routes.V1.Files
-                    + $"/{nodeFileId}/hls/seg-{segmentIndex}.ts?token={encodedToken}&quality={qualityName}");
+                    + $"/{nodeFileId}/hls/seg-{segmentIndex}.ts?{credentialQuery}&quality={qualityName}");
 
             Response.Headers.CacheControl = "private, no-store, no-transform";
-            Response.RegisterDeleteAfterUse(_dbContext, lookup.DownloadToken!);
+            Response.RegisterDeleteAfterUse(_dbContext, lookup.DownloadToken);
             return Content(manifest, HlsManifestBuilder.ContentType, System.Text.Encoding.UTF8);
         }
 
@@ -121,7 +122,7 @@ namespace Cotton.Server.Controllers
         public async Task<IActionResult> HlsSegmentByToken(
             [FromRoute] Guid nodeFileId,
             [FromRoute] int segmentIndex,
-            [FromQuery] string token,
+            [FromQuery] FileDownloadCredentials credentials,
             [FromQuery] string? quality = null)
         {
             if (segmentIndex < 0)
@@ -129,14 +130,14 @@ namespace Cotton.Server.Controllers
                 return CottonResult.BadRequest("Segment index must be non-negative.");
             }
 
-            HlsSourceLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, token);
+            HlsSourceLookup lookup = await ResolveTranscodableSourceAsync(nodeFileId, credentials);
             if (lookup.Failure is not null)
             {
                 return lookup.Failure;
             }
 
             NodeFile nodeFile = lookup.NodeFile!;
-            DownloadToken downloadToken = lookup.DownloadToken!;
+            DownloadToken? downloadToken = lookup.DownloadToken;
             HlsRendition rendition = HlsRenditionProfile.Parse(quality);
             string qualityName = rendition.ToString().ToLowerInvariant();
             string cacheKey = HlsSegmentCache.BuildKey(
@@ -253,9 +254,9 @@ namespace Cotton.Server.Controllers
 
         private async Task<HlsSourceLookup> ResolveTranscodableSourceAsync(
             Guid nodeFileId,
-            string? token)
+            FileDownloadCredentials credentials)
         {
-            if (string.IsNullOrWhiteSpace(token))
+            if (!credentials.IsValid)
             {
                 return new HlsSourceLookup(
                     null,
@@ -265,14 +266,14 @@ namespace Cotton.Server.Controllers
 
             IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
                 _publicShareLookupFailures,
-                token);
+                credentials.Value);
             if (blocked is not null)
             {
                 return new HlsSourceLookup(null, null, blocked);
             }
 
             ResolveHlsSourceResult result = await _mediator.Send(
-                new ResolveHlsSourceQuery(nodeFileId, token),
+                new ResolveHlsSourceQuery(nodeFileId, credentials),
                 HttpContext.RequestAborted);
             switch (result.Status)
             {
@@ -287,7 +288,7 @@ namespace Cotton.Server.Controllers
                         null,
                         this.ApiPublicShareNotFound(
                             _publicShareLookupFailures,
-                            token,
+                            credentials.Value,
                             "File not found"));
                 case ResolveHlsSourceStatus.FileNotFound:
                     return new HlsSourceLookup(

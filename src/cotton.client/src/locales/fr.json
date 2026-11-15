@@ -1635,6 +1635,17 @@
       "loadFailed": "Échec du chargement du fichier partagé.",
       "copyLink": "Échec de la copie du lien dans le presse-papiers.",
       "fileTooLargePreview": "Le fichier est trop volumineux pour l'aperçu ({{size}}). Veuillez télécharger le fichier pour le consulter."
+    },
+    "dropBox": {
+      "ready": "Déposez les fichiers ici",
+      "progress": "Envoi des fichiers",
+      "success": "Fichiers envoyés",
+      "thanks": "Merci pour votre envoi.",
+      "uploaded": "{{completed}} fichiers envoyés sur {{total}}",
+      "more": "Envoyer d’autres fichiers",
+      "add": "Ajouter des fichiers",
+      "select": "Choisir des fichiers",
+      "failed": "Ce fichier n’a pas pu être envoyé. Veuillez réessayer."
     }
   },
   "login": {
@@ -2610,7 +2621,8 @@
         },
         "invalidDuration": "Choisissez une durée de 1 minute à 10 ans.",
         "create": "Créer le lien",
-        "link": "Lien public"
+        "link": "Lien public",
+        "hideFolderContent": "Masquer le contenu du dossier"
       }
     },
     "preview": {

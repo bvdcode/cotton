@@ -13,7 +13,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@shared/api/filesApi", () => ({
-  filesApi: { getDownloadLink: vi.fn() },
+  filesApi: { getShareLink: vi.fn() },
 }));
 vi.mock("@shared/api/layoutsApi", () => ({
   layoutsApi: { getNodeShareLink: vi.fn() },
@@ -44,7 +44,7 @@ beforeEach(() => {
   useUserPreferencesStore
     .getState()
     .hydrateFromRemote({ shareLinkExpireAfterMinutes: "1440" });
-  vi.mocked(filesApi.getDownloadLink).mockResolvedValue("/s/photo-link");
+  vi.mocked(filesApi.getShareLink).mockResolvedValue("/s/photo-link");
   vi.mocked(layoutsApi.getNodeShareLink).mockResolvedValue("/s/folder-link");
 });
 
@@ -74,13 +74,48 @@ describe("ShareLinkDialog", () => {
         screen.getByRole("button", { name: "share.options.create" }),
       );
       await screen.findByRole("textbox", { name: "share.options.link" });
-      expect(filesApi.getDownloadLink).toHaveBeenCalledWith(
+      expect(filesApi.getShareLink).toHaveBeenCalledWith(
         target.id,
         days * 24 * 60,
         "",
       );
     },
   );
+
+  it("allows hidden content only with uploads and sends both permissions", async () => {
+    render(
+      <ShareLinkDialog
+        target={{ kind: "folder", id: "folder", name: "Uploads" }}
+        onClose={vi.fn()}
+      />,
+    );
+    const uploads = screen.getByRole("switch", {
+      name: "share.options.allowUpload",
+    });
+    const hidden = screen.getByRole("switch", {
+      name: "share.options.hideFolderContent",
+    });
+    expect(hidden).toBeDisabled();
+    fireEvent.click(uploads);
+    fireEvent.click(hidden);
+    expect(hidden).toBeChecked();
+    fireEvent.click(uploads);
+    expect(hidden).not.toBeChecked();
+    expect(hidden).toBeDisabled();
+    fireEvent.click(uploads);
+    fireEvent.click(hidden);
+    fireEvent.click(
+      screen.getByRole("button", { name: "share.options.create" }),
+    );
+    await screen.findByRole("textbox", { name: "share.options.link" });
+    expect(layoutsApi.getNodeShareLink).toHaveBeenCalledWith(
+      "folder",
+      1440,
+      "",
+      true,
+      true,
+    );
+  });
 
   it("only offers uploads for folder links and sends the selected permission", async () => {
     render(
@@ -103,6 +138,7 @@ describe("ShareLinkDialog", () => {
       1440,
       "",
       true,
+      false,
     );
     expect(permission).toBeDisabled();
   });
@@ -124,7 +160,7 @@ describe("ShareLinkDialog", () => {
     expect(
       screen.queryByRole("switch", { name: "share.options.allowUpload" }),
     ).not.toBeInTheDocument();
-    expect(filesApi.getDownloadLink).not.toHaveBeenCalled();
+    expect(filesApi.getShareLink).not.toHaveBeenCalled();
     expect(screen.getByRole("spinbutton")).toHaveValue(1);
     fireEvent.change(
       screen.getByRole("textbox", { name: "share.options.name" }),
@@ -138,7 +174,7 @@ describe("ShareLinkDialog", () => {
       screen.getByRole("button", { name: "share.options.create" }),
     );
     await screen.findByRole("textbox", { name: "share.options.link" });
-    expect(filesApi.getDownloadLink).toHaveBeenCalledExactlyOnceWith(
+    expect(filesApi.getShareLink).toHaveBeenCalledExactlyOnceWith(
       "file-1",
       120,
       "holiday-Фото",
@@ -177,6 +213,7 @@ describe("ShareLinkDialog", () => {
       null,
       "",
       false,
+      false,
     );
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.copy" }),
@@ -193,7 +230,7 @@ describe("ShareLinkDialog", () => {
   });
 
   it("keeps the form editable when the custom address is already taken", async () => {
-    vi.mocked(filesApi.getDownloadLink).mockRejectedValueOnce(
+    vi.mocked(filesApi.getShareLink).mockRejectedValueOnce(
       new AxiosError("Conflict", "409", undefined, undefined, {
         ...createHttpResponse({}),
         status: 409,
@@ -218,7 +255,7 @@ describe("ShareLinkDialog", () => {
       screen.getByRole("button", { name: "share.options.create" }),
     );
     await screen.findByRole("textbox", { name: "share.options.link" });
-    expect(filesApi.getDownloadLink).toHaveBeenLastCalledWith(
+    expect(filesApi.getShareLink).toHaveBeenLastCalledWith(
       "file-1",
       1440,
       "photo-2",
@@ -245,7 +282,7 @@ describe("ShareLinkDialog", () => {
       target: { value: "3650" },
     });
     expect(create).toBeEnabled();
-    expect(filesApi.getDownloadLink).not.toHaveBeenCalled();
+    expect(filesApi.getShareLink).not.toHaveBeenCalled();
   });
 
   it("preserves unlimited profile defaults", () => {

@@ -2,10 +2,10 @@ import { useFolderTiles } from "./useFolderTiles";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
-import type { FolderStatsDto } from "../../../shared/api/nodesApi";
 import {
   fetchFolderOverview,
   folderOverviewOptions,
+  getFolderOverviewSnapshot,
 } from "@shared/api/queries/folderOverview";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { translateError } from "../../../shared/i18n/translateError";
@@ -54,11 +54,6 @@ export const useFolderListing = (
 
   const activeListing = isList ? list : tiles;
   const content = useDecryptedFolderContent(activeListing.content);
-  const stats: FolderStatsDto = overview.data?.content.stats ?? {
-    folders: 0,
-    files: 0,
-    sizeBytes: 0,
-  };
   const error =
     overview.isError || activeListing.isError
       ? translateError("files", "errors.loadContentsFailed")
@@ -71,13 +66,8 @@ export const useFolderListing = (
   }, [nodeId]);
 
   return {
-    node:
-      overview.isSuccess && !overview.isFetching
-        ? overview.data.content.node
-        : undefined,
+    ...getFolderOverviewSnapshot(overview),
     content,
-    stats,
-    totalCount: overview.data?.totalCount ?? null,
     loading: overview.isPending || activeListing.isPending,
     error,
     pagination: isList ? list.pagination : undefined,

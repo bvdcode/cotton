@@ -82,25 +82,8 @@ describe("filesApi chunk manifests", () => {
 });
 
 describe("filesApi.getDownloadLink", () => {
-  it("does not combine concurrent links with different custom names", async () => {
-    const get = vi
-      .spyOn(httpClient, "get")
-      .mockResolvedValue({ data: "/s/photo" });
-    await Promise.all([
-      filesApi.getDownloadLink(fileId, null, "  photo  "),
-      filesApi.getDownloadLink(fileId, null, "photo-2"),
-      filesApi.getDownloadLink(fileId, null),
-    ]);
-    expect(get).toHaveBeenCalledTimes(3);
-    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
-      params: { expireAfterMinutes: "", customToken: "photo" },
-    });
-    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
-      params: { expireAfterMinutes: "", customToken: "photo-2" },
-    });
-  });
   it("uses the default expiration and returns the response URL", async () => {
-    const get = vi.spyOn(httpClient, "get").mockResolvedValue({
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: "https://download.example/file",
     });
 
@@ -108,26 +91,34 @@ describe("filesApi.getDownloadLink", () => {
       "https://download.example/file",
     );
 
-    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
-      params: { expireAfterMinutes: 1440 },
-    });
+    expect(post).toHaveBeenCalledWith(
+      `files/${fileId}/download-token`,
+      undefined,
+      {
+        params: { expireAfterMinutes: 1440 },
+      },
+    );
   });
 
   it("forwards explicit expiration minutes", async () => {
-    const get = vi.spyOn(httpClient, "get").mockResolvedValue({
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: "https://download.example/file",
     });
 
     await filesApi.getDownloadLink(fileId, 60);
 
-    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
-      params: { expireAfterMinutes: 60 },
-    });
+    expect(post).toHaveBeenCalledWith(
+      `files/${fileId}/download-token`,
+      undefined,
+      {
+        params: { expireAfterMinutes: 60 },
+      },
+    );
   });
 
   it("deduplicates concurrent calls for the same file and expiration", async () => {
     let resolve!: (response: AxiosResponse<string>) => void;
-    const get = vi.spyOn(httpClient, "get").mockReturnValue(
+    const post = vi.spyOn(httpClient, "post").mockReturnValue(
       new Promise<AxiosResponse<string>>((resolvePromise) => {
         resolve = resolvePromise;
       }),
@@ -142,22 +133,22 @@ describe("filesApi.getDownloadLink", () => {
       "https://download.example/file",
       "https://download.example/file",
     ]);
-    expect(get).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
   it("requests again after the previous in-flight call settles", async () => {
-    const get = vi.spyOn(httpClient, "get").mockResolvedValue({
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: "https://download.example/file",
     });
 
     await filesApi.getDownloadLink(fileId, 1440);
     await filesApi.getDownloadLink(fileId, 1440);
 
-    expect(get).toHaveBeenCalledTimes(2);
+    expect(post).toHaveBeenCalledTimes(2);
   });
 
   it("keeps separate in-flight requests for different expiration values", async () => {
-    const get = vi.spyOn(httpClient, "get").mockResolvedValue({
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: "https://download.example/file",
     });
 
@@ -166,7 +157,46 @@ describe("filesApi.getDownloadLink", () => {
       filesApi.getDownloadLink(fileId, 120),
     ]);
 
-    expect(get).toHaveBeenCalledTimes(2);
+    expect(post).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("filesApi.getShareLink", () => {
+  it("keeps public shares separate from concurrent download tokens", async () => {
+    const get = vi.spyOn(httpClient, "get").mockResolvedValue({
+      data: "/s/public-share",
+    });
+    const post = vi.spyOn(httpClient, "post").mockResolvedValue({
+      data: `/api/v1/files/${fileId}/download?downloadToken=temporary`,
+    });
+
+    const [share, download] = await Promise.all([
+      filesApi.getShareLink(fileId, 1440),
+      filesApi.getDownloadLink(fileId, 1440),
+    ]);
+
+    expect(share).toBe("/s/public-share");
+    expect(download).toBe(`/api/v1/files/${fileId}/download?downloadToken=temporary`);
+    expect(get).toHaveBeenCalledOnce();
+    expect(post).toHaveBeenCalledOnce();
+  });
+
+  it("does not combine concurrent links with different custom names", async () => {
+    const get = vi
+      .spyOn(httpClient, "get")
+      .mockResolvedValue({ data: "/s/photo" });
+    await Promise.all([
+      filesApi.getShareLink(fileId, null, "  photo  "),
+      filesApi.getShareLink(fileId, null, "photo-2"),
+      filesApi.getShareLink(fileId, null),
+    ]);
+    expect(get).toHaveBeenCalledTimes(3);
+    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
+      params: { expireAfterMinutes: "", customToken: "photo" },
+    });
+    expect(get).toHaveBeenCalledWith(`files/${fileId}/download-link`, {
+      params: { expireAfterMinutes: "", customToken: "photo-2" },
+    });
   });
 });
 

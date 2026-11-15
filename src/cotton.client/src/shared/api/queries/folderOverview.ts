@@ -1,4 +1,8 @@
-import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  type QueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { nodesApi, type NodeResponse } from "../nodesApi";
 import type { NodeDto } from "../layoutsApi";
 import { FOLDER_PAGE_SIZE } from "./folderPageSize";
@@ -24,6 +28,23 @@ export function folderOverviewOptions(nodeId: string, userId: string) {
     queryKey: queryKeys.nodeChildren.overview(nodeId, userId, FOLDER_PAGE_SIZE),
     queryFn: () => fetchFolderOverview(nodeId, FOLDER_PAGE_SIZE),
   });
+}
+
+export function getFolderOverviewSnapshot(
+  overview: UseQueryResult<NodeResponse, Error>,
+) {
+  return {
+    node:
+      overview.isSuccess && !overview.isFetching
+        ? overview.data.content.node
+        : undefined,
+    stats: overview.data?.content.stats ?? {
+      folders: 0,
+      files: 0,
+      sizeBytes: 0,
+    },
+    totalCount: overview.data?.totalCount ?? null,
+  };
 }
 
 export function ensureFolderOverview(

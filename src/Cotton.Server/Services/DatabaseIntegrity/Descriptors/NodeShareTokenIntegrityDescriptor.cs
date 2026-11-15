@@ -14,13 +14,13 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
     /// </remarks>
     public class NodeShareTokenIntegrityDescriptor : DatabaseIntegrityDescriptor<NodeShareToken>
     {
-        public const int LatestVersion = 2;
+        public const int LatestVersion = 3;
 
         public override string EntityName => "node_share_tokens";
 
         public override int SchemaVersion => LatestVersion;
 
-        public override IReadOnlyCollection<int> SupportedVersions => [1, 2];
+        public override IReadOnlyCollection<int> SupportedVersions => [1, 2, 3];
 
         public override string GetEntityKey(NodeShareToken entity)
         {
@@ -31,13 +31,19 @@ namespace Cotton.Server.Services.DatabaseIntegrity.Descriptors
         {
             switch (version)
             {
-                case 1 when !entity.AllowUpload:
+                case 1 when !entity.AllowUpload && !entity.HideFolderContent:
                     WriteVersion1(writer, entity);
                     break;
                 case 1:
                     throw new DatabaseIntegrityException(EntityName, GetEntityKey(entity));
-                case 2:
+                case 2 when !entity.HideFolderContent:
                     WriteVersion2(writer, entity);
+                    break;
+                case 2:
+                    throw new DatabaseIntegrityException(EntityName, GetEntityKey(entity));
+                case 3:
+                    WriteVersion2(writer, entity);
+                    writer.WriteBooleanField(nameof(entity.HideFolderContent), entity.HideFolderContent);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(version), version, "Unsupported share signature version.");

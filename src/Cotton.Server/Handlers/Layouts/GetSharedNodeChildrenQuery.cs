@@ -32,7 +32,7 @@ namespace Cotton.Server.Handlers.Layouts
             SharedNodeAccess? access = await _mediator.Send(
                 new ResolveSharedNodeAccessQuery(request.Token),
                 ct);
-            if (access is null)
+            if (access is null || access.HideFolderContent)
             {
                 return new GetSharedNodeChildrenResult(
                     GetSharedNodeChildrenStatus.SharedFolderNotFound);

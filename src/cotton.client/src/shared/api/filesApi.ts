@@ -10,6 +10,21 @@ import { nodeFileManifestSchema } from "./schemas/node";
 
 const downloadLinkInFlight = new Map<string, Promise<string>>();
 
+const requestFileLink = (
+  key: string,
+  request: () => Promise<string>,
+): Promise<string> => {
+  const existing = downloadLinkInFlight.get(key);
+  if (existing) {
+    return existing;
+  }
+  const promise = request().finally(() => {
+    downloadLinkInFlight.delete(key);
+  });
+  downloadLinkInFlight.set(key, promise);
+  return promise;
+};
+
 export interface CreateFileFromChunksRequest {
   nodeId: Guid;
   chunkHashes: string[];
@@ -74,33 +89,38 @@ export const filesApi = {
     return parseValidated(url, response.data, nodeFileManifestSchema);
   },
 
-  getDownloadLink: async (
+  getDownloadLink: (
     nodeFileId: Guid,
-    expireAfterMinutes: number | null = 1440,
+    expireAfterMinutes = 1440,
+  ): Promise<string> =>
+    requestFileLink(
+      JSON.stringify(["download", nodeFileId, expireAfterMinutes]),
+      () =>
+        httpClient
+          .post<string>(`files/${nodeFileId}/download-token`, undefined, {
+            params: { expireAfterMinutes },
+          })
+          .then((response) => response.data),
+    ),
+
+  getShareLink: (
+    nodeFileId: Guid,
+    expireAfterMinutes: number | null,
     customToken?: string,
   ): Promise<string> => {
     const token = customToken?.trim();
-    const key = JSON.stringify([nodeFileId, expireAfterMinutes, token]);
-    const existing = downloadLinkInFlight.get(key);
-    if (existing) {
-      return existing;
-    }
-
-    const promise = httpClient
-      .get<string>(`files/${nodeFileId}/download-link`, {
-        // An empty query value binds to null; Axios omits literal null values.
-        params: {
-          expireAfterMinutes: expireAfterMinutes ?? "",
-          ...(token ? { customToken: token } : {}),
-        },
-      })
-      .then((r) => r.data)
-      .finally(() => {
-        downloadLinkInFlight.delete(key);
-      });
-
-    downloadLinkInFlight.set(key, promise);
-    return promise;
+    return requestFileLink(
+      JSON.stringify(["share", nodeFileId, expireAfterMinutes, token]),
+      () =>
+        httpClient
+          .get<string>(`files/${nodeFileId}/download-link`, {
+            params: {
+              expireAfterMinutes: expireAfterMinutes ?? "",
+              ...(token ? { customToken: token } : {}),
+            },
+          })
+          .then((response) => response.data),
+    );
   },
 
   deleteFile: async (nodeFileId: Guid, skipTrash = false): Promise<void> => {

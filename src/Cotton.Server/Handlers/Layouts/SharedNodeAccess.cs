@@ -10,5 +10,6 @@ namespace Cotton.Server.Handlers.Layouts
         string Name,
         DateTime? ExpiresAt,
         Guid ShareId,
-        bool AllowUpload);
+        bool AllowUpload,
+        bool HideFolderContent);
 }

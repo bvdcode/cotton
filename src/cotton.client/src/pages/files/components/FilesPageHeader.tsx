@@ -13,6 +13,7 @@ import { useFolderSizes } from "../hooks/useFolderSizes";
 import { Star, StarBorder } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import type { usePinnedFolders } from "@shared/dashboard/usePinnedFolders";
+import { ShareLinkDialog } from "@shared/ui/ShareLinkDialog";
 
 interface FilesPageHeaderProps {
   pinnedFolders: ReturnType<typeof usePinnedFolders>;
@@ -75,34 +76,42 @@ export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
   );
 
   return (
-    <PageHeader
-      loading={loading}
-      breadcrumbs={breadcrumbs}
-      stats={{ ...stats, sizeBytes: stats.sizeBytes + folderSizes.sizeBytes }}
-      isSizeCalculating={folderSizes.isCalculating}
-      viewMode={viewMode}
-      canGoUp={canGoUp}
-      onGoUp={onGoUp}
-      onHomeClick={onGoHome}
-      onViewModeCycle={cycleViewMode}
-      showViewModeToggle={!isHugeFolder}
-      showUpload={!!nodeId}
-      showNewFile={!!nodeId}
-      showNewFolder={!!nodeId}
-      onUploadClick={contentOperations.fileUpload.handleUploadClick}
-      onNewFileClick={contentOperations.handleCreateMarkdownFile}
-      onNewFolderClick={contentOperations.handleNewFolderClick}
-      isCreatingFile={contentOperations.isCreatingMarkdownFile}
-      isCreatingFolder={contentOperations.folderOps.isCreatingFolder}
-      selectionMode={fileSelection.selectionMode}
-      selectedCount={fileSelection.selectedCount}
-      onToggleSelectionMode={fileSelection.toggleSelectionMode}
-      onSelectAll={handleSelectAll}
-      onDeselectAll={fileSelection.deselectAll}
-      primaryActionItems={actions}
-      customActionItems={selectionActions.customActionItems}
-      breadcrumbsDropHandlers={move.breadcrumbsDropHandlers}
-      goUpDropHandlers={move.goUpDropHandlers}
-    />
+    <>
+      <PageHeader
+        loading={loading}
+        breadcrumbs={breadcrumbs}
+        stats={{ ...stats, sizeBytes: stats.sizeBytes + folderSizes.sizeBytes }}
+        isSizeCalculating={folderSizes.isCalculating}
+        viewMode={viewMode}
+        canGoUp={canGoUp}
+        onGoUp={onGoUp}
+        onHomeClick={onGoHome}
+        onViewModeCycle={cycleViewMode}
+        showViewModeToggle={!isHugeFolder}
+        showUpload={!!nodeId}
+        showNewFile={!!nodeId}
+        showNewFolder={!!nodeId}
+        onUploadClick={contentOperations.fileUpload.handleUploadClick}
+        onNewFileClick={contentOperations.handleCreateMarkdownFile}
+        onNewFolderClick={contentOperations.handleNewFolderClick}
+        isCreatingFile={contentOperations.isCreatingMarkdownFile}
+        isCreatingFolder={contentOperations.folderOps.isCreatingFolder}
+        selectionMode={fileSelection.selectionMode}
+        selectedCount={fileSelection.selectedCount}
+        onToggleSelectionMode={fileSelection.toggleSelectionMode}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={fileSelection.deselectAll}
+        primaryActionItems={actions}
+        customActionItems={selectionActions.customActionItems}
+        breadcrumbsDropHandlers={move.breadcrumbsDropHandlers}
+        goUpDropHandlers={move.goUpDropHandlers}
+      />
+      {selectionActions.shareDialogTarget && (
+        <ShareLinkDialog
+          target={selectionActions.shareDialogTarget}
+          onClose={selectionActions.closeShareDialog}
+        />
+      )}
+    </>
   );
 };

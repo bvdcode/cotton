@@ -56,6 +56,21 @@ async function resolveParentPolicy(
   return getChildEncryptionPolicy(parentId);
 }
 
+async function hasFolderRenameConflict(
+  node: NodeDto,
+  name: string,
+  encrypted: boolean,
+): Promise<boolean> {
+  if (!node.parentId || (!encrypted && !useVault.getState().isUnlocked)) {
+    return false;
+  }
+  const lookup = await lookupDisplayNames(node.parentId, [name], true);
+  const nameKey = getFileNameKey(name);
+  return [...lookup.nodes, ...lookup.files].some(
+    (item) => item.id !== node.id && getFileNameKey(item.name) === nameKey,
+  );
+}
+
 export const createFolder = async (
   parentNodeId: string,
   name: string,
@@ -176,17 +191,9 @@ export const renameFolder = async (
       Boolean(
         node.parentId && (await resolveParentPolicy(node.parentId, owner)),
       );
-    if (node.parentId && (encrypted || useVault.getState().isUnlocked)) {
-      const lookup = await lookupDisplayNames(node.parentId, [trimmed], true);
-      const conflict = [...lookup.nodes, ...lookup.files].some(
-        (item) =>
-          item.id !== nodeId &&
-          getFileNameKey(item.name) === getFileNameKey(trimmed),
-      );
-      if (conflict) {
-        finish(tFileError("errors.duplicateFolderName"));
-        return false;
-      }
+    if (await hasFolderRenameConflict(node, trimmed, encrypted)) {
+      finish(tFileError("errors.duplicateFolderName"));
+      return false;
     }
     const preparedName = await prepareFolderName(node, trimmed, encrypted);
     if (!isOwner()) {

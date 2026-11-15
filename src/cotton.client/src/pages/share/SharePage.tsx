@@ -20,6 +20,7 @@ import { shareLinks } from "../../shared/utils/shareLinks";
 import { shareLinkAction } from "../../shared/utils/shareLinkAction";
 import { ShareFileViewer } from "./components/ShareFileViewer";
 import { ShareHeaderBar } from "./components/ShareHeaderBar";
+import { SharedFolderDropBox } from "./components/SharedFolderDropBox";
 import { SharedFolderViewer } from "./components/SharedFolderViewer";
 import { useShareFileInfo } from "./hooks/useShareFileInfo";
 import {
@@ -316,7 +317,10 @@ export const SharePage: React.FC = () => {
             isCopied={isCopied}
             onShareLink={handleShareLink}
             onDownload={handleFolderDownload}
-            canDownload={Boolean(folderDownloadAction)}
+            canDownload={
+              !viewState.folder.hideFolderContent &&
+              Boolean(folderDownloadAction)
+            }
             downloadDisabled={folderDownloadAction?.disabled ?? false}
             downloadVariant="outlined"
             shareIconOnly
@@ -324,18 +328,25 @@ export const SharePage: React.FC = () => {
 
           {viewState.folder.allowUpload && (
             <>
-              <TaskQueueWidget />
+              {!viewState.folder.hideFolderContent && <TaskQueueWidget />}
               <UploadFilePicker />
             </>
           )}
-          <SharedFolderViewer
-            info={viewState.folder}
-            token={viewState.token}
-            rootNodeId={viewState.folder.nodeId}
-            rootName={viewState.folder.name}
-            onShareLink={handleShareLink}
-            onDownloadActionChange={handleFolderDownloadActionChange}
-          />
+          {viewState.folder.hideFolderContent ? (
+            <SharedFolderDropBox
+              key={viewState.token}
+              info={viewState.folder}
+            />
+          ) : (
+            <SharedFolderViewer
+              info={viewState.folder}
+              token={viewState.token}
+              rootNodeId={viewState.folder.nodeId}
+              rootName={viewState.folder.name}
+              onShareLink={handleShareLink}
+              onDownloadActionChange={handleFolderDownloadActionChange}
+            />
+          )}
         </>
       )}
 

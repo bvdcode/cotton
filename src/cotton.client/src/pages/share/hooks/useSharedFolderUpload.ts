@@ -15,6 +15,7 @@ export const useSharedFolderUpload = (
   nodeId: string,
   label: string,
   onUploaded: () => void,
+  onQueued?: (ids: string[]) => void,
 ) => {
   const { t } = useTranslation("share");
   const sessionId = useRef<string | null>(null);
@@ -33,38 +34,44 @@ export const useSharedFolderUpload = (
     }
     preparing.current = true;
     try {
-      const takenNameKeys: string[] = [];
-      let page = 1;
-      let remaining = true;
-      while (remaining) {
-        const response = await sharedFoldersApi.getChildren(info.token, {
-          nodeId,
-          page,
-          pageSize: 1000,
-        });
-        takenNameKeys.push(
-          ...response.content.nodes.map((node) => getFileNameKey(node.name)),
-          ...response.content.files.map((file) => getFileNameKey(file.name)),
+      let queuedFiles = list.map((file) => ({ file }));
+      if (!info.hideFolderContent) {
+        const takenNameKeys: string[] = [];
+        let page = 1;
+        let remaining = true;
+        while (remaining) {
+          const response = await sharedFoldersApi.getChildren(info.token, {
+            nodeId,
+            page,
+            pageSize: 1000,
+          });
+          takenNameKeys.push(
+            ...response.content.nodes.map((node) => getFileNameKey(node.name)),
+            ...response.content.files.map((file) => getFileNameKey(file.name)),
+          );
+          remaining = page * 1000 < response.totalCount;
+          page += 1;
+        }
+        const result = await resolveUploadConflicts(
+          list,
+          { nodes: [], files: [], takenNameKeys },
+          conflicts.showConflictDialog,
         );
-        remaining = page * 1000 < response.totalCount;
-        page += 1;
+        if (result.cancelled) {
+          return;
+        }
+        queuedFiles = result.files;
       }
-      const result = await resolveUploadConflicts(
-        list,
-        { nodes: [], files: [], takenNameKeys },
-        conflicts.showConflictDialog,
-      );
-      if (!result.cancelled) {
-        sessionId.current ??= crypto.randomUUID();
-        uploadManager.enqueue(result.files, nodeId, label, {
-          sharedUpload: {
-            token: info.token,
-            sessionId: sessionId.current,
-            server: info,
-          },
-          onFileUploaded: onUploaded,
-        });
-      }
+      sessionId.current ??= crypto.randomUUID();
+      const ids = uploadManager.enqueue(queuedFiles, nodeId, label, {
+        sharedUpload: {
+          token: info.token,
+          sessionId: sessionId.current,
+          server: info,
+        },
+        onFileUploaded: onUploaded,
+      });
+      onQueued?.(ids);
     } catch {
       toast.error(t("folder.uploadFailed"));
     } finally {
@@ -99,6 +106,7 @@ export const useSharedFolderUpload = (
         return;
       }
       event.preventDefault();
+      event.stopPropagation();
       depth.current = 0;
       setIsDragging(false);
       if (

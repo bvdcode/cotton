@@ -10,8 +10,13 @@ namespace Cotton.Server.Helpers
     {
         public static string Create(string baseAppUrl, string token, string fileName, bool hasPreview)
         {
+            string pageTitle = "Cotton Cloud";
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                pageTitle = $"{fileName} - {pageTitle}";
+            }
             string canonicalUrl = $"{baseAppUrl}/s/{Uri.EscapeDataString(token)}";
-            string appShareUrl = $"{baseAppUrl}/share/{Uri.EscapeDataString(token)}";
+            string appShareUrl = $"/share/{Uri.EscapeDataString(token)}";
             string previewUrl = hasPreview
                 ? $"{canonicalUrl}/preview.jpg"
                 : $"{baseAppUrl}/assets/images/social-preview.jpg";
@@ -20,7 +25,7 @@ namespace Cotton.Server.Helpers
                 <html lang="en">
                 <head>
                   <meta charset="utf-8">
-                  <title>{WebUtility.HtmlEncode(fileName)} - Cotton Cloud</title>
+                  <title>{WebUtility.HtmlEncode(pageTitle)}</title>
                   <meta http-equiv="refresh" content="0;url={WebUtility.HtmlEncode(appShareUrl)}" />
                   <link rel="canonical" href="{WebUtility.HtmlEncode(canonicalUrl)}" />
                   <meta property="og:site_name" content="Cotton Cloud" />

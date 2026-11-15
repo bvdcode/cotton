@@ -35,7 +35,7 @@ namespace Cotton.Server.Handlers.Archives
                 return;
             }
             SharedNodeAccess? access = await mediator.Send(new ResolveSharedNodeAccessQuery(ticket.ShareToken), ct);
-            if (access is null || access.CreatedByUserId != ticket.UserId)
+            if (access is null || access.HideFolderContent || access.CreatedByUserId != ticket.UserId)
             {
                 throw new EntityNotFoundException(nameof(Node), "Shared folder is no longer available.");
             }

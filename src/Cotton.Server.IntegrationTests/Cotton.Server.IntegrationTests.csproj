@@ -23,5 +23,6 @@
 	<ItemGroup>
 		<None Update="Fixtures\vector-backup.dump" CopyToOutputDirectory="PreserveNewest" />
 		<None Update="Fixtures\passkey-credentials.json" CopyToOutputDirectory="PreserveNewest" />
+		<None Update="Fixtures\short-video.mkv" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>

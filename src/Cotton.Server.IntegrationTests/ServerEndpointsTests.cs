@@ -43,14 +43,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(creator.HasTables(), Is.False);
             });
 
-            NpgsqlConnectionStringBuilder csb = new NpgsqlConnectionStringBuilder
-            {
-                Host = "localhost",
-                Port = 5432,
-                Database = DatabaseName,
-                Username = "postgres",
-                Password = "postgres"
-            };
+            NpgsqlConnectionStringBuilder csb = new(DbContext.Database.GetConnectionString());
             Dictionary<string, string?> overrides = new Dictionary<string, string?>
             {
                 ["DatabaseSettings:Host"] = csb.Host,

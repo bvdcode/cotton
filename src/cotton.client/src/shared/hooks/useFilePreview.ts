@@ -20,6 +20,46 @@ interface PreviewState {
 
 const PREVIEW_HISTORY_STATE = "preview";
 
+function supportsInlinePreview(
+  fileType: FileType,
+  encrypted: boolean,
+  rawImage: boolean,
+): boolean {
+  switch (fileType) {
+    case "pdf":
+    case "text":
+    case "model":
+    case "office":
+      return true;
+    case "image":
+    case "video":
+    case "audio":
+      return encrypted && !rawImage;
+    case "document":
+    case "archive":
+    case "other":
+      return false;
+  }
+}
+
+function exceedsInlinePreviewLimit(
+  fileType: FileType,
+  encrypted: boolean,
+  size: number,
+): boolean {
+  const inlineLimit = encrypted
+    ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
+    : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
+  return (
+    ((fileType === "text" || encrypted) && size > inlineLimit) ||
+    (fileType === "office" &&
+      size > previewConfig.MAX_OFFICE_PREVIEW_SIZE_BYTES) ||
+    (encrypted &&
+      fileType === "pdf" &&
+      size > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES)
+  );
+}
+
 export const useFilePreview = () => {
   const [previewState, setPreviewState] = useState<PreviewState>({
     isOpen: false,
@@ -53,29 +93,14 @@ export const useFilePreview = () => {
     ) => {
       const typeInfo = getFileTypeInfo(fileName, contentType);
       const encrypted = file ? isFileEncrypted(file.metadata) : false;
-      const inlinePreviewLimit = encrypted
-        ? CLIENT_ENCRYPTION_BLOB_PIPELINE_MAX_BYTES
-        : previewConfig.MAX_TEXT_PREVIEW_SIZE_BYTES;
       let fileType = typeInfo.type;
-      const readableMedia =
-        encrypted &&
-        (fileType === "image" ||
-          fileType === "video" ||
-          fileType === "audio") &&
-        !isRawImageFile(fileName, contentType);
       if (
-        (fileType !== "pdf" &&
-          fileType !== "text" &&
-          fileType !== "model" &&
-          fileType !== "office" &&
-          !readableMedia) ||
-        ((fileType === "text" || encrypted) &&
-          (fileSizeBytes ?? 0) > inlinePreviewLimit) ||
-        (fileType === "office" &&
-          (fileSizeBytes ?? 0) > previewConfig.MAX_OFFICE_PREVIEW_SIZE_BYTES) ||
-        (encrypted &&
-          fileType === "pdf" &&
-          (fileSizeBytes ?? 0) > previewConfig.MAX_PDF_PREVIEW_SIZE_BYTES)
+        !supportsInlinePreview(
+          fileType,
+          encrypted,
+          isRawImageFile(fileName, contentType),
+        ) ||
+        exceedsInlinePreviewLimit(fileType, encrypted, fileSizeBytes ?? 0)
       ) {
         fileType = "other";
       }

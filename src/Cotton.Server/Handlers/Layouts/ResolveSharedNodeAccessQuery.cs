@@ -54,7 +54,8 @@ namespace Cotton.Server.Handlers.Layouts
                 shareToken.Name,
                 shareToken.ExpiresAt,
                 shareToken.Id,
-                shareToken.AllowUpload);
+                shareToken.AllowUpload,
+                shareToken.HideFolderContent);
         }
     }
 }

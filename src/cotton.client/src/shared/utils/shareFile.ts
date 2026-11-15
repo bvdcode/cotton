@@ -32,7 +32,7 @@ export const shareFile = async (
       useUserPreferencesStore.getState(),
     );
 
-    const downloadLink = await filesApi.getDownloadLink(
+    const downloadLink = await filesApi.getShareLink(
       nodeFileId,
       expireAfterMinutes,
     );

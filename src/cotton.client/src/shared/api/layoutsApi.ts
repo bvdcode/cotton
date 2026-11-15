@@ -119,6 +119,7 @@ export const layoutsApi = {
     expireAfterMinutes: number | null = 1440,
     customToken?: string,
     allowUpload = false,
+    hideFolderContent = false,
   ): Promise<string> => {
     const response = await httpClient.get<string>(
       `/layouts/nodes/${nodeId}/share-link`,
@@ -128,6 +129,7 @@ export const layoutsApi = {
           expireAfterMinutes: expireAfterMinutes ?? "",
           ...(customToken?.trim() ? { customToken: customToken.trim() } : {}),
           allowUpload,
+          hideFolderContent,
         },
       },
     );

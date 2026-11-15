@@ -81,14 +81,14 @@ namespace Cotton.Previews
                 for (int column = 0; column < MaximumColumns; column++)
                 {
                     canvas.DrawText(new RichTextOptions(font)
-                    { Origin = new PointF(LeftMargin + column * ColumnWidth + 4, TopMargin - RowHeight) },
+                    { Origin = new PointF(LeftMargin + (column * ColumnWidth) + 4, TopMargin - RowHeight) },
                         ((char)('A' + column)).ToString(), Brushes.Solid(Color.DimGray), null);
                     canvas.Fill(Brushes.Solid(Color.LightGray),
-                        new RectanglePolygon(LeftMargin + column * ColumnWidth, TopMargin - RowHeight, 1, Height));
+                        new RectanglePolygon(LeftMargin + (column * ColumnWidth), TopMargin - RowHeight, 1, Height));
                 }
                 for (int row = 0; row < MaximumRows; row++)
                 {
-                    int top = TopMargin + row * RowHeight;
+                    int top = TopMargin + (row * RowHeight);
                     canvas.Fill(Brushes.Solid(Color.LightGray), new RectanglePolygon(8, top, Width - 16, 1));
                     canvas.DrawText(new RichTextOptions(font) { Origin = new PointF(12, top + 5) },
                         (firstRow + row).ToString(CultureInfo.InvariantCulture), Brushes.Solid(Color.DimGray), null);
@@ -99,7 +99,7 @@ namespace Cotton.Previews
                     for (int column = 0; column < rows[row].Length; column++)
                     {
                         canvas.DrawText(new RichTextOptions(font)
-                        { Origin = new PointF(LeftMargin + column * ColumnWidth + 4, top + 5) },
+                        { Origin = new PointF(LeftMargin + (column * ColumnWidth) + 4, top + 5) },
                             FitText(rows[row][column], font), Brushes.Solid(Color.Black), null);
                     }
                 }

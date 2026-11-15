@@ -15,6 +15,13 @@ namespace Cotton.Server.IntegrationTests
         private string _token = null!;
         private Guid _session;
 
+        protected override void ConfigureTestServices(IServiceCollection services)
+        {
+            services.AddSingleton<SharedUploadNotificationRecorder>();
+            services.AddSingleton<EasyExtensions.Mediator.INotificationHandler<Cotton.Server.Notifications.FileUploadedNotification>>(
+                provider => provider.GetRequiredService<SharedUploadNotificationRecorder>());
+        }
+
         [SetUp]
         public async Task SetUpShare()
         {
@@ -207,9 +214,93 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(content.Files, Is.Empty);
         }
 
-        private async Task<string> ShareAsync(Guid nodeId, bool allowUpload)
+        [Test]
+        public async Task HiddenFolderAcceptsUploadsButDoesNotExposeContentOrDescendants()
         {
-            HttpResponseMessage response = await _client!.GetAsync($"/api/v1/layouts/nodes/{nodeId}/share-link?allowUpload={allowUpload}");
+            NodeDto child = await CreateNodeAsync(_folder.Id, "private child");
+            _token = await ShareAsync(_folder.Id, true, true);
+            SharedNodeInfoDto info = (await _guest.GetFromJsonAsync<SharedNodeInfoDto>($"/api/v1/layouts/shared/{_token}"))!;
+            Assert.That(info.HideFolderContent, Is.True);
+            Assert.That(info.Name, Is.Empty);
+            string html = await _guest.GetStringAsync($"/s/{_token}?view=page");
+            Assert.That(html, Does.Not.Contain(_folder.Name));
+            Assert.That(html, Does.Contain("<title>Cotton Cloud</title>"));
+            (await UploadAsync(_folder.Id, "private upload")).EnsureSuccessStatusCode();
+            using HttpResponseMessage created = await CreateAsync(_folder.Id, [Hash("private upload")], Hash("private upload"));
+            created.EnsureSuccessStatusCode();
+            NodeFileManifestDto file = (await created.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+            string prefix = $"/api/v1/layouts/shared/{_token}";
+            foreach (string path in new[] { "/children", $"/children?nodeId={child.Id}", $"/ancestors/{child.Id}",
+                $"/files/{file.Id}/content", $"/files/{file.Id}/content?preview=true" })
+            {
+                using HttpResponseMessage denied = await _guest.GetAsync(prefix + path);
+                Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.NotFound), path);
+            }
+            using HttpResponseMessage archive = await _guest.PostAsync(prefix + "/archives/download-link", null);
+            Assert.That(archive.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            Assert.That((await UploadAsync(child.Id, "not allowed")).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            NodeContentDto content = (await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{_folder.Id}/children"))!;
+            Assert.That(content.Files.Single().Id, Is.EqualTo(file.Id));
+        }
+
+        [Test]
+        public async Task HiddenUploadsKeepBothNamesIncludingFolderAndConcurrentConflicts()
+        {
+            await CreateNodeAsync(_folder.Id, "uploaded.txt");
+            _token = await ShareAsync(_folder.Id, true, true);
+            HttpResponseMessage[] responses = await Task.WhenAll(Enumerable.Range(0, 3)
+                .Select(_ => CreateAsync(_folder.Id, [], Hash(string.Empty))));
+            foreach (HttpResponseMessage response in responses)
+            {
+                response.EnsureSuccessStatusCode();
+                response.Dispose();
+            }
+            NodeContentDto content = (await _client!.GetFromJsonAsync<NodeContentDto>($"/api/v1/layouts/nodes/{_folder.Id}/children"))!;
+            Assert.That(content.Files.Select(file => file.Name), Is.EquivalentTo(new[] { "uploaded (1).txt", "uploaded (2).txt", "uploaded (3).txt" }));
+            Assert.That(content.Nodes.Single().Name, Is.EqualTo("uploaded.txt"));
+        }
+
+        [Test]
+        public async Task ContentCannotBeHiddenWithoutUploadPermission()
+        {
+            using HttpResponseMessage response = await _client!.GetAsync(
+                $"/api/v1/layouts/nodes/{_folder.Id}/share-link?hideFolderContent=true");
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [Test]
+        public async Task HiddenUploadsPreserveUnicodeAndExtensionsWhenSuffixExceedsNameLimit()
+        {
+            _token = await ShareAsync(_folder.Id, true, true);
+            string name = string.Concat(Enumerable.Repeat("😀", 62)) + ".txt";
+            (await CreateAsync(_folder.Id, [], Hash(string.Empty), name)).EnsureSuccessStatusCode();
+            using HttpResponseMessage renamed = await CreateAsync(_folder.Id, [], Hash(string.Empty), name);
+            renamed.EnsureSuccessStatusCode();
+            NodeFileManifestDto file = (await renamed.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+            Assert.Multiple(() =>
+            {
+                Assert.That(file.Name, Does.EndWith(" (1).txt"));
+                Assert.That(Encoding.UTF8.GetByteCount(file.Name), Is.LessThanOrEqualTo(Cotton.Validators.NameValidator.MaxSegmentBytes));
+                Assert.That(Cotton.Validators.NameValidator.IsValidName(file.Name, out _), Is.True);
+            });
+        }
+
+        [Test]
+        public async Task UploadEventIsPublishedAfterCommitAndNotForRejectedUploads()
+        {
+            SharedUploadNotificationRecorder recorder = _factory!.Services.GetRequiredService<SharedUploadNotificationRecorder>();
+            using HttpResponseMessage response = await CreateAsync(_folder.Id, [], Hash(string.Empty));
+            response.EnsureSuccessStatusCode();
+            NodeFileManifestDto file = (await response.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
+            Assert.That(recorder.Uploads.Single().NodeFileId, Is.EqualTo(file.Id));
+            Assert.That(recorder.Uploads.Single().ShareId, Is.Not.Null);
+            Assert.That((await CreateAsync(_folder.Id, [], Hash(string.Empty))).StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+            Assert.That(recorder.Uploads, Has.Count.EqualTo(1));
+        }
+
+        private async Task<string> ShareAsync(Guid nodeId, bool allowUpload, bool hideFolderContent = false)
+        {
+            HttpResponseMessage response = await _client!.GetAsync($"/api/v1/layouts/nodes/{nodeId}/share-link?allowUpload={allowUpload}&hideFolderContent={hideFolderContent}");
             response.EnsureSuccessStatusCode();
             string link = (await response.Content.ReadAsStringAsync()).Trim('"');
             return link.Split('/').Last();
@@ -221,11 +312,11 @@ namespace Cotton.Server.IntegrationTests
             return await _guest.PostAsync($"/api/v1/layouts/shared/{_token}/chunks/raw?nodeId={nodeId}&sessionId={_session}&hash={hash ?? Hash(content)}", body);
         }
 
-        private Task<HttpResponseMessage> CreateAsync(Guid nodeId, string[] chunks, string hash)
+        private Task<HttpResponseMessage> CreateAsync(Guid nodeId, string[] chunks, string hash, string name = "uploaded.txt")
         {
             return _guest.PostAsJsonAsync($"/api/v1/layouts/shared/{_token}/files/from-chunks?sessionId={_session}", new CreateFileFromChunksRequestDto
             {
-                NodeId = nodeId, Name = "uploaded.txt", ContentType = "text/plain", Hash = hash, ChunkHashes = [.. chunks],
+                NodeId = nodeId, Name = name, ContentType = "text/plain", Hash = hash, ChunkHashes = [.. chunks],
             });
         }
 

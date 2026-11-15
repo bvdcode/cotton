@@ -207,8 +207,9 @@ export class UploadManager {
     nodeId: Guid,
     nodeLabel: string,
     options?: EnqueueOptions,
-  ) {
+  ): string[] {
     const list = normalizeUploadQueueEntries(files);
+    const taskIds: string[] = [];
     const startsNewBatch = !this.hasActiveTasks();
 
     if (startsNewBatch) {
@@ -221,8 +222,10 @@ export class UploadManager {
 
     for (const file of list) {
       this.progress.addFile(file.file.size);
+      const id = makeId();
+      taskIds.push(id);
       this.tasks.unshift({
-        id: makeId(),
+        id,
         nodeId,
         nodeLabel,
         fileName: file.file.name,
@@ -242,6 +245,7 @@ export class UploadManager {
     this.pruneFinishedTasks();
     this.emit();
     this.pump();
+    return taskIds;
   }
 
   private pruneFinishedTasks(): void {

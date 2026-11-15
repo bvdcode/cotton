@@ -35,7 +35,7 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
   }, [clear, disabled]);
 
   const handlers = {
-    onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
+    onPointerDown: (event: PointerEvent<HTMLElement>) => {
       cancel();
       held.current = false;
       if (disabled || event.button !== 0 || !event.isPrimary) {
@@ -52,7 +52,7 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
         setReady(true);
       }, HOLD_DELAY_MS);
     },
-    onPointerMove: (event: PointerEvent<HTMLButtonElement>) => {
+    onPointerMove: (event: PointerEvent<HTMLElement>) => {
       const origin = start.current;
       if (
         origin &&
@@ -63,7 +63,7 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
         cancel();
       }
     },
-    onPointerUp: (event: PointerEvent<HTMLButtonElement>) => {
+    onPointerUp: (event: PointerEvent<HTMLElement>) => {
       const activate =
         !disabled && held.current && start.current?.id === event.pointerId;
       cancel();
@@ -73,14 +73,14 @@ export const useLongPress = (onLongPress: () => void, disabled = false) => {
     },
     onPointerCancel: cancel,
     onPointerLeave: cancel,
-    onClickCapture: (event: MouseEvent<HTMLButtonElement>) => {
+    onClickCapture: (event: MouseEvent<HTMLElement>) => {
       if (held.current && event.detail !== 0) {
         held.current = false;
         event.preventDefault();
         event.stopPropagation();
       }
     },
-    onContextMenu: (event: MouseEvent<HTMLButtonElement>) => {
+    onContextMenu: (event: MouseEvent<HTMLElement>) => {
       event.preventDefault();
     },
   };

@@ -49,25 +49,7 @@ namespace Cotton.Server.Handlers.Routines
             await PublishAsync(routine.OwnerId, run, ct);
             try
             {
-                bool exists = await db.Nodes.AnyAsync(x => x.Id == routine.TargetNodeId && x.OwnerId == routine.OwnerId
-                    && x.Type == NodeType.Default && x.Layout.IsActive, ct);
-                if (!exists)
-                {
-                    run.Error = "WorkingFolderUnavailable";
-                    run.Status = RoutineRunStatus.Failed;
-                }
-                else
-                {
-                    switch (routine.Type)
-                    {
-                        case RoutineType.DeleteFiles:
-                            await DeleteFilesAsync(routine, run, now, ct);
-                            run.Status = RoutineRunStatus.Completed;
-                            break;
-                        default:
-                            throw new InvalidOperationException("Unsupported routine type.");
-                    }
-                }
+                await ExecuteAsync(routine, run, now, ct);
             }
             catch (OperationCanceledException exception) when (ct.IsCancellationRequested)
             {
@@ -87,6 +69,27 @@ namespace Cotton.Server.Handlers.Routines
             run.FinishedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
             await PublishAsync(routine.OwnerId, run, ct);
+        }
+
+        private async Task ExecuteAsync(Routine routine, RoutineRun run, DateTime now, CancellationToken ct)
+        {
+            bool exists = await db.Nodes.AnyAsync(x => x.Id == routine.TargetNodeId && x.OwnerId == routine.OwnerId
+                && x.Type == NodeType.Default && x.Layout.IsActive, ct);
+            if (!exists)
+            {
+                run.Error = "WorkingFolderUnavailable";
+                run.Status = RoutineRunStatus.Failed;
+                return;
+            }
+            switch (routine.Type)
+            {
+                case RoutineType.DeleteFiles:
+                    await DeleteFilesAsync(routine, run, now, ct);
+                    run.Status = RoutineRunStatus.Completed;
+                    break;
+                default:
+                    throw new InvalidOperationException("Unsupported routine type.");
+            }
         }
 
         private async Task DeleteFilesAsync(Routine routine, RoutineRun run, DateTime now, CancellationToken ct)

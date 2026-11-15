@@ -1,5 +1,12 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useLongPress } from "@shared/hooks/useLongPress";
 import { PageHeader, type PageHeaderProps } from "./PageHeader";
 
 vi.mock("react-i18next", () => ({
@@ -25,6 +32,30 @@ const defaultProps: PageHeaderProps = {
 
 function renderHeader(overrides: Partial<PageHeaderProps> = {}): void {
   render(<PageHeader {...defaultProps} {...overrides} />);
+}
+
+function SharingHeader({
+  onClick,
+  onHold,
+}: {
+  onClick: () => void;
+  onHold: () => void;
+}) {
+  const hold = useLongPress(onHold);
+  return (
+    <PageHeader
+      {...defaultProps}
+      customActionItems={[
+        {
+          key: "share",
+          title: "Share",
+          icon: <span />,
+          onClick,
+          hold: { ...hold, icon: <span />, title: "Share settings" },
+        },
+      ]}
+    />
+  );
 }
 
 it("keeps primary folder actions before creation actions and exposes their toggle state", () => {
@@ -72,10 +103,54 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
 describe("PageHeader", () => {
+  it("preserves the hold action and short click when sharing moves into overflow", () => {
+    vi.useFakeTimers();
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(64);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ width: 40, height: 40 }),
+    );
+    const onClick = vi.fn();
+    const onHold = vi.fn();
+    render(<SharingHeader onClick={onClick} onHold={onHold} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    );
+    const item = screen.getByRole("menuitem", { name: "Share" });
+    fireEvent(
+      item,
+      Object.assign(new Event("pointerdown", { bubbles: true }), {
+        pointerId: 1,
+        isPrimary: true,
+        button: 0,
+      }),
+    );
+    act(() => vi.advanceTimersByTime(600));
+    expect(item).toHaveTextContent("Share settings");
+    expect(onHold).not.toHaveBeenCalled();
+    fireEvent(
+      item,
+      Object.assign(new Event("pointerup", { bubbles: true }), {
+        pointerId: 1,
+      }),
+    );
+    fireEvent.click(item, { detail: 1 });
+    expect(onHold).toHaveBeenCalledOnce();
+    expect(onClick).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(300));
+    expect(screen.queryByRole("menu")).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Share" }));
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(onHold).toHaveBeenCalledOnce();
+  });
+
   it("uses overflow only when the minimum button widths exceed available space", () => {
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320);
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(

@@ -1636,6 +1636,17 @@
       "loadFailed": "Načtení sdíleného souboru selhalo.",
       "copyLink": "Zkopírování odkazu do schránky selhalo.",
       "fileTooLargePreview": "Soubor je příliš velký pro náhled ({{size}}). Pro zobrazení jej prosím stáhněte."
+    },
+    "dropBox": {
+      "ready": "Přetáhněte soubory sem",
+      "progress": "Nahrávání souborů",
+      "success": "Soubory nahrány",
+      "thanks": "Děkujeme za nahrání souborů.",
+      "uploaded": "Nahráno {{completed}} z {{total}} souborů",
+      "more": "Nahrát další soubory",
+      "add": "Přidat soubory",
+      "select": "Vybrat soubory",
+      "failed": "Soubor se nepodařilo nahrát. Zkuste to znovu."
     }
   },
   "login": {
@@ -2627,7 +2638,8 @@
         },
         "invalidDuration": "Zvolte dobu od 1 minuty do 10 let.",
         "create": "Vytvořit odkaz",
-        "link": "Veřejný odkaz"
+        "link": "Veřejný odkaz",
+        "hideFolderContent": "Skrýt obsah složky"
       }
     },
     "preview": {
