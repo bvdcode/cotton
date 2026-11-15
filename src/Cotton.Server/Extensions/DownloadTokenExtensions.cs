@@ -15,17 +15,11 @@ namespace Cotton.Server.Extensions
             Guid nodeFileId,
             CancellationToken ct = default)
         {
-            DownloadToken? downloadToken = await downloadTokens
-                .FirstOrDefaultAsync(
-                    x => x.Token == token && x.NodeFileId == nodeFileId,
-                    ct);
-
-            if (downloadToken?.ExpiresAt is DateTime expiresAt && expiresAt < DateTime.UtcNow)
-            {
-                return null;
-            }
-
-            return downloadToken;
+            DateTime now = DateTime.UtcNow;
+            return await downloadTokens.SingleOrDefaultAsync(
+                x => x.Token == token && x.NodeFileId == nodeFileId
+                    && (x.ExpiresAt == null || x.ExpiresAt > now),
+                ct);
         }
 
         public static void RegisterDeleteAfterUse(

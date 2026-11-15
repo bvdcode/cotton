@@ -421,8 +421,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("NodeFileId");
 
-                    b.HasIndex("Token")
-                        .IsUnique();
+                    b.HasIndex("Token");
 
                     b.ToTable("download_tokens");
                 });
@@ -842,8 +841,7 @@ namespace Cotton.Database.Migrations
 
                     b.HasIndex("NodeId");
 
-                    b.HasIndex("Token")
-                        .IsUnique();
+                    b.HasIndex("Token");
 
                     b.ToTable("node_share_tokens");
                 });

@@ -1,15 +1,16 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Abstractions;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
 {
-    [Index(nameof(Token), IsUnique = true)]
+    [Index(nameof(Token))]
     [Table("download_tokens")]
-    public class DownloadToken : BaseEntity<Guid>
+    public class DownloadToken : BaseEntity<Guid>, IPublicShareToken
     {
         [Column("file_name")]
         public string FileName { get; set; } = null!;
