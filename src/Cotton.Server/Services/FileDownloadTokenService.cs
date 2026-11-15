@@ -11,7 +11,7 @@ namespace Cotton.Server.Services
         : ProtectedTokenService(settings, "Cotton.FileDownload.Token.v1", "ctd1.", PayloadLength, logger)
     {
         private const int GuidSize = 16;
-        private const int PayloadLength = GuidSize * 2 + sizeof(long);
+        private const int PayloadLength = (GuidSize * 2) + sizeof(long);
 
         public string Create(Guid userId, Guid nodeFileId, TimeSpan lifetime)
         {
