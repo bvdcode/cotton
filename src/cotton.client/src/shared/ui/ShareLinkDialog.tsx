@@ -39,31 +39,9 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const linkInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(true);
-  const {
-    allowUpload,
-    setAllowUpload,
-    hideFolderContent,
-    setHideFolderContent,
-    name,
-    setName,
-    duration,
-    setDuration,
-    unit,
-    setUnit,
-    pending,
-    link,
-    error,
-    setError,
-    copied,
-    copyLabel,
-    minutes,
-    validName,
-    locked,
-    createLink,
-    copyLink,
-  } = useShareLinkForm(target);
+  const form = useShareLinkForm(target);
   const closeDialog = () => {
-    if (!pending) {
+    if (!form.pending) {
       setOpen(false);
     }
   };
@@ -97,7 +75,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
           },
           onSubmit: (event: React.FormEvent<HTMLDivElement>) => {
             event.preventDefault();
-            void createLink();
+            void form.createLink();
           },
         },
       }}
@@ -111,12 +89,12 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
                 label={t("share.options.allowUpload")}
                 control={
                   <Switch
-                    checked={allowUpload}
-                    disabled={locked}
+                    checked={form.allowUpload}
+                    disabled={form.locked}
                     onChange={(_, checked) => {
-                      setAllowUpload(checked);
+                      form.setAllowUpload(checked);
                       if (!checked) {
-                        setHideFolderContent(false);
+                        form.setHideFolderContent(false);
                       }
                     }}
                   />
@@ -126,33 +104,35 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
                 label={t("share.options.hideFolderContent")}
                 control={
                   <Switch
-                    checked={hideFolderContent}
-                    disabled={locked || !allowUpload}
-                    onChange={(_, checked) => setHideFolderContent(checked)}
+                    checked={form.hideFolderContent}
+                    disabled={form.locked || !form.allowUpload}
+                    onChange={(_, checked) =>
+                      form.setHideFolderContent(checked)
+                    }
                   />
                 }
               />
             </Stack>
           )}
-          {error && (
+          {form.error && (
             <Collapse in appear timeout={reducedMotion ? 0 : "auto"}>
-              <Alert severity="error">{error}</Alert>
+              <Alert severity="error">{form.error}</Alert>
             </Collapse>
           )}
           <TextField
             label={t("share.options.name")}
-            value={name}
+            value={form.name}
             onChange={(event) => {
-              setName(event.target.value);
-              setError("");
+              form.setName(event.target.value);
+              form.setError("");
             }}
             helperText={
-              validName
+              form.validName
                 ? t("share.options.nameHint")
                 : t("share.options.invalidName")
             }
-            error={!validName}
-            disabled={locked}
+            error={!form.validName}
+            disabled={form.locked}
             autoComplete="off"
             autoFocus
             fullWidth
@@ -165,14 +145,14 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
             }}
           />
           <Stack direction="row" spacing={1}>
-            {unit !== "never" && (
+            {form.unit !== "never" && (
               <TextField
                 label={t("share.options.duration")}
                 type="number"
-                value={duration}
-                onChange={(event) => setDuration(event.target.value)}
-                error={minutes === undefined}
-                disabled={locked}
+                value={form.duration}
+                onChange={(event) => form.setDuration(event.target.value)}
+                error={form.minutes === undefined}
+                disabled={form.locked}
                 fullWidth
                 slotProps={{
                   htmlInput: {
@@ -184,17 +164,17 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
             <TextField
               select
               label={t("share.options.unit")}
-              value={unit}
-              disabled={locked}
+              value={form.unit}
+              disabled={form.locked}
               fullWidth
               onChange={(event) => {
                 const selected = shareLinkDurationUnits.find(
                   (entry) => entry.key === event.target.value,
                 );
                 if (selected) {
-                  setUnit(selected.key);
-                  if (duration.length === 0) {
-                    setDuration("1");
+                  form.setUnit(selected.key);
+                  if (form.duration.length === 0) {
+                    form.setDuration("1");
                   }
                 }
               }}
@@ -206,12 +186,12 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
               ))}
             </TextField>
           </Stack>
-          {minutes === undefined && (
+          {form.minutes === undefined && (
             <Typography variant="caption" color="error">
               {t("share.options.invalidDuration")}
             </Typography>
           )}
-          {link && (
+          {form.link && (
             <Collapse
               in
               appear
@@ -221,7 +201,7 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
               <Box sx={{ pt: 1 }}>
                 <TextField
                   label={t("share.options.link")}
-                  value={link}
+                  value={form.link}
                   inputRef={linkInputRef}
                   fullWidth
                   slotProps={{
@@ -229,13 +209,13 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
                       readOnly: true,
                       endAdornment: (
                         <InputAdornment position="end">
-                          <Tooltip title={copyLabel}>
+                          <Tooltip title={form.copyLabel}>
                             <IconButton
-                              aria-label={copyLabel}
-                              onClick={() => void copyLink()}
+                              aria-label={form.copyLabel}
+                              onClick={() => void form.copyLink()}
                               edge="end"
                             >
-                              {copied ? <Check /> : <ContentCopy />}
+                              {form.copied ? <Check /> : <ContentCopy />}
                             </IconButton>
                           </Tooltip>
                         </InputAdornment>
@@ -249,15 +229,15 @@ export const ShareLinkDialog = ({ target, onClose }: ShareLinkDialogProps) => {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button color="inherit" onClick={closeDialog} disabled={pending}>
-          {link ? t("common:actions.close") : t("common:actions.cancel")}
+        <Button color="inherit" onClick={closeDialog} disabled={form.pending}>
+          {form.link ? t("common:actions.close") : t("common:actions.cancel")}
         </Button>
-        {!link && (
+        {!form.link && (
           <Button
             type="submit"
             variant="contained"
-            loading={pending}
-            disabled={!validName || minutes === undefined}
+            loading={form.pending}
+            disabled={!form.validName || form.minutes === undefined}
           >
             {t("share.options.create")}
           </Button>
