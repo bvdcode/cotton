@@ -6,6 +6,8 @@ using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
 using Cotton.Server.Handlers.Computation;
 using Cotton.Server.Handlers.Server;
+using Cotton.Server.Models.Computation;
+using Cotton.Server.Providers;
 using Cotton.Server.Services.Search;
 using Cotton.Topology;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -20,7 +22,7 @@ namespace Cotton.Server.Handlers.Layouts
 {
     public record SearchVectorLayoutHitsQuery(LayoutSearchRequest Search) : IRequest<IQueryable<LayoutSearchHit>?>;
 
-    public class SearchVectorLayoutHitsQueryHandler(CottonDbContext dbContext, IMediator mediator)
+    public class SearchVectorLayoutHitsQueryHandler(CottonDbContext dbContext, IMediator mediator, SettingsProvider settings)
         : IRequestHandler<SearchVectorLayoutHitsQuery, IQueryable<LayoutSearchHit>?>
     {
         public const int MaximumNearestFragments = 1000;
@@ -28,6 +30,19 @@ namespace Cotton.Server.Handlers.Layouts
         public async Task<IQueryable<LayoutSearchHit>?> Handle(
             SearchVectorLayoutHitsQuery request, CancellationToken cancellationToken)
         {
+            ServerSettingsSnapshot configuration = settings.GetServerSettings();
+            if (!configuration.AllowGlobalIndexing)
+            {
+                throw ConfigurationRequired();
+            }
+            _ = TextEmbeddingValidation.NormalizeUrl(GetComputationServiceInfoQueryHandler.ResolveConfiguredUrl(configuration));
+
+            PostgresIndexStatus index = await mediator.Send(new GetVectorIndexMetadataQuery(), cancellationToken);
+            if (!VectorIndexDefinition.IsReady(index))
+            {
+                throw ConfigurationRequired();
+            }
+
             LayoutSearchRequest search = request.Search;
             IQueryable<NodeFile> files = dbContext.NodeFiles.AsNoTracking().AccessibleTo(search.UserId).Where(file =>
                 file.Node.LayoutId == search.LayoutId
@@ -41,12 +56,6 @@ namespace Cotton.Server.Handlers.Layouts
             if (!await embeddings.AnyAsync(cancellationToken))
             {
                 return null;
-            }
-
-            PostgresIndexStatus index = await mediator.Send(new GetVectorIndexMetadataQuery(), cancellationToken);
-            if (!VectorIndexDefinition.IsReady(index))
-            {
-                throw new WebApiException(HttpStatusCode.ServiceUnavailable, string.Empty, "Smart search index is not ready.");
             }
 
             float[][] vectors = await mediator.Send(new GetTextEmbeddingsRequest([search.Query.Trim()]), cancellationToken);
@@ -77,6 +86,13 @@ namespace Cotton.Server.Handlers.Layouts
                        NameKey = file.NameKey,
                        Score = 1 - embedding.Distance,
                    };
+        }
+
+        private static WebApiException ConfigurationRequired()
+        {
+            return new WebApiException(HttpStatusCode.UnprocessableEntity, string.Empty,
+                "Smart search is not configured.",
+                new Dictionary<string, object?> { ["code"] = nameof(ComputationError.NotConfigured) });
         }
     }
 }

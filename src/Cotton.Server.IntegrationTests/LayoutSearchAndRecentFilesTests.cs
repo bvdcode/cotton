@@ -8,6 +8,20 @@ namespace Cotton.Server.IntegrationTests
     public class LayoutSearchAndRecentFilesTests : LayoutEndpointTestBase
     {
         [Test]
+        public async Task Search_DeepWithoutConfiguration_ReturnsActionableError()
+        {
+            _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync());
+            NodeDto root = (await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver"))!;
+
+            using HttpResponseMessage response = await _client.GetAsync(
+                $"/api/v1/layouts/{root.LayoutId}/search?query=report&deep=true");
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.UnprocessableEntity));
+            JsonElement problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.That(problem.GetProperty("code").GetString(), Is.EqualTo("NotConfigured"));
+        }
+
+        [Test]
         public async Task Search_ByNodeGuid_ReturnsOnlyExactNode()
         {
             string token = await LoginAsync();
