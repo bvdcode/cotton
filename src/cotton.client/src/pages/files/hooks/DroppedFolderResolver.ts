@@ -2,12 +2,14 @@ import { createNamedFolder } from "../../../shared/crypto/folderNameOperations";
 import { applyDisplayMetaToNode } from "../../../shared/crypto/folderDisplayMeta";
 import { lookupDisplayNames } from "../../../shared/crypto/lookupDisplayNames";
 import { type SiblingNameLookupDto } from "../../../shared/api/nodesApi";
+import type { NodeDto } from "../../../shared/api/layoutsApi";
 import {
   isFolderEncryptionPolicyEnabled,
   useVault,
 } from "../../../shared/crypto";
 import { useNodesStore } from "../../../shared/store/nodesStore";
 import { getFileNameKey } from "../../../shared/utils/fileNameUtils";
+import { uploadConfig } from "../../../shared/upload/config";
 import type { DroppedFile } from "./scanDroppedFiles";
 
 interface FolderBucket {
@@ -15,12 +17,25 @@ interface FolderBucket {
   files: File[];
 }
 
+interface FolderIdentity {
+  id: string;
+  name: string;
+}
+
+interface FolderTarget {
+  nodeId: string;
+  labelSuffix: string;
+}
+
+interface FolderLookup extends SiblingNameLookupDto {
+  foldersByNameKey: Map<string, NodeDto>;
+  fileNameKeys: Set<string>;
+}
+
 export class DroppedFolderResolver {
-  private readonly folderByKey = new Map<
-    string,
-    { id: string; name: string }
-  >();
-  private readonly lookupByNodeId = new Map<string, SiblingNameLookupDto>();
+  private readonly folderByKey = new Map<string, Promise<FolderIdentity>>();
+  private readonly targetByPath = new Map<string, Promise<FolderTarget>>();
+  private readonly lookupByNodeId = new Map<string, Promise<FolderLookup>>();
   private readonly requestedChildrenByPath = new Map<string, Set<string>>();
   private readonly policyEnabledByNodeId: Map<string, boolean>;
   private readonly rootNodeId: string;
@@ -54,21 +69,29 @@ export class DroppedFolderResolver {
     return { encrypt: vaultUnlocked, vaultLocked: !vaultUnlocked };
   }
 
-  private async getLookup(
+  private getLookup(
     id: string,
     pathKey: string,
     desiredName: string,
-  ): Promise<SiblingNameLookupDto> {
+  ): Promise<FolderLookup> {
     const cached = this.lookupByNodeId.get(id);
     if (cached) {
       return cached;
     }
     const names = this.requestedChildrenByPath.get(pathKey);
-    const lookup = await lookupDisplayNames(
+    const lookup = lookupDisplayNames(
       id,
       names ? [...names] : [desiredName],
       this.policyEnabledByNodeId.get(id) ?? this.isPolicyEnabledForNode(id),
-    );
+    ).then((result) => ({
+      ...result,
+      foldersByNameKey: new Map(
+        result.nodes.map((node) => [getFileNameKey(node.name), node]),
+      ),
+      fileNameKeys: new Set(
+        result.files.map((file) => getFileNameKey(file.name)),
+      ),
+    }));
     this.lookupByNodeId.set(id, lookup);
     return lookup;
   }
@@ -107,11 +130,11 @@ export class DroppedFolderResolver {
     return `${baseName}-${Date.now()}`;
   }
 
-  private async ensureFolder(
+  private ensureFolder(
     parentId: string,
     desiredName: string,
     parentPathKey: string,
-  ): Promise<{ id: string; name: string }> {
+  ): Promise<FolderIdentity> {
     const desiredNameKey = getFileNameKey(desiredName);
     const key = `${parentId}::${desiredNameKey}`;
     const cachedFolder = this.folderByKey.get(key);
@@ -119,16 +142,24 @@ export class DroppedFolderResolver {
       return cachedFolder;
     }
 
+    const folder = this.resolveFolder(parentId, desiredName, parentPathKey);
+    this.folderByKey.set(key, folder);
+    return folder;
+  }
+
+  private async resolveFolder(
+    parentId: string,
+    desiredName: string,
+    parentPathKey: string,
+  ): Promise<FolderIdentity> {
+    const desiredNameKey = getFileNameKey(desiredName);
     const lookup = await this.getLookup(parentId, parentPathKey, desiredName);
-    const existing = lookup.nodes.find(
-      (node) => getFileNameKey(node.name) === desiredNameKey,
-    );
+    const existing = lookup.foldersByNameKey.get(desiredNameKey);
     if (existing) {
       const parentPolicyEnabled =
         this.policyEnabledByNodeId.get(parentId) ??
         this.isPolicyEnabledForNode(parentId);
       const folder = { id: existing.id, name: existing.name };
-      this.folderByKey.set(key, folder);
       this.policyEnabledByNodeId.set(
         existing.id,
         parentPolicyEnabled ||
@@ -137,36 +168,66 @@ export class DroppedFolderResolver {
       return folder;
     }
 
-    const hasFileConflict = lookup.files.some(
-      (file) => getFileNameKey(file.name) === desiredNameKey,
-    );
+    const hasFileConflict = lookup.fileNameKeys.has(desiredNameKey);
     const nameToCreate = hasFileConflict
       ? await this.findAvailableFolderName(parentId, desiredName, lookup)
       : desiredName;
 
+    const aliasKey = `${parentId}::${getFileNameKey(nameToCreate)}`;
+    if (getFileNameKey(nameToCreate) !== desiredNameKey) {
+      const alias = this.folderByKey.get(aliasKey);
+      if (alias) {
+        return alias;
+      }
+    }
+
+    const folder = this.createFolder(parentId, nameToCreate, lookup);
+    this.folderByKey.set(aliasKey, folder);
+    return folder;
+  }
+
+  private async createFolder(
+    parentId: string,
+    name: string,
+    lookup: FolderLookup,
+  ): Promise<FolderIdentity> {
     const parentPolicyEnabled =
       this.policyEnabledByNodeId.get(parentId) ??
       this.isPolicyEnabledForNode(parentId);
-    const folder = await createNamedFolder(
-      parentId,
-      nameToCreate,
-      parentPolicyEnabled,
-    );
+    const folder = await createNamedFolder(parentId, name, parentPolicyEnabled);
     this.policyEnabledByNodeId.set(folder.id, parentPolicyEnabled);
-    lookup.nodes.push(await applyDisplayMetaToNode(folder));
+    this.lookupByNodeId.set(
+      folder.id,
+      Promise.resolve({
+        nodes: [],
+        files: [],
+        takenNameKeys: [],
+        foldersByNameKey: new Map<string, NodeDto>(),
+        fileNameKeys: new Set<string>(),
+      }),
+    );
+    const displayFolder = await applyDisplayMetaToNode(folder);
+    lookup.nodes.push(displayFolder);
+    lookup.foldersByNameKey.set(
+      getFileNameKey(displayFolder.name),
+      displayFolder,
+    );
     useNodesStore.getState().addFolderToCache(parentId, folder);
-    this.folderByKey.set(key, { id: folder.id, name: nameToCreate });
-    this.folderByKey.set(`${parentId}::${getFileNameKey(nameToCreate)}`, {
-      id: folder.id,
-      name: nameToCreate,
-    });
-
-    return { id: folder.id, name: nameToCreate };
+    return { id: folder.id, name };
   }
 
-  private async ensureFolderPath(
-    segments: string[],
-  ): Promise<{ nodeId: string; labelSuffix: string }> {
+  private ensureFolderPath(segments: string[]): Promise<FolderTarget> {
+    const key = segments.map(getFileNameKey).join("/");
+    const cached = this.targetByPath.get(key);
+    if (cached) {
+      return cached;
+    }
+    const target = this.resolveFolderPath(segments);
+    this.targetByPath.set(key, target);
+    return target;
+  }
+
+  private async resolveFolderPath(segments: string[]): Promise<FolderTarget> {
     let currentId = this.rootNodeId;
     let parentPathKey = "";
     const effectiveSegments: string[] = [];
@@ -193,6 +254,7 @@ export class DroppedFolderResolver {
     onProgress: (processed: number) => void,
   ): Promise<Map<string, FolderBucket>> {
     const filesByTarget = new Map<string, FolderBucket>();
+    const paths: string[][] = [];
     this.requestedChildrenByPath.clear();
     for (const item of dropped) {
       const parts = item.relativePath
@@ -200,12 +262,10 @@ export class DroppedFolderResolver {
         .split(/[\\/]+/)
         .filter((part) => part.length > 0);
       parts.pop();
+      const segments = parts.map((part) => part.trim()).filter(Boolean);
+      paths.push(segments);
       let parentPathKey = "";
-      for (const raw of parts) {
-        const segment = raw.trim();
-        if (segment.length === 0) {
-          continue;
-        }
+      for (const segment of segments) {
         const names =
           this.requestedChildrenByPath.get(parentPathKey) ?? new Set<string>();
         names.add(segment);
@@ -215,27 +275,39 @@ export class DroppedFolderResolver {
     }
     onProgress(0);
 
-    for (let index = 0; index < dropped.length; index += 1) {
-      onProgress(index);
-
-      const item = dropped[index];
-      const normalized = item.relativePath.replace(/^\\+|^\/+/, "");
-      const parts = normalized
-        .split(/[\\/]+/)
-        .filter((part) => part.length > 0);
-
-      if (parts.length === 0) {
-        const bucket = filesByTarget.get(this.rootNodeId) ?? {
-          label: this.baseLabel,
-          files: [],
-        };
-        bucket.files.push(item.file);
-        filesByTarget.set(this.rootNodeId, bucket);
-        continue;
+    const targets: FolderTarget[] = [];
+    let nextIndex = 0;
+    let processed = 0;
+    let stopped = false;
+    const resolveNext = async () => {
+      while (!stopped && nextIndex < dropped.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        targets[index] = await this.ensureFolderPath(paths[index]);
+        processed += 1;
+        onProgress(processed);
       }
+    };
+    const workers = Array.from(
+      {
+        length: Math.min(
+          uploadConfig.maxConcurrentFolderCreations,
+          dropped.length,
+        ),
+      },
+      resolveNext,
+    );
+    try {
+      await Promise.all(workers);
+    } catch (error) {
+      stopped = true;
+      await Promise.allSettled(workers);
+      throw error;
+    }
 
-      parts.pop();
-      const { nodeId, labelSuffix } = await this.ensureFolderPath(parts);
+    for (let index = 0; index < dropped.length; index += 1) {
+      const item = dropped[index];
+      const { nodeId, labelSuffix } = targets[index];
       const label =
         labelSuffix.length > 0
           ? `${this.baseLabel} / ${labelSuffix}`

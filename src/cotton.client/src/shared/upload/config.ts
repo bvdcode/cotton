@@ -22,6 +22,8 @@ export const uploadConfig = {
   // and opens more lanes only after uploads prove they benefit from it.
   maxConcurrentFileUploads: 4,
 
+  maxConcurrentFolderCreations: 4,
+
   // A completed transfer faster than this is likely latency/overhead-bound,
   // so opening another lane usually improves throughput.
   concurrencyRampUpMs: 1200,
