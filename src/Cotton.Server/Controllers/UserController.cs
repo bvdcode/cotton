@@ -127,8 +127,7 @@ namespace Cotton.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequest request, CancellationToken cancellationToken)
         {
-            AdminCreateUserRequest command = new(request.Username, request.Email, request.Password, request.Role);
-            UserDto user = await _mediator.Send(command, cancellationToken);
+            UserDto user = await _mediator.Send(request, cancellationToken);
             return Ok(user);
         }
 

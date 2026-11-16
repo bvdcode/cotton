@@ -20,7 +20,10 @@ namespace Cotton.Server.IntegrationTests
                     Username = "  New.User-1  ",
                     Email = "  new.user@example.com  ",
                     Password = "UserPass_123",
-                    Role = UserRole.User
+                    Role = UserRole.User,
+                    FirstName = "Иван",
+                    LastName = "Петров",
+                    BirthDate = new DateOnly(1990, 5, 10)
                 });
 
             createResponse.EnsureSuccessStatusCode();
@@ -32,6 +35,19 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(created!.Username, Is.EqualTo("new.user-1"));
                 Assert.That(created.Email, Is.EqualTo("new.user@example.com"));
                 Assert.That(created.Role, Is.EqualTo((int)UserRole.User));
+                Assert.That(created.FirstName, Is.EqualTo("Иван"));
+                Assert.That(created.LastName, Is.EqualTo("Петров"));
+                Assert.That(created.BirthDate, Is.EqualTo(new DateOnly(1990, 5, 10)));
+            });
+
+            List<AdminUserDto>? users = await _client.GetFromJsonAsync<List<AdminUserDto>>("/api/v1/users");
+            Assert.That(users, Is.Not.Null);
+            AdminUserDto stored = users!.Single(user => user.Id == created!.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(stored.FirstName, Is.EqualTo("Иван"));
+                Assert.That(stored.LastName, Is.EqualTo("Петров"));
+                Assert.That(stored.BirthDate, Is.EqualTo(new DateOnly(1990, 5, 10)));
             });
         }
 
