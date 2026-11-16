@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "A pesquisa inteligente não está configurada. Aceda a Administração → Pesquisa inteligente para a configurar.",
+      "contactAdministrator": "A pesquisa inteligente não está configurada. Contacte o administrador.",
+      "configure": "Configurar",
       "label": "Pesquisa inteligente",
       "enable": "Ativar pesquisa inteligente",
       "disable": "Desativar pesquisa inteligente",

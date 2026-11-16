@@ -24,6 +24,7 @@ import {
 } from "../../shared/store/userPreferencesStore";
 import { useDictionaryMatch } from "./hooks/useDictionaryMatch";
 import { useSearchPagination } from "./hooks/useSearchPagination";
+import { useSmartSearchSetupNotification } from "./hooks/useSmartSearchSetupNotification";
 import { useSearchContentRows } from "./hooks/useSearchContentRows";
 import { useSearchHistory } from "./hooks/useSearchHistory";
 import { SearchHistoryPanel } from "./components/SearchHistoryPanel";
@@ -68,6 +69,7 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
     deep,
     toggleDeep,
   } = useSearchPagination({ trimmedQuery, layoutId, currentNodeId });
+  const configurationRequired = useSmartSearchSetupNotification(error, onClose);
 
   const hasSearchQuery = debouncedQuery.length > 0;
   const matchedDictionaryRows = useDictionaryMatch(debouncedQuery);
@@ -344,7 +346,9 @@ export const SearchModal = ({ open, onClose }: SearchModalProps) => {
             }}
           />
 
-          {error && <Alert severity="error">{t(error)}</Alert>}
+          {error && !configurationRequired && (
+            <Alert severity="error">{t(error)}</Alert>
+          )}
 
           {showSearchHistory && (
             <Box

@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "Slim zoeken is niet ingesteld. Ga naar Beheer → Slim zoeken om het in te stellen.",
+      "contactAdministrator": "Slim zoeken is niet ingesteld. Neem contact op met je beheerder.",
+      "configure": "Instellen",
       "label": "Slim zoeken",
       "enable": "Slim zoeken inschakelen",
       "disable": "Slim zoeken uitschakelen",

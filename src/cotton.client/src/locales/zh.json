@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "智能搜索尚未配置。请前往“管理 → 智能搜索”进行设置。",
+      "contactAdministrator": "智能搜索尚未配置。请联系管理员。",
+      "configure": "设置",
       "label": "智能搜索",
       "enable": "开启智能搜索",
       "disable": "关闭智能搜索",

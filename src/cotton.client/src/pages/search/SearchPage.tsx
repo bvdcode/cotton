@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useRootNodeQuery } from "../../shared/api/queries/layouts";
 import { SearchBar } from "./components/SearchBar";
 import { useLayoutSearch } from "./hooks/useLayoutSearch";
+import { useSmartSearchSetupNotification } from "../../features/search/hooks/useSmartSearchSetupNotification";
 import { SearchHistoryPanel } from "../../features/search/components/SearchHistoryPanel";
 import { useSearchHistory } from "../../features/search/hooks/useSearchHistory";
 import { FileListViewFactory } from "../files/components";
@@ -58,6 +59,7 @@ export const SearchPage: React.FC = () => {
     deep,
     toggleDeep,
   } = searchState;
+  const configurationRequired = useSmartSearchSetupNotification(error);
   const trimmedSearchQuery = query.trim();
   const {
     entries: searchHistoryEntries,
@@ -184,7 +186,7 @@ export const SearchPage: React.FC = () => {
         onToggleDeep={toggleDeep}
       />
 
-      {error && (
+      {error && !configurationRequired && (
         <Box
           sx={{
             mb: 2,

@@ -2,6 +2,8 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LayoutSearchResult } from "../../../shared/api/layoutsApi";
 import { useLayoutSearch } from "./useLayoutSearch";
+import { AxiosError } from "axios";
+import { createHttpResponse } from "../../../test/httpFixtures";
 
 const mocks = vi.hoisted(() => ({ search: vi.fn() }));
 vi.mock("../../../shared/api/layoutsApi", () => ({
@@ -26,6 +28,27 @@ const setup = () =>
   );
 
 describe("useLayoutSearch", () => {
+  it("reports missing configuration from the smart-search response", async () => {
+    const error = new AxiosError(
+      "Configuration required",
+      undefined,
+      undefined,
+      undefined,
+      {
+        ...createHttpResponse({ code: "NotConfigured" }),
+        status: 422,
+      },
+    );
+    mocks.search.mockResolvedValueOnce(response()).mockRejectedValueOnce(error);
+
+    const { result } = setup();
+    await flush();
+
+    expect(result.current.error).toBe("smartSearch.notConfigured");
+    expect(result.current.loading).toBe(false);
+    expect(mocks.search).toHaveBeenCalledTimes(2);
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     mocks.search.mockImplementation(() => new Promise(() => {}));

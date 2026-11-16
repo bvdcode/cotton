@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "Smart search is not configured. Go to Administration → Smart search to set it up.",
+      "contactAdministrator": "Smart search is not configured. Contact your administrator.",
+      "configure": "Configure",
       "label": "Smart search",
       "enable": "Enable smart search",
       "disable": "Disable smart search",

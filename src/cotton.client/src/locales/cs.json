@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "Chytré vyhledávání není nastaveno. Otevřete Správa → Chytré vyhledávání a nastavte ho.",
+      "contactAdministrator": "Chytré vyhledávání není nastaveno. Obraťte se na správce.",
+      "configure": "Nastavit",
       "label": "Chytré vyhledávání",
       "enable": "Zapnout chytré vyhledávání",
       "disable": "Vypnout chytré vyhledávání",

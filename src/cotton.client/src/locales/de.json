@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "Die intelligente Suche ist nicht eingerichtet. Öffnen Sie Verwaltung → Intelligente Suche, um sie einzurichten.",
+      "contactAdministrator": "Die intelligente Suche ist nicht eingerichtet. Wenden Sie sich an Ihre Administration.",
+      "configure": "Einrichten",
       "label": "Intelligente Suche",
       "enable": "Intelligente Suche aktivieren",
       "disable": "Intelligente Suche deaktivieren",
