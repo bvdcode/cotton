@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getAllFilesFromItems } from "./scanDroppedFiles";
+import { getAllFilesFromEntries, getDroppedEntries } from "./scanDroppedFiles";
+
+const getAllFilesFromItems = (
+  items: DataTransferItemList,
+  onFileFound: (count: number) => void,
+) => getAllFilesFromEntries(getDroppedEntries(items), onFileFound);
 
 const unusedEntryMethod = (): never => {
   throw new Error("Unexpected filesystem operation.");
@@ -134,5 +139,28 @@ describe("dropped directory paths", () => {
     );
 
     expect(result.files[0].relativePath).toBe("one.jpg");
+  });
+
+  it("finishes outstanding reads before reporting a scan failure", async () => {
+    const broken = fileEntry("/broken.jpg");
+    const blocked = fileEntry("/blocked.jpg");
+    const error = new DOMException("Cannot read file", "NotReadableError");
+    broken.file = (_success, failure) => failure?.(error);
+    let release!: () => void;
+    blocked.file = (success) => {
+      release = () => success(new File(["data"], "blocked.jpg"));
+    };
+    let settled = false;
+    const pending = getAllFilesFromEntries([broken, blocked], () => {}).catch(
+      (failure: Error) => {
+        settled = true;
+        return failure;
+      },
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    release();
+    expect(await pending).toBe(error);
   });
 });

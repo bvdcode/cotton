@@ -98,15 +98,26 @@ it("shares pending ancestors and treats newly created folders as empty", async (
     { file: new File(["d"], "d.txt"), relativePath: "PHOTOS/DAY/d.txt" },
   ];
 
-  const grouped = await new DroppedFolderResolver(
+  const resolver = new DroppedFolderResolver(
     "root",
     "Files",
     false,
     () => false,
-  ).groupFiles(dropped, () => {});
+  );
+  const grouped = await resolver.groupFiles(dropped, () => {});
+  const knownContents = await resolver.lookupFileNames(
+    "root/Photos",
+    ["Day"],
+    false,
+  );
+  await resolver.lookupFileNames("root/Photos/Day", ["a.txt"], false);
 
   expect(create).toHaveBeenCalledTimes(3);
   expect(lookup).toHaveBeenCalledOnce();
+  expect(knownContents.nodes.map((node) => node.name)).toEqual([
+    "Day",
+    "Night",
+  ]);
   expect(grouped.get("root/Photos/Day")).toEqual({
     label: "Files / Photos / Day",
     files: [dropped[0].file, dropped[1].file, dropped[3].file],

@@ -28,6 +28,7 @@ import { globalHashWorkerPool } from "./hash/HashWorkerPool";
 import {
   normalizeUploadQueueEntries,
   type UploadQueueEntry,
+  type UploadQueueBatch,
 } from "./UploadQueueEntries";
 import type {
   AppTaskHandle,
@@ -56,7 +57,7 @@ const PRUNE_INTERVAL_MS = 5 * 60 * 1000;
 
 export class UploadManager {
   private readonly listeners = new Set<Listener>();
-  private readonly tasks: UploadTaskInternal[] = [];
+  private tasks: UploadTaskInternal[] = [];
   private readonly external = new UploadExternalTasks(() => this.emit());
   private pumping = false;
   private readonly runner = new UploadTaskRunner({
@@ -208,38 +209,45 @@ export class UploadManager {
     nodeLabel: string,
     options?: EnqueueOptions,
   ): string[] {
-    const list = normalizeUploadQueueEntries(files);
+    return this.enqueueBatch([{ files, nodeId, nodeLabel, options }]);
+  }
+
+  enqueueBatch(batches: UploadQueueBatch[]): string[] {
     const taskIds: string[] = [];
+    const added: UploadTaskInternal[] = [];
     const startsNewBatch = !this.hasActiveTasks();
 
     if (startsNewBatch) {
       this.progress.beginBatch();
       this.runner.reset();
-      if (!options?.sharedUpload) {
+      if (batches.some((batch) => !batch.options?.sharedUpload)) {
         this.quota.beginBatch();
       }
     }
 
-    for (const file of list) {
-      this.progress.addFile(file.file.size);
-      const id = makeId();
-      taskIds.push(id);
-      this.tasks.unshift({
-        id,
-        nodeId,
-        nodeLabel,
-        fileName: file.file.name,
-        bytesTotal: file.file.size,
-        bytesUploaded: 0,
-        progress01: 0,
-        status: "queued",
-        _file: file.file,
-        _sharedUpload: options?.sharedUpload,
-        _encrypt: file.encrypt === true || options?.encrypt === true,
-        _replaceNodeFileId: file.replaceNodeFileId,
-        _onFileUploaded: options?.onFileUploaded,
-      });
+    for (const { files, nodeId, nodeLabel, options } of batches) {
+      for (const file of normalizeUploadQueueEntries(files)) {
+        this.progress.addFile(file.file.size);
+        const id = makeId();
+        taskIds.push(id);
+        added.push({
+          id,
+          nodeId,
+          nodeLabel,
+          fileName: file.file.name,
+          bytesTotal: file.file.size,
+          bytesUploaded: 0,
+          progress01: 0,
+          status: "queued",
+          _file: file.file,
+          _sharedUpload: options?.sharedUpload,
+          _encrypt: file.encrypt === true || options?.encrypt === true,
+          _replaceNodeFileId: file.replaceNodeFileId,
+          _onFileUploaded: options?.onFileUploaded,
+        });
+      }
     }
+    this.tasks = added.reverse().concat(this.tasks);
 
     this.open = true;
     this.pruneFinishedTasks();

@@ -36,6 +36,7 @@ export class DroppedFolderResolver {
   private readonly folderByKey = new Map<string, Promise<FolderIdentity>>();
   private readonly targetByPath = new Map<string, Promise<FolderTarget>>();
   private readonly lookupByNodeId = new Map<string, Promise<FolderLookup>>();
+  private readonly createdFolderLookups = new Map<string, FolderLookup>();
   private readonly requestedChildrenByPath = new Map<string, Set<string>>();
   private readonly policyEnabledByNodeId: Map<string, boolean>;
   private readonly rootNodeId: string;
@@ -67,6 +68,14 @@ export class DroppedFolderResolver {
 
     const vaultUnlocked = useVault.getState().isUnlocked;
     return { encrypt: vaultUnlocked, vaultLocked: !vaultUnlocked };
+  }
+
+  lookupFileNames(nodeId: string, names: string[], encrypted: boolean) {
+    const created = this.createdFolderLookups.get(nodeId);
+    if (created) {
+      return Promise.resolve(created);
+    }
+    return lookupDisplayNames(nodeId, names, encrypted);
   }
 
   private getLookup(
@@ -196,16 +205,15 @@ export class DroppedFolderResolver {
       this.isPolicyEnabledForNode(parentId);
     const folder = await createNamedFolder(parentId, name, parentPolicyEnabled);
     this.policyEnabledByNodeId.set(folder.id, parentPolicyEnabled);
-    this.lookupByNodeId.set(
-      folder.id,
-      Promise.resolve({
-        nodes: [],
-        files: [],
-        takenNameKeys: [],
-        foldersByNameKey: new Map<string, NodeDto>(),
-        fileNameKeys: new Set<string>(),
-      }),
-    );
+    const contents: FolderLookup = {
+      nodes: [],
+      files: [],
+      takenNameKeys: [],
+      foldersByNameKey: new Map<string, NodeDto>(),
+      fileNameKeys: new Set<string>(),
+    };
+    this.createdFolderLookups.set(folder.id, contents);
+    this.lookupByNodeId.set(folder.id, Promise.resolve(contents));
     const displayFolder = await applyDisplayMetaToNode(folder);
     lookup.nodes.push(displayFolder);
     lookup.foldersByNameKey.set(
