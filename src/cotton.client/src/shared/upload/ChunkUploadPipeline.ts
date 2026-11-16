@@ -235,7 +235,7 @@ export class ChunkUploadPipeline {
         const chunkBytes = getChunkLength(prepared.segment);
         await chunksApi.uploadChunk({
           sharedUpload: this.options.sharedUpload,
-          blob: new Blob([prepared.buffer], { type: prepared.contentType }),
+          buffer: prepared.buffer,
           fileName: this.options.fileName,
           hash: prepared.hash,
           signal: this.abortController.signal,

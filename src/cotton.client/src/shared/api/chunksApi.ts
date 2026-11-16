@@ -17,7 +17,7 @@ export const chunksApi = {
   },
 
   uploadChunk: async (options: {
-    blob: Blob;
+    buffer: ArrayBuffer;
     sharedUpload?: SharedUploadContext & { nodeId: string };
     fileName: string;
     hash?: string | null;
@@ -32,7 +32,8 @@ export const chunksApi = {
     const url = access
       ? `layouts/shared/${encodeURIComponent(access.token)}/chunks/raw`
       : "chunks/raw";
-    await httpClient.post(url, options.blob, {
+    const byteLength = options.buffer.byteLength;
+    await httpClient.post(url, options.buffer, {
       params: {
         hash: options.hash,
         nodeId: access?.nodeId,
@@ -49,10 +50,10 @@ export const chunksApi = {
 
         const total = event.total ?? 0;
         const bytesUploaded =
-          total > 0 ? (event.loaded / total) * options.blob.size : event.loaded;
+          total > 0 ? (event.loaded / total) * byteLength : event.loaded;
 
         options.onProgress(
-          Math.floor(Math.max(0, Math.min(options.blob.size, bytesUploaded))),
+          Math.floor(Math.max(0, Math.min(byteLength, bytesUploaded))),
         );
       },
     });

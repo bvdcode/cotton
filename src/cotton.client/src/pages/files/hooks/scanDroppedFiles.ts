@@ -68,13 +68,8 @@ export const getAllFilesFromItems = async (
         }
         throw e;
       }
-      const clonedFile = new File([file], file.name, {
-        type: file.type,
-        lastModified: file.lastModified,
-      });
-
       const relativePath = entry.fullPath.replace(/^\/+/, "");
-      files.push({ file: clonedFile, relativePath });
+      files.push({ file, relativePath });
       notify();
     } else if (isDirectoryEntry(entry)) {
       const reader = entry.createReader();

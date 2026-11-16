@@ -70,6 +70,25 @@ const droppedItems = (entry: FileSystemEntry): DataTransferItemList => ({
 });
 
 describe("dropped directory paths", () => {
+  it("retains the filesystem File objects without wrapping their content in new files", async () => {
+    const entries = [
+      fileEntry("/Photos/one.jpg"),
+      fileEntry("/Photos/two.jpg"),
+    ];
+    const originals: File[] = [];
+    for (const entry of entries) {
+      entry.file((file) => originals.push(file));
+    }
+    const root = directoryEntry("/Photos", [entries]);
+
+    const result = await getAllFilesFromItems(droppedItems(root), () => {});
+
+    expect(result.files).toHaveLength(originals.length);
+    for (let index = 0; index < originals.length; index += 1) {
+      expect(result.files[index].file).toBe(originals[index]);
+    }
+  });
+
   it("keeps the top directory and nested paths for native entry properties", async () => {
     const first = fileEntry("/Photos/one.jpg");
     const nested = directoryEntry("/Photos/Trip", [
