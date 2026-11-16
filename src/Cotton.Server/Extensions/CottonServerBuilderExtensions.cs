@@ -5,6 +5,7 @@ using Cotton.Autoconfig.Extensions;
 using Cotton.Database;
 using Cotton.Database.Integrity;
 using Cotton.Server.Abstractions;
+using Cotton.Server.Logging;
 using Cotton.Server.Mappings;
 using Cotton.Server.Models.Configuration;
 using Cotton.Server.Providers;
@@ -179,10 +180,12 @@ namespace Cotton.Server.Extensions
                 .AddScoped<IStorageBackendProvider, StorageBackendProvider>()
                 .AddScoped<MasterKeyValidator>()
                 .AddScoped<MasterKeyStartupValidator>()
+                .AddSingleton<DatabaseLoggerFactory>()
                 .AddPostgresDbContext<CottonDbContext>(
                     x => x.UseLazyLoadingProxies = false,
-                    (sp, options) => options.AddInterceptors(
-                        sp.GetRequiredService<DatabaseIntegritySaveChangesInterceptor>()))
+                    (sp, options) => options
+                        .UseLoggerFactory(sp.GetRequiredService<DatabaseLoggerFactory>())
+                        .AddInterceptors(sp.GetRequiredService<DatabaseIntegritySaveChangesInterceptor>()))
                 .AddSingleton<ILayoutMutationGate, LayoutMutationGate>()
                 .AddScoped<ILayoutService, StorageLayoutService>()
                 .AddScoped<ILayoutNavigator, LayoutNavigator>()

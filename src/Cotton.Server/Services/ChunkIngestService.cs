@@ -5,6 +5,7 @@ using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Server.Abstractions;
 using Cotton.Server.Jobs;
+using Cotton.Server.Logging;
 using Cotton.Server.Providers;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Pipelines;
@@ -13,7 +14,6 @@ using Cotton.Topology.Abstractions;
 using EasyExtensions.AspNetCore.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Npgsql;
 using System.Security.Cryptography;
 
 namespace Cotton.Server.Services
@@ -137,14 +137,15 @@ namespace Cotton.Server.Services
             Guid userId,
             CancellationToken ct)
         {
+            using ChunkUpsertConflictScope conflictScope = new();
             try
             {
                 await _dbContext.SaveChangesAsync(ct);
                 return chunk;
             }
-            catch (DbUpdateException ex) when (IsConcurrentChunkUpsertConflict(ex))
+            catch (DbUpdateException ex) when (ChunkUpsertConflictScope.IsConflict(ex))
             {
-                _logger.LogDebug(ex, "Chunk {Hash} metadata was upserted concurrently, reloading", storageKey);
+                _logger.LogDebug("Chunk {Hash} metadata was upserted concurrently, reloading", storageKey);
                 DetachPendingChunkUpsert(chunkHash, userId);
             }
 
@@ -155,9 +156,9 @@ namespace Cotton.Server.Services
             {
                 await _dbContext.SaveChangesAsync(ct);
             }
-            catch (DbUpdateException ex) when (IsConcurrentChunkUpsertConflict(ex))
+            catch (DbUpdateException ex) when (ChunkUpsertConflictScope.IsConflict(ex))
             {
-                _logger.LogDebug(ex, "Chunk {Hash} ownership was upserted concurrently, reusing existing metadata", storageKey);
+                _logger.LogDebug("Chunk {Hash} ownership was upserted concurrently, reusing existing metadata", storageKey);
                 DetachPendingChunkUpsert(chunkHash, userId);
             }
 
@@ -192,15 +193,6 @@ namespace Cotton.Server.Services
                     entry.State = EntityState.Detached;
                 }
             }
-        }
-
-        private static bool IsConcurrentChunkUpsertConflict(DbUpdateException ex)
-        {
-            return ex.InnerException is PostgresException
-            {
-                SqlState: PostgresErrorCodes.UniqueViolation,
-                TableName: "chunks" or "chunk_ownerships"
-            };
         }
 
         private async Task WaitForGarbageCollectionAsync(string storageKey, CancellationToken ct)
