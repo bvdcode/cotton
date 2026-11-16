@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getApiErrorMessage } from "@shared/api/httpClient";
 import {
+  useComputationStatusQuery,
   useEnableVectorExtensionMutation,
   useTriggerFileIndexingMutation,
   useVectorExtensionStatusQuery,
@@ -22,6 +23,7 @@ export const useSmartSearchSetup = () => {
     saveErrorMessage: t("settings.errors.saveFailed"),
   });
   const statusQuery = useVectorExtensionStatusQuery();
+  const computation = useComputationStatusQuery();
   const enableMutation = useEnableVectorExtensionMutation();
   const triggerMutation = useTriggerFileIndexingMutation();
   const [environment, setEnvironment] = useState<"docker" | "native">("docker");
@@ -51,7 +53,10 @@ export const useSmartSearchSetup = () => {
     });
   };
   const refresh = async () => {
-    const result = await statusQuery.refetch();
+    const [result] = await Promise.all([
+      statusQuery.refetch(),
+      computation.refetch(),
+    ]);
     if (
       result.isSuccess &&
       (result.data.extensionEnabled || failure !== "pgvector_permission_denied")
@@ -68,6 +73,7 @@ export const useSmartSearchSetup = () => {
   return {
     indexing,
     statusQuery,
+    computation,
     enableMutation,
     triggerMutation,
     environment,
@@ -84,6 +90,11 @@ export const useSmartSearchSetup = () => {
     loadError:
       getApiErrorMessage(statusQuery.error) ??
       t("smartSearch.errors.loadFailed"),
-    canTriggerIndexing: indexing.savedValue && Boolean(status?.indexReady),
+    canTriggerIndexing:
+      indexing.savedValue &&
+      Boolean(status?.indexReady) &&
+      !statusQuery.isError &&
+      computation.data?.isReady === true &&
+      !computation.isError,
   };
 };

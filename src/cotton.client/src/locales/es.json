@@ -2937,13 +2937,10 @@
   },
   "admin": {
     "smartSearch": {
-      "progress": "Archivos con vectores: {{indexed}} de {{total}}",
+      "progress": "Archivos procesados: {{indexed}} de {{total}}",
       "indexingProgress": "Progreso de indexación de archivos",
       "indexingDisabled": "Activa la indexación del contenido de los archivos para usar la búsqueda inteligente.",
       "indexingRequested": "Se ha solicitado la indexación.",
-      "computation": {
-        "checkSettings": "Comprueba la conexión al servicio de cálculo en"
-      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Búsqueda inteligente",
@@ -3006,6 +3003,27 @@
         "incompatible": "Otro índice utiliza el nombre del índice de búsqueda. Compruebe su definición en PostgreSQL.",
         "invalidData": "Los vectores de la versión 1 deben contener 1024 números finitos. Corrija los datos y vuelva a intentarlo.",
         "failed": "No se pudo crear el índice. Revise el registro del servidor y vuelva a intentarlo."
+      },
+      "wizard": {
+        "database": "Preparar la base de datos",
+        "service": "Conectar un servicio de búsqueda",
+        "search": "Activar la búsqueda inteligente",
+        "step": "Paso {{current}} de {{total}}",
+        "complete": "Listo",
+        "next": "Continuar",
+        "installHelp": "PostgreSQL necesita la extensión pgvector. Elija cómo está instalada su base de datos.",
+        "activateHelp": "pgvector ya está instalado en el servidor. Cotton puede activarlo en esta base y crear el índice de búsqueda.",
+        "serviceHelp": "Elija Cotton Bridge o su propio servidor de búsqueda compatible. El texto extraído de los archivos se envía a ese servicio para procesarlo.",
+        "dockerHelp": "La imagen pgvector es la imagen oficial de PostgreSQL con búsqueda vectorial añadida. En una imagen Debian estándar suele bastar con cambiar el nombre, manteniendo la versión de PostgreSQL, la variante Debian, el volumen de datos y los ajustes.",
+        "enableSearch": "Indexar el contenido de los archivos",
+        "indexingHelp": "Permitir que Cotton lea el contenido de los archivos y lo prepare para la búsqueda. Este ajuste se aplica a todo el servidor.",
+        "enabledHelp": "La búsqueda inteligente está activada. Los archivos se procesan en segundo plano; los ya indexados se pueden buscar.",
+        "progressHelp": "Se omiten los archivos sin texto compatible.",
+        "empty": "Todavía no hay archivos. Suba archivos para empezar a crear la base de búsqueda.",
+        "provider": "Servicio de búsqueda",
+        "chooseService": "Elegir un servicio",
+        "checkingService": "Comprobando la conexión…",
+        "remoteService": "Servidor propio"
       }
     },
     "title": "Administración",

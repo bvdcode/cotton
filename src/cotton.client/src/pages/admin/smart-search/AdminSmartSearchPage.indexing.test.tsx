@@ -66,10 +66,9 @@ describe("manual file indexing", () => {
       }),
     );
     renderPage();
-    const trigger = screen.getByRole("button", {
+    const trigger = await screen.findByRole("button", {
       name: "smartSearch.actions.triggerIndexing",
     });
-    expect(trigger).toBeDisabled();
     await waitFor(() => expect(trigger).toBeEnabled());
     fireEvent.click(
       screen.getByRole("button", { name: "smartSearch.actions.refresh" }),
@@ -97,7 +96,7 @@ describe("manual file indexing", () => {
       new Error("Unavailable"),
     );
     renderPage();
-    const trigger = screen.getByRole("button", {
+    const trigger = await screen.findByRole("button", {
       name: "smartSearch.actions.triggerIndexing",
     });
     await waitFor(() => expect(trigger).toBeEnabled());
@@ -119,8 +118,8 @@ describe("manual file indexing", () => {
   it("does not offer a manual run when global indexing is disabled", async () => {
     vi.mocked(settingsApi.getAllowGlobalIndexing).mockResolvedValue(false);
     renderPage();
-    await screen.findByText("smartSearch.indexingDisabled");
-    const trigger = screen.getByRole("button", {
+    await screen.findByRole("switch");
+    const trigger = await screen.findByRole("button", {
       name: "smartSearch.actions.triggerIndexing",
     });
     expect(trigger).toBeDisabled();
@@ -146,9 +145,9 @@ describe("manual file indexing", () => {
     renderPage();
     await screen.findByRole("button", { name: "smartSearch.actions.enable" });
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: "smartSearch.actions.triggerIndexing",
       }),
-    ).toBeDisabled();
+    ).not.toBeInTheDocument();
   });
 });

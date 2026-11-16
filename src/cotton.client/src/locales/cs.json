@@ -2979,13 +2979,10 @@
   },
   "admin": {
     "smartSearch": {
-      "progress": "Soubory s vektory: {{indexed}} z {{total}}",
+      "progress": "Zpracované soubory: {{indexed}} z {{total}}",
       "indexingProgress": "Průběh indexování souborů",
       "indexingDisabled": "Aby chytré vyhledávání fungovalo, zapněte indexování obsahu souborů.",
       "indexingRequested": "Spuštění indexování bylo vyžádáno.",
-      "computation": {
-        "checkSettings": "Zkontrolujte připojení k výpočetní službě v sekci"
-      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Chytré vyhledávání",
@@ -3048,6 +3045,27 @@
         "incompatible": "Název vyhledávacího indexu používá jiný index. Zkontrolujte jeho definici v PostgreSQL.",
         "invalidData": "Vektory verze 1 musí obsahovat 1024 konečných čísel. Opravte data a zkuste to znovu.",
         "failed": "Index se nepodařilo vytvořit. Zkontrolujte protokol serveru a zkuste to znovu."
+      },
+      "wizard": {
+        "database": "Připravit databázi",
+        "service": "Připojit vyhledávací službu",
+        "search": "Zapnout chytré vyhledávání",
+        "step": "Krok {{current}} z {{total}}",
+        "complete": "Hotovo",
+        "next": "Pokračovat",
+        "installHelp": "PostgreSQL potřebuje rozšíření pgvector. Níže vyberte způsob instalace databáze.",
+        "activateHelp": "pgvector je na serveru nainstalován. Cotton ho může zapnout v této databázi a vytvořit vyhledávací index.",
+        "serviceHelp": "Vyberte Cotton Bridge nebo vlastní kompatibilní vyhledávací server. Text získaný ze souborů se této službě odesílá ke zpracování.",
+        "dockerHelp": "Obraz pgvector je oficiální PostgreSQL s přidaným vektorovým vyhledáváním. U standardního obrazu Debian obvykle stačí změnit název a zachovat verzi PostgreSQL, variantu Debianu, datový svazek a nastavení.",
+        "enableSearch": "Indexovat obsah souborů",
+        "indexingHelp": "Povolit Cotton číst soubory a připravit je pro vyhledávání. Nastavení platí pro celý server.",
+        "enabledHelp": "Chytré vyhledávání je zapnuto. Soubory se zpracovávají na pozadí; v již indexovaných souborech lze vyhledávat.",
+        "progressHelp": "Soubory bez podporovaného textu se přeskakují.",
+        "empty": "Zatím tu nejsou soubory. Nahrajte je a vytvořte základ pro vyhledávání.",
+        "provider": "Vyhledávací služba",
+        "chooseService": "Vyberte službu",
+        "checkingService": "Ověřování připojení…",
+        "remoteService": "Vlastní server"
       }
     },
     "title": "Správa",

@@ -97,7 +97,7 @@ export const useComputationModeSetting = () => {
     refetchOnMount: "always",
   });
   const service = useQuery({
-    queryKey: [...serviceQueryKey, settings.data?.mode, settings.data?.url],
+    queryKey: serviceQueryKey,
     queryFn: () => settingsApi.getComputationStatus(),
     enabled: settings.data?.mode !== "Local" && !settings.isFetching,
     retry: false,
@@ -122,10 +122,10 @@ export const useComputationModeSetting = () => {
     onSuccess: async ({ service, ...value }) => {
       await queryClient.cancelQueries({ queryKey: serviceQueryKey });
       if (service !== null) {
-        queryClient.setQueryData(
-          [...serviceQueryKey, value.mode, value.url],
-          service,
-        );
+        queryClient.setQueryData(serviceQueryKey, service);
+      }
+      if (service === null) {
+        await queryClient.invalidateQueries({ queryKey: serviceQueryKey });
       }
       queryClient.setQueryData(queryKey, value);
       setDraftMode(null);

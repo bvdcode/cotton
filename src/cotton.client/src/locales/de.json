@@ -2934,13 +2934,10 @@
   },
   "admin": {
     "smartSearch": {
-      "progress": "Dateien mit Vektoren: {{indexed}} von {{total}}",
+      "progress": "Verarbeitete Dateien: {{indexed}} von {{total}}",
       "indexingProgress": "Fortschritt der Dateiindizierung",
       "indexingDisabled": "Aktivieren Sie die Indexierung von Dateiinhalten, damit die intelligente Suche funktioniert.",
       "indexingRequested": "Indexierung wurde angefordert.",
-      "computation": {
-        "checkSettings": "Prüfen Sie die Verbindung zum Berechnungsdienst unter"
-      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Intelligente Suche",
@@ -3003,6 +3000,27 @@
         "incompatible": "Der Name des Suchindex wird von einem anderen Index verwendet. Prüfen Sie seine Definition in PostgreSQL.",
         "invalidData": "Vektoren der Version 1 müssen 1024 endliche Zahlen enthalten. Korrigieren Sie die Daten und versuchen Sie es erneut.",
         "failed": "Der Index konnte nicht erstellt werden. Prüfen Sie das Serverprotokoll und versuchen Sie es erneut."
+      },
+      "wizard": {
+        "database": "Datenbank vorbereiten",
+        "service": "Suchdienst verbinden",
+        "search": "Intelligente Suche aktivieren",
+        "step": "Schritt {{current}} von {{total}}",
+        "complete": "Bereit",
+        "next": "Weiter",
+        "installHelp": "PostgreSQL benötigt die Erweiterung pgvector. Wählen Sie unten die Installationsart Ihrer Datenbank.",
+        "activateHelp": "pgvector ist auf dem Server installiert. Cotton kann die Erweiterung in dieser Datenbank aktivieren und den Suchindex erstellen.",
+        "serviceHelp": "Wählen Sie Cotton Bridge oder einen eigenen kompatiblen Suchserver. Aus Dateien extrahierter Text wird zur Verarbeitung an diesen Dienst gesendet.",
+        "dockerHelp": "Das pgvector-Image ist das offizielle PostgreSQL-Image mit zusätzlicher Vektorsuche. Bei einem Standard-Debian-Image genügt meist ein anderer Image-Name. PostgreSQL-Version, Debian-Variante, Daten-Volume und Einstellungen bleiben gleich.",
+        "enableSearch": "Dateiinhalte indexieren",
+        "indexingHelp": "Cotton darf Dateiinhalte lesen und für die Suche aufbereiten. Diese Einstellung gilt für den gesamten Server.",
+        "enabledHelp": "Die intelligente Suche ist aktiviert. Dateien werden im Hintergrund verarbeitet; bereits indexierte Dateien sind durchsuchbar.",
+        "progressHelp": "Dateien ohne unterstützten Text werden übersprungen.",
+        "empty": "Noch keine Dateien. Laden Sie Dateien hoch, um den Suchbestand aufzubauen.",
+        "provider": "Suchdienst",
+        "chooseService": "Dienst auswählen",
+        "checkingService": "Verbindung wird geprüft…",
+        "remoteService": "Eigener Server"
       }
     },
     "title": "Admin",

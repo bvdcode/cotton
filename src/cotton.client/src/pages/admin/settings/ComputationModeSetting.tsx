@@ -15,7 +15,11 @@ import {
   useComputationModeSetting,
 } from "./useComputationModeSetting";
 
-export const ComputationModeSetting = () => {
+export const ComputationModeSetting = ({
+  smartSearch = false,
+}: {
+  smartSearch?: boolean;
+}) => {
   const { t } = useTranslation("admin");
   const {
     mode,
@@ -37,7 +41,11 @@ export const ComputationModeSetting = () => {
 
   return (
     <SettingsSection
-      title={t("settings.general.fields.computionMode")}
+      title={t(
+        smartSearch
+          ? "smartSearch.wizard.provider"
+          : "settings.general.fields.computionMode",
+      )}
       status={status}
     >
       <Stack
@@ -50,23 +58,39 @@ export const ComputationModeSetting = () => {
       >
         <TextField
           select
-          value={mode}
+          value={smartSearch && mode === "Local" ? "" : mode}
           disabled={disabled}
           fullWidth
           onChange={(event) => selectMode(event.target.value)}
           slotProps={{
             select: {
+              displayEmpty: smartSearch,
               inputProps: {
-                "aria-label": t("settings.general.fields.computionMode"),
+                "aria-label": t(
+                  smartSearch
+                    ? "smartSearch.wizard.provider"
+                    : "settings.general.fields.computionMode",
+                ),
               },
             },
           }}
         >
-          {computionOptions.map((option) => (
-            <MenuItem key={option} value={option}>
-              {t(`settings.general.computionMode.${option}`)}
+          {smartSearch && (
+            <MenuItem value="" disabled>
+              {t("smartSearch.wizard.chooseService")}
             </MenuItem>
-          ))}
+          )}
+          {computionOptions
+            .filter((option) => !smartSearch || option !== "Local")
+            .map((option) => (
+              <MenuItem key={option} value={option}>
+                {t(
+                  smartSearch && option === "Remote"
+                    ? "smartSearch.wizard.remoteService"
+                    : `settings.general.computionMode.${option}`,
+                )}
+              </MenuItem>
+            ))}
         </TextField>
         {mode === "Remote" && (
           <>
@@ -106,6 +130,11 @@ export const ComputationModeSetting = () => {
               </Button>
             </Stack>
           </>
+        )}
+        {smartSearch && service.isFetching && !savedService && (
+          <Typography role="status" variant="body2">
+            {t("smartSearch.wizard.checkingService")}
+          </Typography>
         )}
         {!save.isError && savedService?.isReady && savedService.info && (
           <Typography
