@@ -1,36 +1,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Server.Handlers.Files;
 using Cotton.Server.Services.Search;
-using EasyExtensions.Mediator;
 
 namespace Cotton.Server.IntegrationTests
 {
     public class PreviewConcurrencyTests : PreviewTestBase
     {
         [Test]
-        public async Task PreviewPipeline_ConcurrentCleanup_RetriesCurrentManifestAndLoadsQueuedManifestFresh()
+        public async Task PreviewPipeline_ConcurrentManifestUpdate_RetriesCurrentManifestAndLoadsQueuedManifestFresh()
         {
             Pipeline.SetBearer(await Pipeline.LoginAsync());
             NodeDto root = await Pipeline.GetRootNodeAsync();
             await Pipeline.UploadAndCreateFileAsync(root.Id, "older.txt", "text/plain", "Older content"u8.ToArray());
             await Pipeline.UploadAndCreateFileAsync(root.Id, "newer.txt", "text/plain", "Newer content"u8.ToArray());
-            await using (AsyncServiceScope setupScope = _factory!.Services.CreateAsyncScope())
-            {
-                CottonDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<CottonDbContext>();
-                List<FileManifest> manifests = await setupContext.FileManifests.ToListAsync();
-                foreach (FileManifest manifest in manifests)
-                {
-                    manifest.ContentType = "text/plain";
-                }
-                await setupContext.SaveChangesAsync();
-                foreach (FileManifest manifest in manifests)
-                {
-                    await DatabaseIntegrityTestSignatures.SetVersionAsync(setupContext, manifest, 1, setupScope.ServiceProvider);
-                }
-            }
-
             await using AsyncServiceScope previewScope = _factory!.Services.CreateAsyncScope();
             CallbackStoragePipeline storage = new(previewScope.ServiceProvider.GetRequiredService<IStoragePipeline>(), async readCount =>
             {
@@ -38,16 +21,15 @@ namespace Cotton.Server.IntegrationTests
                 {
                     return;
                 }
-                await using AsyncServiceScope cleanupScope = _factory.Services.CreateAsyncScope();
-                IMediator mediator = cleanupScope.ServiceProvider.GetRequiredService<IMediator>();
-                Assert.That(await mediator.Send(new ClearFileManifestContentTypesRequest(), CancellationToken.None), Is.EqualTo(2));
-                CottonDbContext cleanupContext = cleanupScope.ServiceProvider.GetRequiredService<CottonDbContext>();
-                foreach (FileManifest manifest in await cleanupContext.FileManifests.ToListAsync())
+                await using AsyncServiceScope updateScope = _factory.Services.CreateAsyncScope();
+                CottonDbContext updateContext = updateScope.ServiceProvider.GetRequiredService<CottonDbContext>();
+                foreach (FileManifest manifest in await updateContext.FileManifests.ToListAsync())
                 {
+                    manifest.ComputedContentHash = manifest.ProposedContentHash;
                     manifest.TextIndexVersion = VectorIndexDefinition.Version;
                     manifest.Metadata = new Dictionary<string, string> { ["label"] = "Concurrent metadata" };
                 }
-                await cleanupContext.SaveChangesAsync();
+                await updateContext.SaveChangesAsync();
             });
             await PreviewTestPipeline.ExecutePreviewWithStorageAsync(previewScope.ServiceProvider, storage);
 
@@ -62,13 +44,12 @@ namespace Cotton.Server.IntegrationTests
                     Assert.That(manifest.SmallFilePreviewHash, Is.Not.Null);
                     Assert.That(manifest.SmallFilePreviewHashEncrypted, Is.Not.Null);
                     Assert.That(manifest.PreviewGenerationError, Is.Null);
-                    Assert.That(manifest.ContentType, Is.Empty);
                     Assert.That(manifest.TextIndexVersion, Is.EqualTo(VectorIndexDefinition.Version));
                     Assert.That(manifest.Metadata?["label"], Is.EqualTo("Concurrent metadata"));
                     Assert.That(previewContext.Entry(manifest).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
                         Is.EqualTo(FileManifestIntegrityDescriptor.LatestVersion));
                 });
-                verifier.RequireValid(previewContext, manifest, "test.preview-cleanup");
+                verifier.RequireValid(previewContext, manifest, "test.preview-manifest-update");
             }
         }
 

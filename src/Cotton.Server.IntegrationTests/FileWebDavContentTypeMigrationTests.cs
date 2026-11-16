@@ -2,8 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Net.Http.Headers;
-using Cotton.Server.Handlers.Files;
-using EasyExtensions.Mediator;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -11,7 +9,7 @@ namespace Cotton.Server.IntegrationTests
     public class FileWebDavContentTypeMigrationTests : FileEndpointTestBase
     {
         [Test]
-        public async Task WebDav_LegacyFile_WorksBeforeAndAfterContentTypeBackfill()
+        public async Task WebDav_LegacyFile_WorksBeforeAndAfterRename()
         {
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync());
             NodeDto root = (await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver"))!;
@@ -30,18 +28,21 @@ namespace Cotton.Server.IntegrationTests
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
                 Convert.ToBase64String(Encoding.UTF8.GetBytes($"testuser:{webDavToken}")));
 
-            foreach (bool backfilled in new[] { false, true })
+            foreach (bool renamed in new[] { false, true })
             {
-                if (backfilled)
+                string name = "legacy-webdav.txt";
+                if (renamed)
                 {
-                    IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                    await mediator.Send(new BackfillNodeFileContentTypesRequest());
+                    name = "renamed-webdav.txt";
+                    file = await dbContext.NodeFiles.SingleAsync(entity => entity.Id == created.Id);
+                    file.SetName(name);
+                    await dbContext.SaveChangesAsync();
                 }
-                string expectedContentType = backfilled ? "text/plain" : "application/octet-stream";
-                using HttpResponseMessage getResponse = await _client.GetAsync("/api/v1/webdav/legacy-webdav.txt");
-                using HttpRequestMessage headRequest = new(HttpMethod.Head, "/api/v1/webdav/legacy-webdav.txt");
+                string expectedContentType = renamed ? "text/plain" : "application/octet-stream";
+                using HttpResponseMessage getResponse = await _client.GetAsync($"/api/v1/webdav/{name}");
+                using HttpRequestMessage headRequest = new(HttpMethod.Head, $"/api/v1/webdav/{name}");
                 using HttpResponseMessage headResponse = await _client.SendAsync(headRequest);
-                using HttpRequestMessage rangeRequest = new(HttpMethod.Get, "/api/v1/webdav/legacy-webdav.txt");
+                using HttpRequestMessage rangeRequest = new(HttpMethod.Get, $"/api/v1/webdav/{name}");
                 rangeRequest.Headers.Range = new RangeHeaderValue(4, 7);
                 using HttpResponseMessage rangeResponse = await _client.SendAsync(rangeRequest);
 
@@ -67,9 +68,9 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(await headResponse.Content.ReadAsByteArrayAsync(), Is.Empty);
                 Assert.That(await rangeResponse.Content.ReadAsStringAsync(), Is.EqualTo("4567"));
                 NodeFile stored = await dbContext.NodeFiles.SingleAsync(entity => entity.Id == created.Id);
-                Assert.That(stored.ContentType, Is.EqualTo(backfilled ? "text/plain" : string.Empty));
+                Assert.That(stored.ContentType, Is.EqualTo(renamed ? "text/plain" : string.Empty));
                 Assert.That(dbContext.Entry(stored).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
-                    Is.EqualTo(backfilled ? NodeFileIntegrityDescriptor.LatestVersion : 1));
+                    Is.EqualTo(renamed ? NodeFileIntegrityDescriptor.LatestVersion : 1));
                 scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityVerifier>()
                     .RequireValid(dbContext, stored, "test.webdav-content-type");
                 dbContext.ChangeTracker.Clear();
