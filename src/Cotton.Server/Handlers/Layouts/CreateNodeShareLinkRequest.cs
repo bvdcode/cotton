@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
 using EasyExtensions.AspNetCore.Exceptions;
@@ -47,39 +48,24 @@ namespace Cotton.Server.Handlers.Layouts
                     CreateNodeShareLinkStatus.NodeNotFound);
             }
 
-            string token;
-            if (!string.IsNullOrWhiteSpace(request.CustomToken))
-            {
-                bool exists = await _dbContext.DownloadTokens
-                    .AnyAsync(x => x.Token == request.CustomToken, ct)
-                    || await _dbContext.NodeShareTokens
-                        .AnyAsync(x => x.Token == request.CustomToken, ct);
-                if (exists)
-                {
-                    return new CreateNodeShareLinkResult(
-                        CreateNodeShareLinkStatus.TokenConflict);
-                }
-
-                token = request.CustomToken;
-            }
-            else
-            {
-                token = await _publicShareTokens.CreateUniqueAsync(ct);
-            }
-
             NodeShareToken shareToken = new()
             {
                 Name = node.Name,
                 NodeId = node.Id,
                 CreatedByUserId = request.UserId,
                 ExpiresAt = expiresAt,
-                Token = token,
+                Token = !string.IsNullOrWhiteSpace(request.CustomToken)
+                    ? request.CustomToken
+                    : await _publicShareTokens.CreateUniqueAsync(ct),
                 AllowUpload = request.AllowUpload,
                 HideFolderContent = request.HideFolderContent,
             };
 
-            await _dbContext.NodeShareTokens.AddAsync(shareToken, ct);
-            await _dbContext.SaveChangesAsync(ct);
+            bool created = await _dbContext.TryCreatePublicShareTokenAsync(shareToken, ct);
+            if (!created)
+            {
+                return new CreateNodeShareLinkResult(CreateNodeShareLinkStatus.TokenConflict);
+            }
             return new CreateNodeShareLinkResult(
                 CreateNodeShareLinkStatus.Created,
                 $"/s/{shareToken.Token}");

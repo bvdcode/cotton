@@ -4,6 +4,7 @@
 using Cotton.Database;
 using Cotton.Database.Models;
 using Cotton.Database.Models.Enums;
+using Cotton.Server.Extensions;
 using Cotton.Server.Models;
 using Cotton.Server.Services;
 using EasyExtensions.Mediator;
@@ -29,18 +30,6 @@ namespace Cotton.Server.Handlers.Files
             CancellationToken ct)
         {
             DateTime? expiresAt = ShareLinkExpiration.FromMinutes(request.ExpireAfterMinutes);
-            if (!string.IsNullOrWhiteSpace(request.CustomToken))
-            {
-                bool exists = await _dbContext.DownloadTokens
-                    .AnyAsync(x => x.Token == request.CustomToken, ct)
-                    || await _dbContext.NodeShareTokens
-                        .AnyAsync(x => x.Token == request.CustomToken, ct);
-                if (exists)
-                {
-                    return new CreateFileShareLinkResult(CreateFileShareLinkStatus.TokenConflict);
-                }
-            }
-
             NodeFile? nodeFile = await _dbContext.NodeFiles
                 .Where(x => x.Id == request.NodeFileId && x.OwnerId == request.UserId)
                 .Include(x => x.Node)
@@ -61,8 +50,11 @@ namespace Cotton.Server.Handlers.Files
                     ? request.CustomToken
                     : await _publicShareTokens.CreateUniqueAsync(ct),
             };
-            await _dbContext.DownloadTokens.AddAsync(token, ct);
-            await _dbContext.SaveChangesAsync(ct);
+            bool created = await _dbContext.TryCreatePublicShareTokenAsync(token, ct);
+            if (!created)
+            {
+                return new CreateFileShareLinkResult(CreateFileShareLinkStatus.TokenConflict);
+            }
             return new CreateFileShareLinkResult(
                 CreateFileShareLinkStatus.Created,
                 Routes.V1.Files + $"/{nodeFile.Id}/download?token={token.Token}");

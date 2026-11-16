@@ -69,7 +69,7 @@ export const useFolderSizes = (
   }, [calculation.error, t]);
 
   return {
-    sizeBytes: enabled ? (calculation.data ?? 0) : 0,
+    sizeBytes: calculation.data ?? 0,
     isCalculating: calculation.isFetching,
   };
 };

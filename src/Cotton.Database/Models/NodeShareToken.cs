@@ -1,21 +1,22 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Database.Abstractions;
 using EasyExtensions.EntityFrameworkCore.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cotton.Database.Models
 {
-    [Index(nameof(Token), IsUnique = true)]
+    [Index(nameof(Token))]
     [Table("node_share_tokens")]
-    public class NodeShareToken : BaseEntity<Guid>
+    public class NodeShareToken : BaseEntity<Guid>, IPublicShareToken
     {
         [Column("name")]
         public string Name { get; set; } = null!;
 
         /// <summary>
-        /// Unique opaque token used in the share URL.
+        /// Opaque token used in the share URL.
         /// </summary>
         [Column("token")]
         public string Token { get; set; } = null!;

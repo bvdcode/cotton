@@ -26,8 +26,23 @@ const isDirectoryEntry = (
   entry: FileSystemEntry,
 ): entry is FileSystemDirectoryEntry => entry.isDirectory;
 
-export const getAllFilesFromItems = async (
+export const getDroppedEntries = (
   items: DataTransferItemList,
+): FileSystemEntry[] => {
+  const entries: FileSystemEntry[] = [];
+  for (const item of Array.from(items)) {
+    if (item.kind === "file") {
+      const entry = item.webkitGetAsEntry();
+      if (entry) {
+        entries.push(entry);
+      }
+    }
+  }
+  return entries;
+};
+
+export const getAllFilesFromEntries = async (
+  entries: FileSystemEntry[],
   onFileFound: (filesFound: number) => void,
 ): Promise<DroppedScanResult> => {
   const files: DroppedFile[] = [];
@@ -68,13 +83,8 @@ export const getAllFilesFromItems = async (
         }
         throw e;
       }
-      const clonedFile = new File([file], file.name, {
-        type: file.type,
-        lastModified: file.lastModified,
-      });
-
       const relativePath = entry.fullPath.replace(/^\/+/, "");
-      files.push({ file: clonedFile, relativePath });
+      files.push({ file, relativePath });
       notify();
     } else if (isDirectoryEntry(entry)) {
       const reader = entry.createReader();
@@ -110,17 +120,13 @@ export const getAllFilesFromItems = async (
     }
   };
 
-  const promises: Promise<void>[] = [];
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (item.kind === "file") {
-      const entry = item.webkitGetAsEntry();
-      if (entry) {
-        promises.push(traverseEntry(entry));
-      }
-    }
+  const pending = entries.map(traverseEntry);
+  try {
+    await Promise.all(pending);
+  } catch (error) {
+    await Promise.allSettled(pending);
+    throw error;
   }
-  await Promise.all(promises);
 
   return { files, skippedNotFound, skippedItems };
 };

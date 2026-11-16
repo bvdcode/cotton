@@ -84,7 +84,6 @@ export class ChunkHashSession {
       segment,
       buffer,
       hash,
-      contentType: chunk.type,
     };
   }
 
@@ -108,7 +107,6 @@ export class ChunkHashSession {
           buffer,
           fileHashBuffer: buffer.slice(0),
           hash: hashBuffer(buffer, this.algorithm),
-          contentType: chunk.type,
         };
       }),
     );
@@ -130,7 +128,6 @@ export class ChunkHashSession {
       segment: prepared.segment,
       buffer: prepared.buffer,
       hash: hashes[index],
-      contentType: prepared.contentType,
     }));
   }
 

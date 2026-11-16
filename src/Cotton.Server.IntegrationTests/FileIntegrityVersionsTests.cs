@@ -2,8 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Net.Http.Headers;
-using Cotton.Server.Handlers.Files;
-using EasyExtensions.Mediator;
 
 namespace Cotton.Server.IntegrationTests
 {
@@ -60,7 +58,7 @@ namespace Cotton.Server.IntegrationTests
         [TestCase(true, 1, false)]
         [TestCase(false, 1, true)]
         [TestCase(true, 1, true)]
-        public async Task ContentTypeMigration_BackfillChecksSignatureBeforeUpdating(bool tampered, int version, bool populated)
+        public async Task Rename_ChecksSignatureBeforeUpdating(bool tampered, int version, bool populated)
         {
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await LoginAsync());
             NodeDto root = (await _client.GetFromJsonAsync<NodeDto>("/api/v1/layouts/resolver"))!;
@@ -78,11 +76,11 @@ namespace Cotton.Server.IntegrationTests
                 await dbContext.NodeFiles.Where(entity => entity.Id == created.Id)
                     .ExecuteUpdateAsync(setters => setters.SetProperty(entity => entity.Name, "tampered.txt"));
             }
-            IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            file = await dbContext.NodeFiles.SingleAsync(entity => entity.Id == created.Id);
+            file.SetName("renamed.md");
             if (tampered)
             {
-                await Assert.ThrowsAsync<DatabaseIntegrityException>(() =>
-                    mediator.Send(new BackfillNodeFileContentTypesRequest(), CancellationToken.None));
+                await Assert.ThrowsAsync<DatabaseIntegrityException>(() => dbContext.SaveChangesAsync());
                 Assert.That(await dbContext.NodeFiles.Where(entity => entity.Id == created.Id)
                     .Select(entity => entity.ContentType).SingleAsync(), Is.EqualTo(initialType));
                 Assert.That(await dbContext.NodeFiles.Where(entity => entity.Id == created.Id)
@@ -91,13 +89,14 @@ namespace Cotton.Server.IntegrationTests
                 return;
             }
 
-            Assert.That(await mediator.Send(new BackfillNodeFileContentTypesRequest(), CancellationToken.None), Is.EqualTo(1));
+            await dbContext.SaveChangesAsync();
             NodeFile stored = await dbContext.NodeFiles.SingleAsync(entity => entity.Id == created.Id);
-            Assert.That(stored.ContentType, Is.EqualTo(populated ? initialType : "text/plain"));
+            Assert.That(stored.Name, Is.EqualTo("renamed.md"));
+            Assert.That(stored.ContentType, Is.EqualTo("text/markdown"));
             Assert.That(dbContext.Entry(stored).Property<int?>(DatabaseIntegrityColumns.VersionProperty).CurrentValue,
                 Is.EqualTo(NodeFileIntegrityDescriptor.LatestVersion));
             scope.ServiceProvider.GetRequiredService<IDatabaseIntegrityVerifier>()
-                .RequireValid(dbContext, stored, "test.backfilled-current-signature");
+                .RequireValid(dbContext, stored, "test.renamed-current-signature");
         }
     }
 }

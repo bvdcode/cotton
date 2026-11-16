@@ -1,243 +1,157 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import {
   Alert,
   Button,
   IconButton,
-  LinearProgress,
   Skeleton,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
+  Step,
+  StepButton,
+  StepContent,
+  Stepper,
   Tooltip,
   Typography,
 } from "@mui/material";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AdminPageSurface } from "../components/AdminPageSurface";
-import { PgvectorDockerSetup } from "./PgvectorDockerSetup";
-import { PgvectorNativeSetup } from "./PgvectorNativeSetup";
-import { PgvectorActivation } from "./PgvectorActivation";
-import { PgvectorIndexSetup } from "./PgvectorIndexSetup";
-import { SmartSearchComputationStatus } from "./SmartSearchComputationStatus";
-import { BooleanSwitchSettingControl } from "../settings/BooleanSwitchSetting";
+import { ComputationModeSetting } from "../settings/ComputationModeSetting";
+import { SmartSearchDatabaseSetup } from "./SmartSearchDatabaseSetup";
+import { SmartSearchIndexing } from "./SmartSearchIndexing";
 import { useSmartSearchSetup } from "./useSmartSearchSetup";
 
 export const AdminSmartSearchPage = () => {
   const { t } = useTranslation("admin");
+  const setup = useSmartSearchSetup();
   const {
-    indexing,
-    statusQuery,
-    enableMutation,
-    triggerMutation,
-    environment,
     status,
-    progress,
-    numberFormat,
-    failure,
-    needsInstallation,
-    busy,
-    activationError,
-    triggerIndexing,
+    statusQuery,
+    indexing,
+    computation,
     refresh,
-    changeEnvironment,
+    busy,
     loadError,
-    canTriggerIndexing,
-  } = useSmartSearchSetup();
-  const environmentControl = (
-    <ToggleButtonGroup
-      value={environment}
-      exclusive
-      size="small"
-      aria-label={t("smartSearch.installation.where")}
-      onChange={(_, value: string | null) => changeEnvironment(value)}
-      sx={{ flexShrink: 0 }}
-    >
-      <ToggleButton value="docker">
-        {t("smartSearch.installation.docker")}
-      </ToggleButton>
-      <ToggleButton value="native">
-        {t("smartSearch.installation.native")}
-      </ToggleButton>
-    </ToggleButtonGroup>
-  );
-  const checkInstallation = (
-    <Button
-      variant="outlined"
-      color="inherit"
-      loading={statusQuery.isFetching}
-      disabled={enableMutation.isPending}
-      onClick={() => void refresh()}
-    >
-      {t("smartSearch.actions.checkInstallation")}
-    </Button>
-  );
+  } = setup;
+  const [selectedStep, setSelectedStep] = useState<number | null>(null);
+  const databaseReady =
+    Boolean(status?.extensionEnabled && status.indexReady) &&
+    !statusQuery.isError;
+  const computationReady =
+    computation.data?.isReady === true && !computation.isError;
+  const firstIncomplete = !databaseReady ? 0 : !computationReady ? 1 : 2;
+  const activeStep = Math.min(selectedStep ?? firstIncomplete, firstIncomplete);
+  const steps = [
+    { title: "database", ready: databaseReady, available: true },
+    { title: "service", ready: computationReady, available: databaseReady },
+    {
+      title: "search",
+      ready: indexing.savedValue && databaseReady && computationReady,
+      available: databaseReady && computationReady,
+    },
+  ];
+  const loading = statusQuery.isPending || indexing.status === "loading";
 
   return (
     <AdminPageSurface>
-      <Stack
-        spacing={2}
-        sx={{
-          p: { xs: 2, sm: 3 },
-
-          "& .MuiInputLabel-root.Mui-focused:not(.Mui-error)": {
-            color: "text.primary",
-          },
-        }}
-      >
+      <Stack spacing={2} sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack
           direction="row"
           spacing={1}
-          sx={{
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
+          sx={{ justifyContent: "space-between", alignItems: "center" }}
         >
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            sx={{
-              alignItems: { sm: "baseline" },
-              gap: { xs: 0.5, sm: 2 },
-              minWidth: 0,
-            }}
-          >
-            <Typography
-              component="h1"
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-              }}
-            >
-              {t("smartSearch.title")}
-            </Typography>
-            {status && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "text.secondary",
-                  overflowWrap: "anywhere",
-                }}
+          <Typography component="h1" variant="h5" sx={{ fontWeight: 700 }}>
+            {t("smartSearch.title")}
+          </Typography>
+          <Tooltip title={t("smartSearch.actions.refresh")}>
+            <span>
+              <IconButton
+                aria-label={t("smartSearch.actions.refresh")}
+                disabled={busy}
+                onClick={() => void refresh()}
               >
-                {t("smartSearch.database", {
-                  version: status.postgresMajorVersion,
-                  database: status.databaseName,
-                })}
-              </Typography>
-            )}
-          </Stack>
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{
-              flexShrink: 0,
-            }}
-          >
-            <Tooltip title={t("smartSearch.actions.triggerIndexing")}>
-              <span>
-                <IconButton
-                  aria-label={t("smartSearch.actions.triggerIndexing")}
-                  loading={triggerMutation.isPending}
-                  disabled={!canTriggerIndexing}
-                  onClick={triggerIndexing}
-                >
-                  <PlayArrowIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title={t("smartSearch.actions.refresh")}>
-              <span>
-                <IconButton
-                  aria-label={t("smartSearch.actions.refresh")}
-                  disabled={busy}
-                  onClick={() => void refresh()}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
+                <RefreshIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Stack>
-
-        <BooleanSwitchSettingControl
-          title={t("settings.general.fields.allowGlobalIndexing")}
-          description={t("settings.general.help.allowGlobalIndexing")}
-          value={indexing.value}
-          commitValue={indexing.commitValue}
-          status={indexing.status}
-          loadFailed={indexing.loadFailed}
-        />
-        {!indexing.loadFailed &&
-          indexing.status !== "loading" &&
-          !indexing.savedValue && (
-            <Alert severity="info">{t("smartSearch.indexingDisabled")}</Alert>
-          )}
-        <SmartSearchComputationStatus />
-
-        {statusQuery.isPending && (
+        {loading ? (
           <Skeleton
             variant="rounded"
-            height={120}
+            height={160}
             role="status"
             aria-label={t("smartSearch.loading")}
           />
-        )}
-        {statusQuery.isError && <Alert severity="error">{loadError}</Alert>}
-
-        {status && (
-          <>
-            <Stack spacing={1}>
-              <Typography>
-                {t("smartSearch.progress", {
-                  indexed: numberFormat.format(status.embeddedFileCount),
-                  total: numberFormat.format(status.fileCount),
-                })}
-              </Typography>
-              <LinearProgress
-                color="inherit"
-                variant="determinate"
-                value={progress * 100}
-                aria-label={t("smartSearch.indexingProgress")}
-              />
-            </Stack>
-            {status.extensionEnabled ? (
-              <PgvectorIndexSetup
-                status={status}
-                pending={enableMutation.isPending}
-                disabled={statusQuery.isFetching || statusQuery.isError}
-                error={activationError}
-                onPrepare={() => enableMutation.mutate()}
-              />
-            ) : needsInstallation ? (
-              <Stack spacing={1.5}>
-                <Typography variant="body2">
-                  {t("smartSearch.installation.missing")}
-                </Typography>
-                {environment === "docker" && (
-                  <PgvectorDockerSetup
-                    majorVersion={status.postgresMajorVersion}
-                    environmentControl={environmentControl}
-                    action={checkInstallation}
-                  />
-                )}
-                {environment === "native" && (
-                  <PgvectorNativeSetup
-                    majorVersion={status.postgresMajorVersion}
-                    environmentControl={environmentControl}
-                    action={checkInstallation}
-                  />
-                )}
-              </Stack>
-            ) : (
-              <PgvectorActivation
-                databaseName={status.databaseName}
-                permissionDenied={failure === "pgvector_permission_denied"}
-                error={activationError}
-                pending={enableMutation.isPending}
-                disabled={statusQuery.isFetching || statusQuery.isError}
-                onEnable={() => enableMutation.mutate()}
-                onRefresh={() => void refresh()}
-              />
-            )}
-          </>
+        ) : (
+          <Stepper activeStep={activeStep} orientation="vertical" nonLinear>
+            {steps.map((step, index) => (
+              <Step key={step.title} completed={step.ready && step.available}>
+                <StepButton
+                  disabled={!step.available}
+                  onClick={() => setSelectedStep(index)}
+                  optional={
+                    <Typography variant="caption" color="text.secondary">
+                      {t(
+                        `smartSearch.wizard.${step.ready && step.available ? "complete" : "step"}`,
+                        { current: index + 1, total: steps.length },
+                      )}
+                    </Typography>
+                  }
+                >
+                  <Typography sx={{ fontWeight: 600 }}>
+                    {t(`smartSearch.wizard.${step.title}`)}
+                  </Typography>
+                </StepButton>
+                <StepContent>
+                  <Stack spacing={2} sx={{ pt: 1, pb: 1, minWidth: 0 }}>
+                    {index === 0 && (
+                      <>
+                        {status && (
+                          <Typography variant="caption" color="text.secondary">
+                            {t("smartSearch.database", {
+                              version: status.postgresMajorVersion,
+                              database: status.databaseName,
+                            })}
+                          </Typography>
+                        )}
+                        {statusQuery.isError && (
+                          <Alert severity="error">{loadError}</Alert>
+                        )}
+                        <SmartSearchDatabaseSetup
+                          setup={setup}
+                          nextAction={
+                            <Button
+                              variant="contained"
+                              disabled={!databaseReady}
+                              onClick={() => setSelectedStep(1)}
+                            >
+                              {t("smartSearch.wizard.next")}
+                            </Button>
+                          }
+                        />
+                      </>
+                    )}
+                    {index === 1 && (
+                      <>
+                        <Typography variant="body2" color="text.secondary">
+                          {t("smartSearch.wizard.serviceHelp")}
+                        </Typography>
+                        <ComputationModeSetting smartSearch />
+                        <Button
+                          variant="contained"
+                          disabled={!computationReady}
+                          onClick={() => setSelectedStep(2)}
+                          sx={{ alignSelf: "flex-start" }}
+                        >
+                          {t("smartSearch.wizard.next")}
+                        </Button>
+                      </>
+                    )}
+                    {index === 2 && <SmartSearchIndexing setup={setup} />}
+                  </Stack>
+                </StepContent>
+              </Step>
+            ))}
+          </Stepper>
         )}
       </Stack>
     </AdminPageSurface>

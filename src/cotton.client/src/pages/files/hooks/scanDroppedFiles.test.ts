@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getAllFilesFromItems } from "./scanDroppedFiles";
+import { getAllFilesFromEntries, getDroppedEntries } from "./scanDroppedFiles";
+
+const getAllFilesFromItems = (
+  items: DataTransferItemList,
+  onFileFound: (count: number) => void,
+) => getAllFilesFromEntries(getDroppedEntries(items), onFileFound);
 
 const unusedEntryMethod = (): never => {
   throw new Error("Unexpected filesystem operation.");
@@ -70,6 +75,25 @@ const droppedItems = (entry: FileSystemEntry): DataTransferItemList => ({
 });
 
 describe("dropped directory paths", () => {
+  it("retains the filesystem File objects without wrapping their content in new files", async () => {
+    const entries = [
+      fileEntry("/Photos/one.jpg"),
+      fileEntry("/Photos/two.jpg"),
+    ];
+    const originals: File[] = [];
+    for (const entry of entries) {
+      entry.file((file) => originals.push(file));
+    }
+    const root = directoryEntry("/Photos", [entries]);
+
+    const result = await getAllFilesFromItems(droppedItems(root), () => {});
+
+    expect(result.files).toHaveLength(originals.length);
+    for (let index = 0; index < originals.length; index += 1) {
+      expect(result.files[index].file).toBe(originals[index]);
+    }
+  });
+
   it("keeps the top directory and nested paths for native entry properties", async () => {
     const first = fileEntry("/Photos/one.jpg");
     const nested = directoryEntry("/Photos/Trip", [
@@ -115,5 +139,28 @@ describe("dropped directory paths", () => {
     );
 
     expect(result.files[0].relativePath).toBe("one.jpg");
+  });
+
+  it("finishes outstanding reads before reporting a scan failure", async () => {
+    const broken = fileEntry("/broken.jpg");
+    const blocked = fileEntry("/blocked.jpg");
+    const error = new DOMException("Cannot read file", "NotReadableError");
+    broken.file = (_success, failure) => failure?.(error);
+    let release!: () => void;
+    blocked.file = (success) => {
+      release = () => success(new File(["data"], "blocked.jpg"));
+    };
+    let settled = false;
+    const pending = getAllFilesFromEntries([broken, blocked], () => {}).catch(
+      (failure: Error) => {
+        settled = true;
+        return failure;
+      },
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    release();
+    expect(await pending).toBe(error);
   });
 });

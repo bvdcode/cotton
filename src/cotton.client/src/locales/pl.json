@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "Inteligentne wyszukiwanie nie jest skonfigurowane. Otwórz Administracja → Inteligentne wyszukiwanie, aby je skonfigurować.",
+      "contactAdministrator": "Inteligentne wyszukiwanie nie jest skonfigurowane. Skontaktuj się z administratorem.",
+      "configure": "Skonfiguruj",
       "label": "Inteligentne wyszukiwanie",
       "enable": "Włącz inteligentne wyszukiwanie",
       "disable": "Wyłącz inteligentne wyszukiwanie",
@@ -2979,13 +2982,10 @@
   },
   "admin": {
     "smartSearch": {
-      "progress": "Pliki z wektorami: {{indexed}} z {{total}}",
+      "progress": "Przetworzone pliki: {{indexed}} z {{total}}",
       "indexingProgress": "Postęp indeksowania plików",
       "indexingDisabled": "Włącz indeksowanie zawartości plików, aby korzystać z inteligentnego wyszukiwania.",
       "indexingRequested": "Wysłano żądanie indeksowania.",
-      "computation": {
-        "checkSettings": "Sprawdź połączenie z usługą obliczeniową w sekcji"
-      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Inteligentne wyszukiwanie",
@@ -3048,6 +3048,27 @@
         "incompatible": "Nazwa indeksu wyszukiwania jest używana przez inny indeks. Sprawdź jego definicję w PostgreSQL.",
         "invalidData": "Wektory wersji 1 muszą zawierać 1024 skończone liczby. Popraw dane i spróbuj ponownie.",
         "failed": "Nie udało się utworzyć indeksu. Sprawdź dziennik serwera i spróbuj ponownie."
+      },
+      "wizard": {
+        "database": "Przygotuj bazę danych",
+        "service": "Połącz usługę wyszukiwania",
+        "search": "Włącz inteligentne wyszukiwanie",
+        "step": "Krok {{current}} z {{total}}",
+        "complete": "Gotowe",
+        "next": "Dalej",
+        "installHelp": "PostgreSQL wymaga rozszerzenia pgvector. Wybierz poniżej sposób instalacji bazy.",
+        "activateHelp": "pgvector jest już zainstalowany na serwerze. Cotton może włączyć go w tej bazie i utworzyć indeks wyszukiwania.",
+        "serviceHelp": "Wybierz Cotton Bridge lub własny zgodny serwer wyszukiwania. Tekst wyodrębniony z plików będzie wysyłany do tej usługi.",
+        "dockerHelp": "Obraz pgvector to oficjalny PostgreSQL z dodanym wyszukiwaniem wektorowym. Dla standardowego obrazu Debian zwykle wystarczy zmienić nazwę, zachowując wersję PostgreSQL, wariant Debiana, wolumin danych i ustawienia.",
+        "enableSearch": "Indeksuj zawartość plików",
+        "indexingHelp": "Zezwól Cotton na odczyt plików i przygotowanie ich do wyszukiwania. Ustawienie dotyczy całego serwera.",
+        "enabledHelp": "Inteligentne wyszukiwanie jest włączone. Pliki są przetwarzane w tle; już zindeksowane pliki można przeszukiwać.",
+        "progressHelp": "Pliki bez obsługiwanego tekstu są pomijane.",
+        "empty": "Nie ma jeszcze plików. Prześlij je, aby utworzyć zasób do wyszukiwania.",
+        "provider": "Usługa wyszukiwania",
+        "chooseService": "Wybierz usługę",
+        "checkingService": "Sprawdzanie połączenia…",
+        "remoteService": "Własny serwer"
       }
     },
     "title": "Administrator",

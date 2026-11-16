@@ -2,9 +2,13 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createFile, createFolder } from "../../../test/fileFixtures";
 import { nodesApi } from "../../../shared/api/nodesApi";
 import { DroppedFolderResolver } from "./DroppedFolderResolver";
-import { encryptFolderName } from "../../../shared/crypto/folderDisplayMeta";
+import {
+  encryptFolderName,
+  readFolderName,
+} from "../../../shared/crypto/folderDisplayMeta";
 import { generateMasterKey } from "../../../shared/crypto/keys";
 import { useVault } from "../../../shared/crypto/vault";
+import { useNodesStore } from "../../../shared/store/nodesStore";
 
 afterEach(() => {
   useVault.getState().lock();
@@ -156,4 +160,62 @@ it("reuses an encrypted folder's visible name under a plain parent", async () =>
   });
   expect(get).toHaveBeenCalledOnce();
   expect(create).not.toHaveBeenCalled();
+});
+
+it("inherits encryption through newly created folders without fetching their children", async () => {
+  useVault.getState().unlock(await generateMasterKey(), {
+    persistToSession: false,
+  });
+  vi.spyOn(useNodesStore.getState(), "addFolderToCache").mockImplementation(
+    () => {},
+  );
+  const parent = createFolder({ id: "parent" });
+  const get = vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
+    content: { node: parent, ...parent, nodes: [], files: [] },
+    totalCount: 0,
+  });
+  const create = vi
+    .spyOn(nodesApi, "createNode")
+    .mockImplementation(async ({ parentId, name, metadata }) =>
+      createFolder({ id: crypto.randomUUID(), parentId, name, metadata }),
+    );
+  const dropped = [
+    { file: new File(["a"], "a.txt"), relativePath: "Photos/Day/a.txt" },
+    { file: new File(["b"], "b.txt"), relativePath: "photos/day/b.txt" },
+    { file: new File(["c"], "c.txt"), relativePath: "Photos/Night/c.txt" },
+  ];
+  const resolver = new DroppedFolderResolver(
+    parent.id,
+    "Files",
+    true,
+    () => false,
+  );
+
+  const grouped = await resolver.groupFiles(dropped, () => {});
+
+  expect(get).toHaveBeenCalledOnce();
+  expect(create).toHaveBeenCalledTimes(3);
+  const names: string[] = [];
+  for (const [request] of create.mock.calls) {
+    expect(request.metadata?.isClientEncryptionEnabled).toBe("true");
+    names.push(
+      await readFolderName({ name: request.name, metadata: request.metadata }),
+    );
+    expect(request.name).not.toBe(names.at(-1));
+  }
+  expect(names[0]).toBe("Photos");
+  expect(names.slice(1).sort()).toEqual(["Day", "Night"]);
+  for (const nodeId of grouped.keys()) {
+    expect(resolver.decideEncryption(nodeId)).toEqual({
+      encrypt: true,
+      vaultLocked: false,
+    });
+  }
+  expect([...grouped.values()]).toEqual([
+    {
+      label: "Files / Photos / Day",
+      files: [dropped[0].file, dropped[1].file],
+    },
+    { label: "Files / Photos / Night", files: [dropped[2].file] },
+  ]);
 });

@@ -8,7 +8,6 @@ export interface PreparedChunk {
   segment: ChunkSegment;
   buffer: ArrayBuffer;
   hash: string;
-  contentType: string;
 }
 
 export interface UploadedChunkSegment {

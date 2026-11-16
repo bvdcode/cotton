@@ -8,6 +8,10 @@ import type { JsonValue } from "../../types/json";
 import { queryClient } from "./queryClient";
 import { queryKeys } from "./queryKeys";
 import { useFolderSizeInvalidation } from "./useFolderSizeInvalidation";
+import {
+  clearFolderInfoCache,
+  FOLDER_SIZE_REFRESH_DELAY_MS,
+} from "./folderInfo";
 
 const wrapper = ({ children }: PropsWithChildren) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -15,6 +19,7 @@ const wrapper = ({ children }: PropsWithChildren) => (
 
 afterEach(() => {
   cleanup();
+  clearFolderInfoCache(queryClient);
   queryClient.clear();
   vi.restoreAllMocks();
   vi.useRealTimers();
@@ -43,6 +48,10 @@ it("expires cached ancestors for nested file changes, but not renames", async ()
   await act(async () => {
     listeners.get(HUB_METHODS.FileCreated)?.({ nodeId: "descendant" });
     await vi.advanceTimersByTimeAsync(300);
+  });
+  expect(queryClient.getQueryState(totalKey)?.isInvalidated).toBe(false);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(FOLDER_SIZE_REFRESH_DELAY_MS);
   });
   expect(queryClient.getQueryState(totalKey)?.isInvalidated).toBe(true);
   expect(queryClient.getQueryState(childKey)?.isInvalidated).toBe(true);

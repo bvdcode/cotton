@@ -1,5 +1,6 @@
-import React from "react";
-import { Input } from "@mui/material";
+import React, { useRef, useState } from "react";
+import { CircularProgress, Input } from "@mui/material";
+import { useTranslation } from "react-i18next";
 
 interface InlineRenameFieldProps {
   value: string;
@@ -25,18 +26,37 @@ export const InlineRenameField: React.FC<InlineRenameFieldProps> = ({
   onCancel,
   placeholder,
 }) => {
+  const { t } = useTranslation();
+  const submitting = useRef(false);
+  const [pending, setPending] = useState(false);
+  const confirm = async () => {
+    if (submitting.current) {
+      return;
+    }
+    submitting.current = true;
+    setPending(true);
+    try {
+      await onConfirm();
+    } finally {
+      submitting.current = false;
+      setPending(false);
+    }
+  };
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     event.stopPropagation();
 
     if (event.key === "Enter") {
       event.preventDefault();
-      void onConfirm();
+      void confirm();
       return;
     }
 
     if (event.key === "Escape") {
       event.preventDefault();
-      onCancel();
+      if (!submitting.current) {
+        submitting.current = true;
+        onCancel();
+      }
     }
   };
 
@@ -44,13 +64,23 @@ export const InlineRenameField: React.FC<InlineRenameFieldProps> = ({
     <Input
       autoFocus
       fullWidth
+      readOnly={pending}
+      endAdornment={
+        pending ? (
+          <CircularProgress
+            color="inherit"
+            size={16}
+            aria-label={t("files:loading.title")}
+          />
+        ) : undefined
+      }
       value={value}
       placeholder={placeholder}
       onChange={(event) => onChange(event.target.value)}
       onFocus={(event) => event.target.select()}
       onKeyDown={handleKeyDown}
       onBlur={() => {
-        void onConfirm();
+        void confirm();
       }}
       onClick={stopEventPropagation}
       onMouseDown={stopEventPropagation}

@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Stack, Typography } from "@mui/material";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ENABLE_VECTOR_SQL } from "./smartSearchSetup";
 import { SetupCommand } from "./SetupCommand";
@@ -12,6 +12,7 @@ interface PgvectorActivationProps {
   disabled: boolean;
   onEnable: () => void;
   onRefresh: () => void;
+  nextAction: ReactNode;
 }
 
 export const PgvectorActivation = ({
@@ -22,6 +23,7 @@ export const PgvectorActivation = ({
   disabled,
   onEnable,
   onRefresh,
+  nextAction,
 }: PgvectorActivationProps) => {
   const { t } = useTranslation("admin");
   const [showManual, setShowManual] = useState(false);
@@ -36,14 +38,17 @@ export const PgvectorActivation = ({
             gap: 1,
           }}
         >
-          <Button
-            variant="contained"
-            loading={pending}
-            disabled={disabled}
-            onClick={onEnable}
-          >
-            {t("smartSearch.actions.enable")}
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              loading={pending}
+              disabled={disabled}
+              onClick={onEnable}
+            >
+              {t("smartSearch.actions.enable")}
+            </Button>
+            {nextAction}
+          </Stack>
           <Button
             color="inherit"
             aria-expanded={showManual}
@@ -83,18 +88,17 @@ export const PgvectorActivation = ({
             >
               <SetupCommand command={ENABLE_VECTOR_SQL} />
             </Box>
-            <Button
-              color="inherit"
-              variant="outlined"
-              disabled={disabled || pending}
-              onClick={onRefresh}
-              sx={{
-                alignSelf: { xs: "flex-start", sm: "center" },
-                flexShrink: 0,
-              }}
-            >
-              {t("smartSearch.actions.checkAgain")}
-            </Button>
+            <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+              <Button
+                color="inherit"
+                variant="outlined"
+                disabled={disabled || pending}
+                onClick={onRefresh}
+              >
+                {t("smartSearch.actions.checkAgain")}
+              </Button>
+              {permissionDenied && nextAction}
+            </Stack>
           </Stack>
         </Stack>
       )}

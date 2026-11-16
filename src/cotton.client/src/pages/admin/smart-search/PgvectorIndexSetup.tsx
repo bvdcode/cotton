@@ -1,5 +1,6 @@
 import { Alert, Button, Chip, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
 import type { VectorExtensionStatusDto } from "@shared/api/adminApi";
 import { formatBytes } from "@shared/utils/formatBytes";
 import { SetupCommand } from "./SetupCommand";
@@ -10,6 +11,7 @@ interface PgvectorIndexSetupProps {
   disabled: boolean;
   error: string | null;
   onPrepare: () => void;
+  nextAction?: ReactNode;
 }
 
 const indexErrorKey = (code: string): string => {
@@ -31,6 +33,7 @@ export const PgvectorIndexSetup = ({
   disabled,
   error,
   onPrepare,
+  nextAction,
 }: PgvectorIndexSetupProps) => {
   const { t, i18n } = useTranslation("admin");
   const building = status.indexBuilding || pending;
@@ -104,17 +107,19 @@ export const PgvectorIndexSetup = ({
         status.indexErrorCode === "pgvector_index_permission_denied" && (
           <SetupCommand command={status.indexCreateSql} />
         )}
-      {(!status.indexReady || building) && (
-        <Button
-          variant="contained"
-          loading={building}
-          disabled={disabled}
-          onClick={onPrepare}
-          sx={{ alignSelf: "flex-start" }}
-        >
-          {t("smartSearch.actions.enable")}
-        </Button>
-      )}
+      <Stack direction="row" spacing={1}>
+        {(!status.indexReady || building) && (
+          <Button
+            variant="contained"
+            loading={building}
+            disabled={disabled}
+            onClick={onPrepare}
+          >
+            {t("smartSearch.actions.enable")}
+          </Button>
+        )}
+        {nextAction}
+      </Stack>
     </Stack>
   );
 };

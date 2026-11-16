@@ -73,6 +73,9 @@ export const PgvectorDockerSetup = ({
           helperText={error}
         />
       </Stack>
+      <Typography variant="body2">
+        {t("smartSearch.wizard.dockerHelp")}
+      </Typography>
       {showVariant && (
         <TextField
           select

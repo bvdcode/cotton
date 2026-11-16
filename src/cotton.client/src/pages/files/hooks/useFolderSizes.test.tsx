@@ -8,6 +8,7 @@ import { queryKeys } from "@shared/api/queries/queryKeys";
 import { useCachedFolderSizes } from "@shared/api/queries/useCachedFolderSizes";
 import {
   clearFolderInfoCache,
+  FOLDER_SIZE_REFRESH_DELAY_MS,
   FOLDER_SIZE_STALE_TIME,
   invalidateFolderInfoCache,
   useCachedFolderSize,
@@ -25,8 +26,10 @@ const wrapper = ({ children }: PropsWithChildren) => (
 );
 afterEach(() => {
   cleanup();
+  clearFolderInfoCache(queryClient);
   queryClient.clear();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("batched folder sizes", () => {
@@ -99,7 +102,13 @@ describe("batched folder sizes", () => {
     rerender({ id: "parent" });
     expect(result.current.sizeBytes).toBe(10);
     expect(batch).toHaveBeenCalledTimes(1);
-    await act(async () => invalidateFolderInfoCache(queryClient));
+    vi.useFakeTimers();
+    await act(async () => {
+      invalidateFolderInfoCache(queryClient);
+      await vi.advanceTimersByTimeAsync(FOLDER_SIZE_REFRESH_DELAY_MS);
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    vi.useRealTimers();
     await waitFor(() => expect(result.current.sizeBytes).toBe(25));
     expect(batch).toHaveBeenCalledTimes(2);
   });
@@ -122,6 +131,23 @@ describe("batched folder sizes", () => {
     expect(result.current.isCalculating).toBe(true);
     await act(async () => finish?.({ first: stats(25) }));
     await waitFor(() => expect(result.current.sizeBytes).toBe(25));
+  });
+
+  it("keeps the full cached size while a folder mutation pauses calculations", async () => {
+    const batch = vi
+      .spyOn(nodesApi, "getChildFolderStats")
+      .mockResolvedValue({ first: stats(4_000_000_000) });
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useFolderSizes("parent", enabled),
+      { wrapper, initialProps: { enabled: true } },
+    );
+    await waitFor(() => expect(result.current.sizeBytes).toBe(4_000_000_000));
+
+    rerender({ enabled: false });
+    expect(result.current.sizeBytes).toBe(4_000_000_000);
+    rerender({ enabled: true });
+    expect(result.current.sizeBytes).toBe(4_000_000_000);
+    expect(batch).toHaveBeenCalledTimes(1);
   });
 
   it("does not carry the previous total into a different folder", async () => {

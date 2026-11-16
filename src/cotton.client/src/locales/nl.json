@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "Slim zoeken is niet ingesteld. Ga naar Beheer → Slim zoeken om het in te stellen.",
+      "contactAdministrator": "Slim zoeken is niet ingesteld. Neem contact op met je beheerder.",
+      "configure": "Instellen",
       "label": "Slim zoeken",
       "enable": "Slim zoeken inschakelen",
       "disable": "Slim zoeken uitschakelen",
@@ -2936,13 +2939,10 @@
   },
   "admin": {
     "smartSearch": {
-      "progress": "Bestanden met vectoren: {{indexed}} van {{total}}",
+      "progress": "Verwerkte bestanden: {{indexed}} van {{total}}",
       "indexingProgress": "Voortgang van bestandsindexering",
       "indexingDisabled": "Schakel de indexering van bestandsinhoud in om slim zoeken te gebruiken.",
       "indexingRequested": "Indexering aangevraagd.",
-      "computation": {
-        "checkSettings": "Controleer de verbinding met de rekenservice bij"
-      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Slim zoeken",
@@ -3005,6 +3005,27 @@
         "incompatible": "De naam van de zoekindex wordt door een andere index gebruikt. Controleer de definitie in PostgreSQL.",
         "invalidData": "Vectoren van versie 1 moeten 1024 eindige getallen bevatten. Corrigeer de gegevens en probeer het opnieuw.",
         "failed": "De index kon niet worden aangemaakt. Controleer het serverlogboek en probeer het opnieuw."
+      },
+      "wizard": {
+        "database": "Database voorbereiden",
+        "service": "Zoekdienst verbinden",
+        "search": "Slim zoeken inschakelen",
+        "step": "Stap {{current}} van {{total}}",
+        "complete": "Gereed",
+        "next": "Doorgaan",
+        "installHelp": "PostgreSQL heeft de uitbreiding pgvector nodig. Kies hieronder hoe je database is geïnstalleerd.",
+        "activateHelp": "pgvector is al op de server geïnstalleerd. Cotton kan het in deze database inschakelen en de zoekindex maken.",
+        "serviceHelp": "Kies Cotton Bridge of je eigen compatibele zoekserver. Tekst uit bestanden wordt voor verwerking naar deze dienst gestuurd.",
+        "dockerHelp": "Het pgvector-image is het officiële PostgreSQL-image met vectorzoeken erbij. Bij een standaard Debian-image hoef je meestal alleen de naam te wijzigen. Behoud de PostgreSQL-versie, Debian-variant, het datavolume en de instellingen.",
+        "enableSearch": "Bestandsinhoud indexeren",
+        "indexingHelp": "Sta Cotton toe bestanden te lezen en voor zoeken voor te bereiden. Deze instelling geldt voor de hele server.",
+        "enabledHelp": "Slim zoeken is ingeschakeld. Bestanden worden op de achtergrond verwerkt; al geïndexeerde bestanden zijn doorzoekbaar.",
+        "progressHelp": "Bestanden zonder ondersteunde tekst worden overgeslagen.",
+        "empty": "Er zijn nog geen bestanden. Upload bestanden om je zoekbestand op te bouwen.",
+        "provider": "Zoekdienst",
+        "chooseService": "Kies een dienst",
+        "checkingService": "Verbinding controleren…",
+        "remoteService": "Eigen server"
       }
     },
     "title": "Beheer",

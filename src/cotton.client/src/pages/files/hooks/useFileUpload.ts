@@ -10,13 +10,14 @@ import { toast } from "../../../shared/ui/notifications";
 import { useFileConflictDialog } from "./useFileConflictDialog";
 import { useUploadEncryptionPolicy } from "./useUploadEncryptionPolicy";
 import { hasFileDragPayload } from "./hasFileDragPayload";
-import type {
-  UseBreadcrumb,
-  DropPreparationState,
-  SkippedItemsDialogState,
-} from "./fileUploadTypes";
-import { getAllFilesFromItems, type DroppedFile } from "./scanDroppedFiles";
-import { DroppedFolderResolver } from "./DroppedFolderResolver";
+import type { UseBreadcrumb, SkippedItemsDialogState } from "./fileUploadTypes";
+import {
+  getAllFilesFromEntries,
+  getDroppedEntries,
+  type DroppedFile,
+} from "./scanDroppedFiles";
+import { prepareDroppedUpload } from "./prepareDroppedUpload";
+import { useUploadPreparation } from "./useUploadPreparation";
 import { emptySkippedItemsDialog } from "./fileUploadTypes";
 import { reportClientError } from "@shared/utils/clientDiagnostics";
 
@@ -35,13 +36,7 @@ export const useFileUpload = (
   const { t } = useTranslation(["files"]);
   const [isDragging, setIsDragging] = useState(false);
   const dragDepthRef = useRef<number>(0);
-  const [dropPreparation, setDropPreparation] = useState<DropPreparationState>({
-    active: false,
-    phase: "idle",
-    step: "idle",
-    filesFound: 0,
-    processed: 0,
-  });
+  const { dropPreparation, setDropPreparation, run } = useUploadPreparation();
   const { dialogState, showConflictDialog, handleResolve, handleExited } =
     useFileConflictDialog();
   const [skippedItemsDialog, setSkippedItemsDialog] =
@@ -63,7 +58,7 @@ export const useFileUpload = (
 
   const { isPolicyEnabledForNode, decideEncrypt } = useUploadEncryptionPolicy();
 
-  const handleUploadFiles = useMemo(
+  const prepareFiles = useMemo(
     () => async (files: FileList | File[]) => {
       if (!nodeId) return;
 
@@ -120,127 +115,54 @@ export const useFileUpload = (
     ],
   );
 
-  const handleUploadDroppedFiles = useMemo(
-    () => async (dropped: DroppedFile[]) => {
-      if (!nodeId) return;
-      if (dropped.length === 0) return;
-
-      const rootDecision = await decideEncrypt(nodeId);
-      if (rootDecision.vaultLocked) {
-        onToast?.(t("uploadDrop.toasts.vaultLocked", { ns: "files" }), "error");
-        return;
+  const handleUploadFiles = useMemo(
+    () => (files: FileList | File[]) => {
+      const list = Array.from(files);
+      if (!nodeId || list.length === 0) {
+        return Promise.resolve();
       }
-
-      const rootPolicyEnabled = rootDecision.encrypt;
-      setDropPreparation((prev) => ({
-        ...prev,
-        active: true,
-        phase: "preparing",
-        step: "folders",
-        filesFound: dropped.length,
-        processed: 0,
-      }));
-
-      skipAllConflictsRef.current = false;
-
-      let totalEnqueued = 0;
-
-      const confirmConflict = createUploadConflictResolver(
-        skipAllConflictsRef,
-        showConflictDialog,
-      );
-
-      const folderResolver = new DroppedFolderResolver(
-        nodeId,
-        baseLabel,
-        rootPolicyEnabled,
-        isPolicyEnabledForNode,
-      );
-
-      let lastProgressTime = 0;
-      const updateProgress = (processed: number) => {
-        const now = Date.now();
-        if (now - lastProgressTime < 120 && processed < dropped.length) return;
-        lastProgressTime = now;
-        setDropPreparation((prev) => ({
-          ...prev,
+      return run(async () => {
+        setDropPreparation({
           active: true,
           phase: "preparing",
-          step: "folders",
-          processed,
-          filesFound: dropped.length,
-        }));
-      };
-
-      const filesByTarget = await folderResolver.groupFiles(
-        dropped,
-        updateProgress,
-      );
-
-      setDropPreparation((prev) => ({
-        ...prev,
-        active: true,
-        phase: "preparing",
-        step: "conflicts",
-        filesFound: dropped.length,
-        processed: dropped.length,
-      }));
-
-      let remainingItems = dropped.length;
-      for (const [targetNodeId, bucket] of filesByTarget) {
-        remainingItems -= bucket.files.length;
-        const decision = folderResolver.decideEncryption(targetNodeId);
-        if (decision.vaultLocked) {
-          onToast?.(
-            t("uploadDrop.toasts.vaultLocked", { ns: "files" }),
-            "error",
-          );
-          continue;
-        }
-        const contentForCheck = await lookupUploadNames(
-          targetNodeId,
-          bucket.files.map((file) => file.name),
-          decision.encrypt,
-        );
-        const result = await resolveUploadConflicts(
-          bucket.files,
-          contentForCheck,
-          confirmConflict,
-          remainingItems,
-        );
-        if (result.cancelled) return;
-        if (result.files.length === 0) continue;
-
-        setDropPreparation((prev) => ({
-          ...prev,
-          active: true,
-          phase: "preparing",
-          step: "enqueue",
-          filesFound: dropped.length,
-          processed: dropped.length,
-        }));
-        uploadManager.enqueue(result.files, targetNodeId, bucket.label, {
-          encrypt: decision.encrypt,
-          onFileUploaded,
+          step: "conflicts",
+          filesFound: list.length,
+          processed: 0,
         });
-        totalEnqueued += result.files.length;
-      }
-
-      if (totalEnqueued === 0 && skipAllConflictsRef.current) {
-        onToast?.(t("uploadDrop.toasts.noneCopied", { ns: "files" }));
-      }
+        await prepareFiles(list);
+      });
     },
-    [
+    [nodeId, prepareFiles, run, setDropPreparation],
+  );
+
+  const handleUploadDroppedFiles = async (dropped: DroppedFile[]) => {
+    if (!nodeId || dropped.length === 0) {
+      return;
+    }
+    const rootDecision = await decideEncrypt(nodeId);
+    if (rootDecision.vaultLocked) {
+      onToast?.(t("uploadDrop.toasts.vaultLocked"), "error");
+      return;
+    }
+    skipAllConflictsRef.current = false;
+    const count = await prepareDroppedUpload(dropped, {
       nodeId,
       baseLabel,
-      showConflictDialog,
-      onToast,
-      onFileUploaded,
-      t,
-      decideEncrypt,
+      rootPolicyEnabled: rootDecision.encrypt,
       isPolicyEnabledForNode,
-    ],
-  );
+      confirmConflict: createUploadConflictResolver(
+        skipAllConflictsRef,
+        showConflictDialog,
+      ),
+      onProgress: setDropPreparation,
+      onVaultLocked: () =>
+        onToast?.(t("uploadDrop.toasts.vaultLocked"), "error"),
+      onFileUploaded,
+    });
+    if (count === 0 && skipAllConflictsRef.current) {
+      onToast?.(t("uploadDrop.toasts.noneCopied"));
+    }
+  };
 
   const handleUploadClick = () => {
     if (!nodeId) return;
@@ -310,22 +232,23 @@ export const useFileUpload = (
 
     if (!nodeId) return;
 
-    const hasItems = e.dataTransfer.items && e.dataTransfer.items.length > 0;
-    const hasFiles = e.dataTransfer.files && e.dataTransfer.files.length > 0;
+    const entries =
+      e.dataTransfer.items.length > 0
+        ? getDroppedEntries(e.dataTransfer.items)
+        : null;
+    const files = Array.from(e.dataTransfer.files);
+    await run(async () => {
+      if (entries !== null) {
+        setDropPreparation({
+          active: true,
+          phase: "scanning",
+          step: "scanning",
+          filesFound: 0,
+          processed: 0,
+        });
 
-    if (hasItems) {
-      setDropPreparation({
-        active: true,
-        phase: "scanning",
-        step: "scanning",
-        filesFound: 0,
-        processed: 0,
-      });
-
-      try {
-        const scan = await getAllFilesFromItems(
-          e.dataTransfer.items,
-          (filesFound) =>
+        try {
+          const scan = await getAllFilesFromEntries(entries, (filesFound) =>
             setDropPreparation((prev) => ({
               ...prev,
               active: true,
@@ -334,83 +257,74 @@ export const useFileUpload = (
               filesFound,
               processed: 0,
             })),
-        );
+          );
 
-        if (scan.skippedNotFound > 0) {
-          const details = {
-            open: false,
-            total: scan.skippedNotFound,
-            items: scan.skippedItems,
-            truncated: scan.skippedItems.length < scan.skippedNotFound,
-          };
-          setSkippedItemsDialog(details);
-          if (skippedItemsToastIdRef.current) {
-            toast.dismiss(skippedItemsToastIdRef.current);
+          if (scan.skippedNotFound > 0) {
+            const details = {
+              open: false,
+              total: scan.skippedNotFound,
+              items: scan.skippedItems,
+              truncated: scan.skippedItems.length < scan.skippedNotFound,
+            };
+            setSkippedItemsDialog(details);
+            if (skippedItemsToastIdRef.current) {
+              toast.dismiss(skippedItemsToastIdRef.current);
+            }
+            skippedItemsToastSequenceRef.current += 1;
+            const toastId = `files-upload-skipped-${skippedItemsToastSequenceRef.current}`;
+            skippedItemsToastIdRef.current = toastId;
+
+            showActionToast({
+              toastId,
+              message: t("uploadDrop.toasts.someItemsSkipped", {
+                ns: "files",
+                count: scan.skippedNotFound,
+              }),
+              action: t("uploadDrop.toasts.details", { ns: "files" }),
+              onAction: () => setSkippedItemsDialog({ ...details, open: true }),
+            });
           }
-          skippedItemsToastSequenceRef.current += 1;
-          const toastId = `files-upload-skipped-${skippedItemsToastSequenceRef.current}`;
-          skippedItemsToastIdRef.current = toastId;
 
-          showActionToast({
-            toastId,
-            message: t("uploadDrop.toasts.someItemsSkipped", {
-              ns: "files",
-              count: scan.skippedNotFound,
-            }),
-            action: t("uploadDrop.toasts.details", { ns: "files" }),
-            onAction: () => setSkippedItemsDialog({ ...details, open: true }),
-          });
+          if (scan.files.length > 0) {
+            setDropPreparation((prev) => ({
+              ...prev,
+              active: true,
+              phase: "preparing",
+              step: "mapping",
+              filesFound: scan.files.length,
+              processed: 0,
+            }));
+            await handleUploadDroppedFiles(scan.files);
+          }
+        } catch {
+          onToast?.(
+            t("uploadDrop.errors.dropFailed", { ns: "files" }),
+            "error",
+          );
         }
 
-        if (scan.files.length > 0) {
-          setDropPreparation((prev) => ({
-            ...prev,
-            active: true,
-            phase: "preparing",
-            step: "mapping",
-            filesFound: scan.files.length,
-            processed: 0,
-          }));
-          await handleUploadDroppedFiles(scan.files);
+        return;
+      }
+
+      if (files.length > 0) {
+        setDropPreparation({
+          active: true,
+          phase: "preparing",
+          step: "conflicts",
+          filesFound: files.length,
+          processed: files.length,
+        });
+
+        try {
+          await prepareFiles(files);
+        } catch {
+          onToast?.(
+            t("uploadDrop.errors.dropFailed", { ns: "files" }),
+            "error",
+          );
         }
-      } catch {
-        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }), "error");
-      } finally {
-        setDropPreparation({
-          active: false,
-          phase: "idle",
-          step: "idle",
-          filesFound: 0,
-          processed: 0,
-        });
       }
-
-      return;
-    }
-
-    if (hasFiles) {
-      setDropPreparation({
-        active: true,
-        phase: "preparing",
-        step: "conflicts",
-        filesFound: e.dataTransfer.files.length,
-        processed: e.dataTransfer.files.length,
-      });
-
-      try {
-        await handleUploadFiles(Array.from(e.dataTransfer.files));
-      } catch {
-        onToast?.(t("uploadDrop.errors.dropFailed", { ns: "files" }), "error");
-      } finally {
-        setDropPreparation({
-          active: false,
-          phase: "idle",
-          step: "idle",
-          filesFound: 0,
-          processed: 0,
-        });
-      }
-    }
+    });
   };
 
   const closeSkippedItemsDialog = () => {

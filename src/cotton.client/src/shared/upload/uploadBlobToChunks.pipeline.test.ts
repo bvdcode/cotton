@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UploadProgressSnapshot } from "./types";
 import { uploadBlobToChunks } from "./uploadBlobToChunks";
 
@@ -67,6 +67,8 @@ const createWorker = () => {
 };
 
 describe("uploadBlobToChunks", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   beforeEach(() => {
     vi.clearAllMocks();
     let hashIndex = 0;
@@ -77,6 +79,34 @@ describe("uploadBlobToChunks", () => {
     });
     mocks.chunkExists.mockResolvedValue(true);
     mocks.uploadChunk.mockResolvedValue(undefined);
+  });
+
+  it("sends the hashed buffers directly without allocating upload blobs", async () => {
+    const bytes = new Uint8Array([1, 2, 3, 4, 5, 6, 7]);
+    const source = new Blob([bytes]);
+    const createBlob = vi.spyOn(globalThis, "Blob");
+    mocks.acquire.mockResolvedValue(createWorker());
+    mocks.chunkExists.mockResolvedValue(false);
+
+    await uploadBlobToChunks({
+      blob: source,
+      fileName: "binary.bin",
+      server: { maxChunkSizeBytes: 4, supportedHashAlgorithm: "sha256" },
+    });
+
+    expect(createBlob).not.toHaveBeenCalled();
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(2);
+    const uploaded: number[] = [];
+    for (
+      let index = 0;
+      index < mocks.uploadChunk.mock.calls.length;
+      index += 1
+    ) {
+      const [request] = mocks.uploadChunk.mock.calls[index];
+      expect(request.buffer).toBe(mocks.hashBuffer.mock.calls[index][0]);
+      uploaded.push(...new Uint8Array(request.buffer));
+    }
+    expect(uploaded).toEqual([...bytes]);
   });
 
   it("always transfers anonymous chunks and never probes ownership, including after an interruption", async () => {

@@ -119,7 +119,11 @@ export const TrashPageHeader: React.FC<TrashPageHeaderProps> = ({
       loading={loading}
       breadcrumbs={breadcrumbs}
       onNavigateBreadcrumb={onNavigateBreadcrumb}
-      stats={{ ...stats, sizeBytes: stats.sizeBytes + folderSizes.sizeBytes }}
+      stats={{
+        ...stats,
+        sizeBytes:
+          stats.sizeBytes + (stats.folders > 0 ? folderSizes.sizeBytes : 0),
+      }}
       isSizeCalculating={folderSizes.isCalculating}
       viewMode={viewMode}
       canGoUp={breadcrumbs.length > 1}

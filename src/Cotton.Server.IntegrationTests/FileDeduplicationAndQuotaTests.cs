@@ -60,6 +60,8 @@ namespace Cotton.Server.IntegrationTests
         {
             string token = await LoginAsync();
             _client!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using NUnitLoggerProvider logs = new();
+            _factory!.Services.GetRequiredService<ILoggerFactory>().AddProvider(logs);
 
             byte[] content = new byte[2 * 1024 * 1024];
             RandomNumberGenerator.Fill(content);
@@ -86,6 +88,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(storedChunk?.PlainSizeBytes, Is.EqualTo(content.Length));
                 Assert.That(storedChunk?.StoredSizeBytes, Is.GreaterThan(0));
                 Assert.That(ownershipCount, Is.EqualTo(1));
+                Assert.That(logs.Messages.Any(message => message.StartsWith("Microsoft.EntityFrameworkCore.")
+                    && message.Contains("23505")), Is.False);
             });
         }
 

@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "La recherche intelligente n’est pas configurée. Ouvrez Administration → Recherche intelligente pour la configurer.",
+      "contactAdministrator": "La recherche intelligente n’est pas configurée. Contactez votre administrateur.",
+      "configure": "Configurer",
       "label": "Recherche intelligente",
       "enable": "Activer la recherche intelligente",
       "disable": "Désactiver la recherche intelligente",
@@ -2935,13 +2938,10 @@
   },
   "admin": {
     "smartSearch": {
-      "progress": "Fichiers avec vecteurs : {{indexed}} sur {{total}}",
+      "progress": "Fichiers traités : {{indexed}} sur {{total}}",
       "indexingProgress": "Progression de l’indexation des fichiers",
       "indexingDisabled": "Activez l’indexation du contenu des fichiers pour utiliser la recherche intelligente.",
       "indexingRequested": "Indexation demandée.",
-      "computation": {
-        "checkSettings": "Vérifiez la connexion au service de calcul dans"
-      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Recherche intelligente",
@@ -3004,6 +3004,27 @@
         "incompatible": "Un autre index utilise le nom de l’index de recherche. Vérifiez sa définition dans PostgreSQL.",
         "invalidData": "Les vecteurs de version 1 doivent contenir 1024 nombres finis. Corrigez les données et réessayez.",
         "failed": "Impossible de créer l’index. Consultez le journal du serveur et réessayez."
+      },
+      "wizard": {
+        "database": "Préparer la base de données",
+        "service": "Connecter un service de recherche",
+        "search": "Activer la recherche intelligente",
+        "step": "Étape {{current}} sur {{total}}",
+        "complete": "Prêt",
+        "next": "Continuer",
+        "installHelp": "PostgreSQL a besoin de l’extension pgvector. Choisissez ci-dessous comment votre base est installée.",
+        "activateHelp": "pgvector est installé sur le serveur. Cotton peut l’activer dans cette base et créer l’index de recherche.",
+        "serviceHelp": "Choisissez Cotton Bridge ou votre propre serveur de recherche compatible. Le texte extrait des fichiers est envoyé à ce service pour traitement.",
+        "dockerHelp": "L’image pgvector est l’image officielle PostgreSQL avec la recherche vectorielle en plus. Pour une image Debian standard, il suffit généralement de changer son nom, en conservant la version PostgreSQL, la variante Debian, le volume de données et les paramètres.",
+        "enableSearch": "Indexer le contenu des fichiers",
+        "indexingHelp": "Autoriser Cotton à lire le contenu des fichiers et à le préparer pour la recherche. Ce réglage concerne tout le serveur.",
+        "enabledHelp": "La recherche intelligente est activée. Les fichiers sont traités en arrière-plan ; ceux déjà indexés sont consultables.",
+        "progressHelp": "Les fichiers sans texte pris en charge sont ignorés.",
+        "empty": "Aucun fichier pour le moment. Importez des fichiers pour alimenter la recherche.",
+        "provider": "Service de recherche",
+        "chooseService": "Choisir un service",
+        "checkingService": "Vérification de la connexion…",
+        "remoteService": "Votre propre serveur"
       }
     },
     "title": "Administration",

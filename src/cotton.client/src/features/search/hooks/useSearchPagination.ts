@@ -7,6 +7,7 @@ import {
 } from "../../../shared/api/layoutsApi";
 import { mergeSearchResults } from "../utils/normalizeSearch";
 import { useDeepSearchMode } from "./useDeepSearchMode";
+import { getSearchErrorKey } from "../utils/getSearchErrorKey";
 
 const SEARCH_PAGE_SIZE = 80;
 const SEARCH_DEBOUNCE_MS = 260;
@@ -152,7 +153,7 @@ export const useSearchPagination = ({
             error: null,
           };
         });
-      } catch {
+      } catch (error) {
         if (signal.aborted || generation !== searchGenerationRef.current) {
           return;
         }
@@ -164,7 +165,7 @@ export const useSearchPagination = ({
             ...current,
             loadingInitial: false,
             loadingMore: false,
-            error: deep ? "smartSearch.error" : "error",
+            error: getSearchErrorKey(error, deep),
           };
         });
       }

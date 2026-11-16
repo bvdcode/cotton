@@ -97,23 +97,23 @@ describe("chunksApi.exists", () => {
 });
 
 describe("chunksApi.uploadChunk", () => {
-  const makeBlob = () => new Blob(["chunk-bytes"], { type: "text/plain" });
+  const makeBuffer = () => new TextEncoder().encode("chunk-bytes").buffer;
 
   it("posts a raw chunk body with the hash in query params", async () => {
     const post = vi.spyOn(httpClient, "post").mockResolvedValue({
       data: undefined,
     });
-    const blob = makeBlob();
+    const buffer = makeBuffer();
 
     await chunksApi.uploadChunk({
-      blob,
+      buffer,
       fileName: "chunk.bin",
       hash: "chunk-hash",
     });
 
     const [url, body, config] = post.mock.calls[0];
     expect(url).toBe("chunks/raw");
-    expect(body).toBe(blob);
+    expect(body).toBe(buffer);
     expect(config?.params).toEqual({ hash: "chunk-hash" });
     expect(config?.headers?.["Content-Type"]).toBe("application/octet-stream");
   });
@@ -125,14 +125,14 @@ describe("chunksApi.uploadChunk", () => {
 
     await expect(
       chunksApi.uploadChunk({
-        blob: makeBlob(),
+        buffer: makeBuffer(),
         fileName: "without-null-hash.bin",
         hash: null,
       }),
     ).rejects.toThrow("Chunk hash is required for raw chunk uploads.");
     await expect(
       chunksApi.uploadChunk({
-        blob: makeBlob(),
+        buffer: makeBuffer(),
         fileName: "without-undefined-hash.bin",
       }),
     ).rejects.toThrow("Chunk hash is required for raw chunk uploads.");
@@ -147,7 +147,7 @@ describe("chunksApi.uploadChunk", () => {
     const controller = new AbortController();
 
     await chunksApi.uploadChunk({
-      blob: makeBlob(),
+      buffer: makeBuffer(),
       fileName: "chunk.bin",
       hash: "chunk-hash",
       signal: controller.signal,
@@ -158,8 +158,8 @@ describe("chunksApi.uploadChunk", () => {
     );
   });
 
-  it("reports upload progress scaled and clamped to blob bytes", async () => {
-    const blob = makeBlob();
+  it("reports upload progress scaled and clamped to buffer bytes", async () => {
+    const buffer = makeBuffer();
     const onProgress = vi.fn();
     let progressCallback: ((event: AxiosProgressEvent) => void) | undefined;
 
@@ -169,7 +169,7 @@ describe("chunksApi.uploadChunk", () => {
     });
 
     await chunksApi.uploadChunk({
-      blob,
+      buffer,
       fileName: "chunk.bin",
       hash: "chunk-hash",
       onProgress,
@@ -179,8 +179,11 @@ describe("chunksApi.uploadChunk", () => {
     progressCallback?.(createUploadProgress(500, 100));
     progressCallback?.(createUploadProgress(4));
 
-    expect(onProgress).toHaveBeenNthCalledWith(1, Math.floor(blob.size * 0.5));
-    expect(onProgress).toHaveBeenNthCalledWith(2, blob.size);
+    expect(onProgress).toHaveBeenNthCalledWith(
+      1,
+      Math.floor(buffer.byteLength * 0.5),
+    );
+    expect(onProgress).toHaveBeenNthCalledWith(2, buffer.byteLength);
     expect(onProgress).toHaveBeenNthCalledWith(3, 4);
   });
 
@@ -191,7 +194,7 @@ describe("chunksApi.uploadChunk", () => {
 
     await expect(
       chunksApi.uploadChunk({
-        blob: makeBlob(),
+        buffer: makeBuffer(),
         fileName: "chunk.bin",
         hash: "chunk-hash",
       }),

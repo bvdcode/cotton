@@ -123,13 +123,20 @@ This table applies to existing installations. A new empty installation can start
 | Target release | Required transition release | Completion requirement |
 | --- | --- | --- |
 | `0.5.x` from `0.4.x` or earlier | `0.4.35` | **Completion signal:** the log contains `CTN2 rewrite job finished.` (this release does not send a completion notification). **Time-based alternative:** keep `0.4.35` running continuously for at least **7 days**. |
-| `0.6.x` from `0.5.x` (planned) | Final `0.5.x` transition release — to be announced | **Completion signal:** an administrator notification names `PrepareUpgradeTo06Job` and target `0.6`, or the log contains `Upgrade preparation job PrepareUpgradeTo06Job for Cotton 0.6 completed successfully.` **Time-based alternative:** keep the required release running continuously for at least **24 hours**. The required release and full set of steps must be confirmed before `0.6` is published. |
+| `0.6.x`, starting with `0.6.0`, from `0.5.x` | `0.5.24` or `0.5.25` | **Completion signal on the transition release:** an administrator notification names `PrepareUpgradeTo06Job` and target `0.6`, or the log contains `Upgrade preparation job PrepareUpgradeTo06Job for Cotton 0.6 completed successfully.` **Time-based alternative:** keep the transition release running continuously for at least **24 hours**. Version `0.6.0` and later do not run this preparation job. |
 
 Run each required release against the same database, storage, and master key. Follow the listed transitions in order when crossing multiple release lines. Completion signals allow proceeding without waiting for the full time allowance. The time-based alternative is for operators who cannot inspect logs; it assumes the server remains unlocked and background jobs can run normally. Elapsed time cannot guarantee completion if jobs fail, are interrupted, or take longer on a large installation.
 
-The `0.6` preparation job fills missing individual file content types, upgrades file and manifest signatures to version 2, clears obsolete manifest content types, and removes preview data from the empty-file manifest. Files with an existing content type also receive the current signature without replacing their content type. All stages must finish before the completion notification is sent. Regular preview generation runs independently and does not delay this notification. Notifications appear in Cotton for every administrator and are deduplicated by job and target version across repeated runs and server restarts. A notification confirms the named preparation job; follow every requirement listed for the target release before upgrading.
+The preparation job in `0.5.24` and `0.5.25` fills missing individual file content types, upgrades file and manifest signatures to version 2, clears obsolete manifest content types, and removes preview data from the empty-file manifest. Files with an existing content type also receive the current signature without replacing their content type. All stages must finish before the completion notification is sent. Regular preview generation runs independently and does not delay this notification. Notifications appear in Cotton for every administrator and are deduplicated by job and target version across repeated runs and server restarts. A notification confirms the named preparation job; follow every requirement listed for the target release before upgrading.
 
 Earlier notifications naming `HotfixBackfillContentTypeJob` confirm only the content-type preparation. Wait for `PrepareUpgradeTo06Job` to confirm all the stages listed above.
+
+### Upgrading from 0.5.x to 0.6.0
+
+1. Back up the database, storage, and master key before upgrading.
+2. If running `0.5.0`–`0.5.23`, upgrade to `0.5.25` first, using the same database, storage, and master key.
+3. On `0.5.24` or `0.5.25`, wait for the `PrepareUpgradeTo06Job` completion signal listed above. If preparation has already completed on this installation, no repeat run is needed.
+4. Upgrade to `0.6.0` after preparation completes. Do not skip the transition release: `0.6.0` no longer includes the preparation job.
 
 Version 0.5 does not decrypt CTN1 or backfill unsigned protected rows. Encountering either produces a targeted compatibility error rather than silent repair.
 

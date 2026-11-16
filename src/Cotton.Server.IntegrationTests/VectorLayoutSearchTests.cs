@@ -45,14 +45,25 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task DeepSearch_WithoutIndexedFiles_DoesNotRequirePgvectorOrAWorker()
+        public async Task DeepSearch_WithoutAnIndex_ReportsMissingConfigurationWithoutCallingWorker()
         {
             AddFile("report.pdf", []);
             await DbContext.SaveChangesAsync();
-            PagedResult<SearchResultDto> result = await Search();
-            Assert.That(result.TotalCount, Is.Zero);
+            await Assert.ThrowsAsync<WebApiException>(() => Search());
             Assert.That(_worker.InfoCalls + _worker.EmbedCalls, Is.Zero);
             Assert.That(await DbContext.Database.IsExtensionInstalledAsync("vector"), Is.False);
+        }
+
+        [Test]
+        public async Task DeepSearch_ConfiguredWithoutIndexedFiles_ReturnsNoMatchesWithoutCallingWorker()
+        {
+            AddFile("report.pdf", []);
+            await PrepareIndex();
+
+            PagedResult<SearchResultDto> result = await Search();
+
+            Assert.That(result.TotalCount, Is.Zero);
+            Assert.That(_worker.InfoCalls + _worker.EmbedCalls, Is.Zero);
         }
 
         [Test]
@@ -198,6 +209,7 @@ namespace Cotton.Server.IntegrationTests
             ServerSettingsCache settings = new();
             settings.GetOrAdd(() => ServerSettingsSnapshot.FromEntity(new CottonServerSettings
             {
+                AllowGlobalIndexing = true,
                 ComputionMode = ComputionMode.Remote,
                 RemoteComputationRunnerUrl = "https://runner.example/",
             }));

@@ -13,7 +13,6 @@ import { AdminSmartSearchPage } from "./AdminSmartSearchPage";
 import { ENABLE_VECTOR_SQL } from "./smartSearchSetup";
 import { settingsApi } from "@shared/api/settingsApi";
 import { readyComputationStatus } from "../../../test/computationStatus";
-import { ADMIN_GENERAL_SETTINGS_ROUTE } from "@shared/config/adminRoutes";
 
 const availableStatus: VectorExtensionStatusDto = {
   extensionEnabled: false,
@@ -29,6 +28,12 @@ const availableStatus: VectorExtensionStatusDto = {
   indexErrorCode: null,
   indexCreateSql:
     "CREATE INDEX CONCURRENTLY search_index ON file_embeddings (id)",
+};
+
+const preparedStatus = {
+  ...availableStatus,
+  extensionEnabled: true,
+  indexReady: true,
 };
 
 const setupError = (code: string) =>
@@ -68,6 +73,8 @@ const renderPage = () => {
 };
 
 beforeEach(() => {
+  vi.spyOn(settingsApi, "getComputionMode").mockResolvedValue("Cloud");
+  vi.spyOn(settingsApi, "getRemoteComputationRunnerUrl").mockResolvedValue("");
   vi.spyOn(settingsApi, "getAllowGlobalIndexing").mockResolvedValue(true);
   vi.spyOn(settingsApi, "setAllowGlobalIndexing").mockResolvedValue();
   vi.spyOn(adminApi, "getVectorExtensionStatus").mockResolvedValue(
@@ -86,126 +93,116 @@ afterEach(() => {
 });
 
 describe("AdminSmartSearchPage", () => {
-  it("explains disabled indexing and enables it without changing other settings", async () => {
+  it("starts with the database and gates the remaining steps", async () => {
+    renderPage();
+    await screen.findByRole("button", { name: "smartSearch.actions.enable" });
+    expect(
+      screen.getByRole("tab", { name: /smartSearch.wizard.service/ }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("tab", { name: /smartSearch.wizard.search/ }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("opens the search step when both prerequisites are ready and saves its switch", async () => {
+    vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue(
+      preparedStatus,
+    );
     vi.mocked(settingsApi.getAllowGlobalIndexing).mockResolvedValue(false);
     renderPage();
-    expect(
-      await screen.findByText("smartSearch.indexingDisabled"),
-    ).toBeInTheDocument();
-    const toggle = screen.getByRole("switch", {
-      name: "settings.general.fields.allowGlobalIndexing",
+    const toggle = await screen.findByRole("switch", {
+      name: "smartSearch.wizard.enableSearch",
     });
     expect(toggle).not.toBeChecked();
     fireEvent.click(toggle);
     await waitFor(() =>
       expect(settingsApi.setAllowGlobalIndexing).toHaveBeenCalledWith(true),
     );
-    await waitFor(() =>
-      expect(
-        screen.queryByText("smartSearch.indexingDisabled"),
-      ).not.toBeInTheDocument(),
-    );
-    expect(toggle).toBeChecked();
+    expect(
+      await screen.findByText("smartSearch.wizard.enabledHelp"),
+    ).toBeInTheDocument();
     expect(adminApi.enableVectorExtension).not.toHaveBeenCalled();
   });
 
-  it("shows zero progress for an empty library", async () => {
+  it("explains an empty library instead of showing zero progress", async () => {
+    vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue(
+      preparedStatus,
+    );
     renderPage();
     expect(
-      await screen.findByText("smartSearch.progress: 0 / 0"),
+      await screen.findByText("smartSearch.wizard.empty"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute(
-      "aria-valuenow",
-      "0",
-    );
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
-  it("loads progress independently of a slow computation service", async () => {
+  it("keeps the search step unavailable while the service is being checked", async () => {
+    vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue(
+      preparedStatus,
+    );
     vi.mocked(settingsApi.getComputationStatus).mockReturnValue(
       new Promise(() => {}),
     );
-    vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue({
-      ...availableStatus,
-      fileCount: 1_000,
-      embeddedFileCount: 250,
-    });
     renderPage();
+    await screen.findByRole("combobox");
     expect(
-      await screen.findByText("smartSearch.progress: 250 / 1,000"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute(
-      "aria-valuenow",
-      "25",
-    );
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      screen.getByRole("tab", { name: /smartSearch.wizard.search/ }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 
-  it("refreshes file progress and recovers worker health every ten seconds", async () => {
+  it("recovers service health and refreshes search coverage", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    vi.mocked(adminApi.getVectorExtensionStatus)
-      .mockResolvedValueOnce({
-        ...availableStatus,
-        fileCount: 10,
-        embeddedFileCount: 2,
-      })
-      .mockResolvedValue({
-        ...availableStatus,
-        fileCount: 10,
-        embeddedFileCount: 8,
-      });
-    vi.mocked(settingsApi.getComputationStatus)
-      .mockResolvedValueOnce({
-        info: null,
-        dimensions: null,
-        isReady: false,
-        error: "Unreachable",
-      })
-      .mockResolvedValue(readyComputationStatus);
+    vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue({
+      ...availableStatus,
+      extensionEnabled: true,
+      indexReady: true,
+      fileCount: 10,
+      embeddedFileCount: 8,
+    });
+    vi.mocked(settingsApi.getComputationStatus).mockResolvedValue({
+      info: null,
+      dimensions: null,
+      isReady: false,
+      error: "Unreachable",
+    });
     const view = renderPage();
     expect(
-      await screen.findByText("smartSearch.progress: 2 / 10"),
+      await screen.findByText("settings.general.remoteRunner.cloudUnavailable"),
     ).toBeInTheDocument();
-    expect(await screen.findByRole("link")).toHaveAttribute(
-      "href",
-      ADMIN_GENERAL_SETTINGS_ROUTE,
-    );
     expect(
-      screen.getByText("smartSearch.computation.checkSettings", {
-        exact: false,
-      }),
-    ).toBeInTheDocument();
-
+      screen.getByRole("tab", { name: /smartSearch.wizard.search/ }),
+    ).toBeDisabled();
+    vi.mocked(settingsApi.getComputationStatus).mockResolvedValue(
+      readyComputationStatus,
+    );
     await act(() => vi.advanceTimersByTimeAsync(10_000));
-
     expect(
       await screen.findByText("smartSearch.progress: 8 / 10"),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "80",
     );
-    expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(2);
-    expect(settingsApi.getComputationStatus).toHaveBeenCalledTimes(2);
     view.unmount();
-    await act(() => vi.advanceTimersByTimeAsync(10_000));
-    expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(2);
-    expect(settingsApi.getComputationStatus).toHaveBeenCalledTimes(2);
   });
 
-  it("shows a settings link when the health endpoint cannot be reached", async () => {
+  it("keeps service settings editable after a status failure", async () => {
+    vi.mocked(adminApi.getVectorExtensionStatus).mockResolvedValue(
+      preparedStatus,
+    );
     vi.mocked(settingsApi.getComputationStatus).mockRejectedValue(
       new Error("Unavailable"),
     );
     renderPage();
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "settings.general.remoteRunner.statusLoadFailed",
-    );
-    expect(screen.getByRole("link")).toHaveAttribute(
-      "href",
-      ADMIN_GENERAL_SETTINGS_ROUTE,
-    );
     expect(
-      await screen.findByText("smartSearch.progress: 0 / 0"),
+      await screen.findByText("settings.general.remoteRunner.statusLoadFailed"),
     ).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toBeEnabled();
+    expect(
+      screen.getByRole("tab", { name: /smartSearch.wizard.search/ }),
+    ).toBeDisabled();
   });
 
   it("does not offer activation until the status is loaded", () => {
@@ -235,6 +232,11 @@ describe("AdminSmartSearchPage", () => {
 
     renderPage();
 
+    fireEvent.click(
+      await screen.findByRole("tab", {
+        name: /smartSearch.wizard.database/,
+      }),
+    );
     expect(await screen.findByText("smartSearch.enabled")).toBeInTheDocument();
     expect(screen.getByText("2,000,000")).toBeInTheDocument();
     expect(
@@ -266,7 +268,7 @@ describe("AdminSmartSearchPage", () => {
     await waitFor(() => expect(activate).toBeDisabled());
     expect(screen.queryByText("smartSearch.enabled")).not.toBeInTheDocument();
     completeActivation?.();
-    expect(await screen.findByText("smartSearch.enabled")).toBeInTheDocument();
+    expect(await screen.findByRole("switch")).toBeInTheDocument();
     expect(adminApi.enableVectorExtension).toHaveBeenCalledTimes(1);
     expect(adminApi.getVectorExtensionStatus).toHaveBeenCalledTimes(2);
     expect(
@@ -325,7 +327,7 @@ describe("AdminSmartSearchPage", () => {
     });
     renderPage();
     expect(
-      await screen.findByText("smartSearch.installation.missing"),
+      await screen.findByText("smartSearch.wizard.installHelp"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "smartSearch.actions.enable" }),
@@ -355,7 +357,7 @@ describe("AdminSmartSearchPage", () => {
     ).toBeEnabled();
     await waitFor(() =>
       expect(
-        screen.queryByText("smartSearch.installation.missing"),
+        screen.queryByText("smartSearch.wizard.installHelp"),
       ).not.toBeInTheDocument(),
     );
   });
@@ -406,7 +408,7 @@ describe("AdminSmartSearchPage", () => {
       await screen.findByRole("button", { name: "smartSearch.actions.enable" }),
     );
     expect(
-      await screen.findByText("smartSearch.installation.missing"),
+      await screen.findByText("smartSearch.wizard.installHelp"),
     ).toBeInTheDocument();
   });
 

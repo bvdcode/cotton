@@ -1,6 +1,9 @@
 {
   "search": {
     "smartSearch": {
+      "notConfigured": "Smart search is not configured. Go to Administration → Smart search to set it up.",
+      "contactAdministrator": "Smart search is not configured. Contact your administrator.",
+      "configure": "Configure",
       "label": "Smart search",
       "enable": "Enable smart search",
       "disable": "Disable smart search",
@@ -2732,13 +2735,10 @@
   },
   "admin": {
     "smartSearch": {
-      "progress": "Files with vectors: {{indexed}} of {{total}}",
+      "progress": "Files processed: {{indexed}} of {{total}}",
       "indexingProgress": "File indexing progress",
       "indexingDisabled": "Enable file content indexing to use smart search.",
       "indexingRequested": "Indexing requested.",
-      "computation": {
-        "checkSettings": "Check the computation service connection in"
-      },
       "extension": "pgvector",
       "database": "PostgreSQL {{version}} · {{database}}",
       "title": "Smart search",
@@ -2801,6 +2801,27 @@
         "incompatible": "The search index name is used by a different index. Check its definition in PostgreSQL.",
         "invalidData": "Version 1 vectors must contain 1024 finite numbers. Correct the data and retry.",
         "failed": "Could not build the index. Check the server log and retry."
+      },
+      "wizard": {
+        "database": "Prepare the database",
+        "service": "Connect a search service",
+        "search": "Enable smart search",
+        "step": "Step {{current}} of {{total}}",
+        "complete": "Ready",
+        "next": "Continue",
+        "installHelp": "PostgreSQL needs the pgvector extension. Choose how your database is installed below.",
+        "activateHelp": "pgvector is already installed on the server. Cotton can enable it in this database and create the search index.",
+        "serviceHelp": "Choose Cotton Bridge or your own compatible search server. Text extracted from files is sent to this service for processing.",
+        "dockerHelp": "The pgvector image is the official PostgreSQL image with vector search added. For a standard Debian image, you usually only change the image name, keeping the same PostgreSQL version, Debian variant, data volume and settings.",
+        "enableSearch": "Index file contents",
+        "indexingHelp": "Allow Cotton to read file contents and prepare them for search. This setting applies to the whole server.",
+        "enabledHelp": "Smart search is enabled. Files are processed in the background; you can search files that are already indexed.",
+        "progressHelp": "Files without supported text are skipped.",
+        "empty": "No files yet. Upload files to start building your search library.",
+        "provider": "Search service",
+        "chooseService": "Choose a service",
+        "checkingService": "Checking the connection…",
+        "remoteService": "Your own server"
       }
     },
     "title": "Admin",

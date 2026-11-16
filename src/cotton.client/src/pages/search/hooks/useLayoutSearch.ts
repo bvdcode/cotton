@@ -7,6 +7,7 @@ import {
   type LayoutSearchResultDto,
 } from "../../../shared/api/layoutsApi";
 import { useDeepSearchMode } from "../../../features/search/hooks/useDeepSearchMode";
+import { getSearchErrorKey } from "../../../features/search/utils/getSearchErrorKey";
 
 export interface UseLayoutSearchOptions {
   layoutId?: Guid | null;
@@ -101,11 +102,11 @@ export function useLayoutSearch(
         }
         setResults(response.data);
         setTotalCount(response.totalCount);
-      } catch {
+      } catch (error) {
         if (!controller.signal.aborted) {
           setResults(null);
           setTotalCount(0);
-          setError(deep ? "smartSearch.error" : "error");
+          setError(getSearchErrorKey(error, deep));
         }
       } finally {
         if (!controller.signal.aborted) {

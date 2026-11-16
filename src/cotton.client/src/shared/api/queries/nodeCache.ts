@@ -4,6 +4,7 @@ import type { NodeFileManifestDto, NodeResponse } from "../nodesApi";
 import { applyDisplayMetaToFiles } from "../../crypto/displayMeta";
 import { queryKeys } from "./queryKeys";
 import { cachedFolderPages, type NodeNavigation } from "./nodeNavigation";
+import { invalidateFolderInfoCache } from "./folderInfo";
 
 type ListingData = NodeResponse | InfiniteData<NodeResponse, number>;
 
@@ -27,14 +28,26 @@ export function updateCachedListings(
         return data;
       }
       if ("pages" in data) {
-        const pages = data.pages.map((page) => update(page, false));
+        const pages = data.pages.map((page) =>
+          update(page, data.pages.length === 1 && isCompleteListing(page)),
+        );
         return pages.every((page, index) => page === data.pages[index])
           ? data
           : { ...data, pages };
       }
-      return update(data, key[3] === "complete");
+      return update(
+        data,
+        key[3] === "complete" ||
+          (key[3] === "overview" && isCompleteListing(data)),
+      );
     });
   }
+}
+
+function isCompleteListing(page: NodeResponse): boolean {
+  return (
+    page.totalCount === page.content.nodes.length + page.content.files.length
+  );
 }
 
 export function addCachedFolder(
@@ -54,7 +67,16 @@ export function addCachedFolder(
     return {
       ...page,
       totalCount: page.totalCount + 1,
-      content: { ...page.content, nodes: [...page.content.nodes, folder] },
+      content: {
+        ...page.content,
+        nodes: [...page.content.nodes, folder],
+        ...(page.content.stats && {
+          stats: {
+            ...page.content.stats,
+            folders: page.content.stats.folders + 1,
+          },
+        }),
+      },
     };
   });
 }
@@ -129,8 +151,11 @@ export function invalidateCachedFolder(
   nodeId: string,
   userId: string,
 ): void {
+  invalidateFolderInfoCache(client);
   void client.invalidateQueries({
     queryKey: [...queryKeys.nodeChildren.all(nodeId), userId],
+    predicate: ({ queryKey }) =>
+      queryKey[3] !== "folderInfo" && queryKey[3] !== "folderSizes",
   });
 }
 

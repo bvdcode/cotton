@@ -1,5 +1,6 @@
 import {
   cleanup,
+  act,
   createEvent,
   fireEvent,
   render,
@@ -42,5 +43,50 @@ describe("InlineRenameField", () => {
     fireEvent(input, event);
 
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("shows pending feedback and submits once for Enter followed by blur", async () => {
+    let finish: (() => void) | undefined;
+    const confirm = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(
+      <InlineRenameField
+        value="Photos"
+        onChange={vi.fn()}
+        onConfirm={confirm}
+        onCancel={vi.fn()}
+      />,
+    );
+    const input = screen.getByRole<HTMLInputElement>("textbox");
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.blur(input);
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(input).toHaveAttribute("readonly");
+    expect(screen.getByRole("progressbar")).toBeVisible();
+    await act(async () => finish?.());
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  it("does not submit on blur after cancelling", () => {
+    const confirm = vi.fn();
+    const cancel = vi.fn();
+    render(
+      <InlineRenameField
+        value="Photos"
+        onChange={vi.fn()}
+        onConfirm={confirm}
+        onCancel={cancel}
+      />,
+    );
+    const input = screen.getByRole("textbox");
+    fireEvent.keyDown(input, { key: "Escape" });
+    fireEvent.blur(input);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
   });
 });
