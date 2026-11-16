@@ -10,6 +10,11 @@ import { queryClient } from "./queryClient";
 import { useAuthStore } from "../../store/authStore";
 
 export const FOLDER_SIZE_STALE_TIME = 10 * 60_000;
+export const FOLDER_SIZE_REFRESH_DELAY_MS = 5_000;
+const pendingInvalidations = new WeakMap<
+  QueryClient,
+  ReturnType<typeof setTimeout>
+>();
 
 export const folderInfoOptions = (
   nodeId: string,
@@ -50,10 +55,36 @@ const folderSizeQueries = {
 };
 
 export const clearFolderInfoCache = (client: QueryClient) => {
+  clearTimeout(pendingInvalidations.get(client));
+  pendingInvalidations.delete(client);
   client.removeQueries(folderSizeQueries);
 };
 
-export const invalidateFolderInfoCache = async (client: QueryClient) => {
-  await client.cancelQueries(folderSizeQueries);
-  void client.invalidateQueries(folderSizeQueries);
+export const invalidateFolderInfoCache = (client: QueryClient): void => {
+  if (
+    pendingInvalidations.has(client) ||
+    client.getQueryCache().findAll(folderSizeQueries).length === 0
+  ) {
+    return;
+  }
+  const timer = setTimeout(() => {
+    void refreshFolderInfoCache(client, timer);
+  }, FOLDER_SIZE_REFRESH_DELAY_MS);
+  pendingInvalidations.set(client, timer);
 };
+
+async function refreshFolderInfoCache(
+  client: QueryClient,
+  timer: ReturnType<typeof setTimeout>,
+): Promise<void> {
+  const running = client
+    .getQueryCache()
+    .findAll(folderSizeQueries)
+    .flatMap((query) => (query.promise ? [query.promise] : []));
+  await Promise.allSettled(running);
+  if (pendingInvalidations.get(client) !== timer) {
+    return;
+  }
+  pendingInvalidations.delete(client);
+  await client.invalidateQueries(folderSizeQueries, { cancelRefetch: false });
+}

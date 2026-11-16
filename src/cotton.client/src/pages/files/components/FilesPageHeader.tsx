@@ -80,7 +80,11 @@ export const FilesPageHeader: React.FC<FilesPageHeaderProps> = ({
       <PageHeader
         loading={loading}
         breadcrumbs={breadcrumbs}
-        stats={{ ...stats, sizeBytes: stats.sizeBytes + folderSizes.sizeBytes }}
+        stats={{
+          ...stats,
+          sizeBytes:
+            stats.sizeBytes + (stats.folders > 0 ? folderSizes.sizeBytes : 0),
+        }}
         isSizeCalculating={folderSizes.isCalculating}
         viewMode={viewMode}
         canGoUp={canGoUp}
