@@ -44,6 +44,7 @@ const isConnectionInterruption = (error: Error): boolean => {
 
   if (error.response) {
     switch (error.response.status) {
+      case 408:
       case 502:
       case 503:
       case 504:

@@ -105,7 +105,7 @@ describe("uploadBlobToChunks", () => {
     mocks.uploadChunk.mockResolvedValue(undefined);
   });
 
-  it("recovers after a minute-long gateway timeout without reuploading a stored chunk", async () => {
+  it.each([408, 502, 503, 504])("recovers after an HTTP %s timeout without reuploading a stored chunk", async (status) => {
     vi.useFakeTimers();
     const worker = createWorker();
     const chunkBytes = 128 * 1024;
@@ -120,7 +120,7 @@ describe("uploadBlobToChunks", () => {
       }) => {
         reportProgress(chunkBytes);
         return new Promise<void>((_resolve, reject) => {
-          setTimeout(() => reject(createResponseError(504)), 60000);
+          setTimeout(() => reject(createResponseError(status)), 60000);
         });
       },
     );
@@ -157,7 +157,7 @@ describe("uploadBlobToChunks", () => {
     expect(mocks.release).toHaveBeenCalledWith(worker);
   });
 
-  it("rehashes retry segments without restarting the whole-file hash", async () => {
+  it.each(["ERR_NETWORK", 408, 502, 503, 504])("rehashes retry segments without restarting the whole-file hash (%s)", async (failure) => {
     const worker = createWorker();
     const chunkBytes = 256 * 1024;
     let uploadCalls = 0;
@@ -166,7 +166,10 @@ describe("uploadBlobToChunks", () => {
     mocks.uploadChunk.mockImplementation(async () => {
       uploadCalls += 1;
       if (uploadCalls === 1) {
-        throw new AxiosError("interrupted", "ERR_NETWORK");
+        if (typeof failure === "string") {
+          throw new AxiosError("interrupted", failure);
+        }
+        throw createResponseError(failure);
       }
     });
 
