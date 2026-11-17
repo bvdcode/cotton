@@ -36,7 +36,13 @@ export const TaskQueueWidget = () => {
   const stats = useMemo(() => calculateTaskStats(tasks), [tasks]);
   const totalSpeed = snapshot.overall.speedBytesPerSec;
   const visible = snapshot.open && stats.total > 0;
-  const activity = JSON.stringify(snapshot);
+  const activity = JSON.stringify({
+    overall: snapshot.overall,
+    total: stats.total,
+    completed: stats.completed,
+    failed: stats.failed,
+    active: stats.activeTasks.filter((task) => task.status !== "queued"),
+  });
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetInactivity = useCallback(() => {
     if (inactivityTimer.current !== null) {
