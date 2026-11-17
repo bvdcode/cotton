@@ -258,7 +258,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task NavigationContract_WebDavResolvesEncodedFolderAndFileNames()
+        public async Task NavigationContract_WebDavResolvesDecodedFolderAndFileNames()
         {
             NodeDto root = await PrepareNavigationRootAsync();
             NodeDto parent = await CreateNodeAsync(root.Id, "folder #100%");
@@ -266,9 +266,9 @@ namespace Cotton.Server.IntegrationTests
             Guid ownerId = await DbContext.Nodes.Where(n => n.Id == root.Id).Select(n => n.OwnerId).SingleAsync();
             using IServiceScope scope = _factory!.Services.CreateScope();
             IWebDavPathResolver resolver = scope.ServiceProvider.GetRequiredService<IWebDavPathResolver>();
-            string folderPath = Uri.EscapeDataString(parent.Name.ToUpperInvariant());
+            string folderPath = parent.Name.ToUpperInvariant();
             WebDavResolveResult folder = await resolver.ResolveMetadataAsync(ownerId, folderPath);
-            WebDavResolveResult result = await resolver.ResolveMetadataAsync(ownerId, folderPath + "/" + Uri.EscapeDataString(file.Name));
+            WebDavResolveResult result = await resolver.ResolveMetadataAsync(ownerId, folderPath + "/" + file.Name);
             WebDavResolveResult missing = await resolver.ResolveMetadataAsync(ownerId, folderPath + "/missing");
             Assert.Multiple(() =>
             {
@@ -277,7 +277,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(missing.Found, Is.False);
             });
             WebDavPropFindResult properties = await scope.ServiceProvider.GetRequiredService<IMediator>()
-                .Send(new WebDavPropFindQuery(ownerId, folderPath + "/" + Uri.EscapeDataString(file.Name), "/dav/", 0));
+                .Send(new WebDavPropFindQuery(ownerId, folderPath + "/" + file.Name, "/dav/", 0));
             XNamespace dav = "DAV:";
             Assert.That(XDocument.Parse(properties.XmlResponse!).Descendants(dav + "href").Single().Value,
                 Is.EqualTo("/dav/" + Uri.EscapeDataString(parent.Name) + "/" + Uri.EscapeDataString(file.Name)));

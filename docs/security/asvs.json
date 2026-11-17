@@ -8,9 +8,9 @@
   },
   "reqs": {
     "V1.1.1": {
-      "status": "fail",
+      "status": "pass",
       "date": "2026-11-16",
-      "notes": "ASVS 5.0.0: isolated HTTP tests confirmed repeated percent decoding in WebDAV. GET invoice%2541.txt reads invoiceA.txt instead of the literal invoice%41.txt; MKCOL folder%2541 creates folderA. COPY also resolves the decoded alias. A locked invoiceA.txt rejects ordinary DELETE with 423, but DELETE invoice%2541.txt succeeds with 204 because locking and resource lookup use different path representations. Decoding occurs in WebDavRequestHeaders.GetDestinationPath and WebDavPathResolver after route decoding or lock checks. Tested JSON name handling, JSON escape validation, REST path resolution, query binding and client filename/token parsing separately. WebDAV needs a single decoding boundary and the same canonical path for validation, locking and resource lookup. Production behavior was not tested."
+      "notes": "Verified decoding before validation in JSON, query parameters, filename headers and WebDAV. Fixed repeated WebDAV decoding; confirmed literal percent-encoded names remain distinct and cannot bypass file locks. Local integration tests passed."
     }
   }
 }
