@@ -30,6 +30,10 @@ namespace Cotton.Server.Extensions
         {
             limits.InitialConnectionWindowSize = options.InitialConnectionWindowSize;
             limits.InitialStreamWindowSize = options.InitialStreamWindowSize;
+            int connectionWindowUpdateThreshold = options.InitialConnectionWindowSize / 2;
+            int maxBufferedStreams = Math.Max(1,
+                connectionWindowUpdateThreshold / options.InitialStreamWindowSize);
+            limits.MaxStreamsPerConnection = Math.Min(limits.MaxStreamsPerConnection, maxBufferedStreams);
         }
     }
 }
