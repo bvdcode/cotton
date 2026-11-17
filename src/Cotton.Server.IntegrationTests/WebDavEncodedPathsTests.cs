@@ -129,6 +129,42 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         }
 
+        [TestCase("GET", "invalid?.txt")]
+        [TestCase("HEAD", "invalid*.txt")]
+        [TestCase("PROPFIND", "invalid:name.txt")]
+        [TestCase("PROPFIND", "invalid|folder/file.txt")]
+        [TestCase("PROPPATCH", "invalid<name.txt")]
+        [TestCase("LOCK", "invalid>name.txt")]
+        [TestCase("DELETE", "invalid\"name.txt")]
+        [TestCase("MKCOL", "invalid|folder/child")]
+        [TestCase("PUT", "invalid|folder/file.txt")]
+        public async Task InvalidPathReturnsBadRequest(string method, string path)
+        {
+            await PrepareRootAsync();
+            await UseWebDavAsync();
+            string[] segments = path.Split('/');
+            using HttpRequestMessage request = new(new HttpMethod(method), WebDavPath(segments));
+            using HttpResponseMessage response = await _client!.SendAsync(request);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        }
+
+        [TestCase("COPY", "invalid?.txt")]
+        [TestCase("MOVE", "invalid|folder/file.txt")]
+        public async Task InvalidDestinationReturnsBadRequestWithoutChangingSource(string method, string destination)
+        {
+            NodeDto root = await PrepareRootAsync();
+            NodeFileManifestDto source = await UploadTextFileAsync(root, "source.txt", "source-content");
+            await UseWebDavAsync();
+            using HttpRequestMessage request = new(new HttpMethod(method), WebDavPath(source.Name));
+            request.Headers.Add("Destination", "http://localhost" + WebDavPath(destination.Split('/')));
+            using HttpResponseMessage response = await _client!.SendAsync(request);
+
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+            using HttpResponseMessage download = await _client.GetAsync(WebDavPath(source.Name));
+            Assert.That(await download.Content.ReadAsStringAsync(), Is.EqualTo("source-content"));
+        }
+
         [Test]
         public async Task Delete_LiteralPercentNameCannotDeleteLockedAlias()
         {

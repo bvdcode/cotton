@@ -35,7 +35,7 @@ namespace Cotton.Server.Services.WebDav
             bool includeFileContentGraph,
             CancellationToken ct)
         {
-            string cleanPath = NormalizePath(path);
+            string cleanPath = NormalizeAndValidatePath(path);
 
             // Root path
             if (string.IsNullOrEmpty(cleanPath))
@@ -112,7 +112,8 @@ namespace Cotton.Server.Services.WebDav
 
         public async Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default)
         {
-            (Node Parent, string ResourceName)? resolved = await _navigator.ResolveParentAndNameAsync(userId, path, DefaultNodeType, ct);
+            string cleanPath = NormalizeAndValidatePath(path);
+            (Node Parent, string ResourceName)? resolved = await _navigator.ResolveParentAndNameAsync(userId, cleanPath, DefaultNodeType, ct);
             if (resolved is null)
             {
                 return new WebDavParentResult { Found = false };
@@ -129,9 +130,16 @@ namespace Cotton.Server.Services.WebDav
         private static string CombinePath(string parentPath, string name) =>
             string.IsNullOrEmpty(parentPath) ? name : parentPath + PathSeparator + name;
 
-        private static string NormalizePath(string? path)
+        private static string NormalizeAndValidatePath(string? path)
         {
             string p = (path ?? string.Empty).Replace('\\', PathSeparator);
+            foreach (string part in p.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!NameValidator.TryNormalizeAndValidate(part, out _, out string error))
+                {
+                    throw new BadHttpRequestException(error);
+                }
+            }
             return p.Trim(PathSeparator);
         }
     }
