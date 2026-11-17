@@ -51,6 +51,42 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
+        public async Task SendEmailAsync_MarksPlainTextWithoutChangingValuesOrInputParameters()
+        {
+            const string content = "<br /> &lt;literal&gt; {{year}}\r\nNext line";
+            Dictionary<string, string> parameters = new()
+            {
+                [EmailTemplateParameterNames.SecurityTitle] = "R&D <Security>",
+                [EmailTemplateParameterNames.SecurityContent] = content,
+                [EmailTemplateParameterNames.OccurredAt] = "2026-11-16 10:00:00 +00:00 (UTC)",
+            };
+            using HttpResponseMessage response = new(HttpStatusCode.OK);
+            using RecordingHttpMessageHandler handler = new(response);
+            using HttpClient client = new(handler)
+            {
+                BaseAddress = new Uri(CottonPublicEmailProvider.CottonBridgeBaseUrl),
+            };
+            CottonPublicEmailProvider provider = new(client, NullLogger<CottonPublicEmailProvider>.Instance);
+
+            bool sent = await provider.SendEmailAsync(
+                Guid.NewGuid(), EmailTemplate.SecurityAlert, "https://cotton.example",
+                "recipient@example.test", "R&D {{year}}", "en", parameters);
+
+            using JsonDocument body = JsonDocument.Parse(handler.RequestBody!);
+            JsonElement actual = body.RootElement.GetProperty("parameters");
+            Assert.Multiple(() =>
+            {
+                Assert.That(sent, Is.True);
+                Assert.That(actual.GetProperty(EmailTemplateParameterNames.Format).GetString(),
+                    Is.EqualTo(nameof(EmailParameterFormat.PlainText)));
+                Assert.That(actual.GetProperty(EmailTemplateParameterNames.SecurityContent).GetString(), Is.EqualTo(content));
+                Assert.That(body.RootElement.GetProperty("recipientName").GetString(), Is.EqualTo("R&D {{year}}"));
+                Assert.That(parameters.ContainsKey(EmailTemplateParameterNames.Format), Is.False);
+                Assert.That(parameters[EmailTemplateParameterNames.SecurityContent], Is.EqualTo(content));
+            });
+        }
+
+        [Test]
         public async Task CheckHealthAsync_UsesConfiguredClient()
         {
             using HttpResponseMessage response = new(HttpStatusCode.OK)
