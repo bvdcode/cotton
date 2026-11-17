@@ -2,6 +2,7 @@ import { chunksApi } from "../api/chunksApi";
 import { isAxiosError } from "../api/httpClient";
 import { BoundedByteQueue } from "./BoundedByteQueue";
 import { ChunkHashSession } from "./ChunkHashSession";
+import { globalChunkUploadGate } from "./ChunkUploadGate";
 import { ChunkUploadProgressTracker } from "./ChunkUploadProgressTracker";
 import {
   getChunkLength,
@@ -234,16 +235,23 @@ export class ChunkUploadPipeline {
         attemptId = this.progress.beginAttempt();
         const uploadAttemptId = attemptId;
         const chunkBytes = getChunkLength(prepared.segment);
-        await chunksApi.uploadChunk({
-          sharedUpload: this.options.sharedUpload,
-          buffer: prepared.buffer,
-          fileName: this.options.fileName,
-          hash: prepared.hash,
-          signal: this.abortController.signal,
-          onProgress: (bytesUploaded) => {
-            this.progress.updateTransmission(uploadAttemptId, bytesUploaded);
-          },
-        });
+        await globalChunkUploadGate.run(
+          () =>
+            chunksApi.uploadChunk({
+              sharedUpload: this.options.sharedUpload,
+              buffer: prepared.buffer,
+              fileName: this.options.fileName,
+              hash: prepared.hash,
+              signal: this.abortController.signal,
+              onProgress: (bytesUploaded) => {
+                this.progress.updateTransmission(
+                  uploadAttemptId,
+                  bytesUploaded,
+                );
+              },
+            }),
+          this.abortController.signal,
+        );
         this.progress.completeAttempt(uploadAttemptId, chunkBytes);
         this.recordUploadedSegment(prepared);
         return;

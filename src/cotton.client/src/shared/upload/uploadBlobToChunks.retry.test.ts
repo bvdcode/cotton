@@ -105,6 +105,35 @@ describe("uploadBlobToChunks", () => {
     mocks.uploadChunk.mockResolvedValue(undefined);
   });
 
+  it("shares the network limit across four concurrent files", async () => {
+    const releaseUploads = createDeferred<void>();
+    let activeRequests = 0;
+    let peakRequests = 0;
+    mocks.acquire.mockImplementation(async () => createWorker());
+    mocks.chunkExists.mockResolvedValue(false);
+    mocks.uploadChunk.mockImplementation(async () => {
+      activeRequests += 1;
+      peakRequests = Math.max(peakRequests, activeRequests);
+      await releaseUploads.promise;
+      activeRequests -= 1;
+    });
+    const uploads = Array.from({ length: 4 }, (_, index) => uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(16)]),
+      fileName: `parallel-${index}.bin`,
+      server: { maxChunkSizeBytes: 1, supportedHashAlgorithm: "sha256" },
+      client: { concurrency: 8 },
+    }));
+
+    try {
+      await vi.waitFor(() => expect(mocks.uploadChunk).toHaveBeenCalledTimes(8));
+    } finally {
+      releaseUploads.resolve();
+      await Promise.all(uploads);
+    }
+    expect(peakRequests).toBe(8);
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(64);
+  });
+
   it.each([408, 502, 503, 504])("recovers after an HTTP %s timeout without reuploading a stored chunk", async (status) => {
     vi.useFakeTimers();
     const worker = createWorker();
