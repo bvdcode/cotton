@@ -11,6 +11,11 @@
       "status": "pass",
       "date": "2026-11-16",
       "notes": "Verified decoding before validation in JSON, query parameters, filename headers and WebDAV. Fixed repeated WebDAV decoding; confirmed literal percent-encoded names remain distinct and cannot bypass file locks. Local integration tests passed."
+    },
+    "V1.1.2": {
+      "status": "fail",
+      "date": "2026-11-16",
+      "notes": "Confirmed HTML injection through profile names in confirmation and password-reset emails (English and Russian). Template placeholders inside names are also reprocessed. Share-page, WebDAV XML and download-header checks passed."
     }
   }
 }
