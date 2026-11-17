@@ -86,6 +86,7 @@ namespace Cotton.Server.Extensions
             builder.Services
                 .AddExceptionHandler<UntrustedProxyConnectionExceptionHandler>()
                 .AddExceptionHandler<BadHttpRequestExceptionHandler>()
+                .AddExceptionHandler<DatabaseUnavailableExceptionHandler>()
                 .AddExceptionHandler()
                 .AddOptions<CottonEncryptionSettings>()
                 .Bind(builder.Configuration);
