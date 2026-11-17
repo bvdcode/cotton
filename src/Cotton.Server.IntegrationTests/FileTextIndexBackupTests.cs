@@ -36,7 +36,15 @@ namespace Cotton.Server.IntegrationTests
                 .UseNpgsql(connection.ConnectionString).Options);
             try
             {
-                await CreateDumpService(CurrentDatabaseName).DumpToFileAsync(dumpPath);
+                await using (FileStream output = new(dumpPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                    81920, useAsync: true))
+                {
+                    await CreateDumpService(CurrentDatabaseName).ReadDumpAsync(async (stream, token) =>
+                    {
+                        await stream.CopyToAsync(output, token);
+                        return output.Length;
+                    });
+                }
                 await restored.Database.EnsureCreatedAsync();
                 Models.DatabaseBackup.PostgresRestoreResult result = await CreateDumpService(restoreDatabase).RestoreFromFileAsync(dumpPath);
                 await restored.Database.OpenConnectionAsync();

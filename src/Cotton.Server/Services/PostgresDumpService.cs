@@ -16,24 +16,16 @@ namespace Cotton.Server.Services
         private readonly IConfiguration _configuration = configuration;
         private readonly ILogger<PostgresDumpService> _logger = logger;
 
-        public async Task DumpToFileAsync(string outputFilePath, CancellationToken cancellationToken = default)
+        public async Task<TResult> ReadDumpAsync<TResult>(
+            Func<Stream, CancellationToken, Task<TResult>> readDump,
+            CancellationToken cancellationToken = default)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(outputFilePath);
-
-            string? outputDirectory = Path.GetDirectoryName(outputFilePath);
-            if (string.IsNullOrWhiteSpace(outputDirectory))
-            {
-                throw new InvalidOperationException("Output directory is not specified in output file path.");
-            }
-            Directory.CreateDirectory(outputDirectory);
-
+            ArgumentNullException.ThrowIfNull(readDump);
             DbSettings settings = ReadDbSettings();
-            ProcessStartInfo processStartInfo = CreateProcessStartInfo(settings, outputFilePath);
-
-            _logger.LogInformation("Creating PostgreSQL dump to {OutputFilePath}.", outputFilePath);
-            await ExecuteAsync(processStartInfo, cancellationToken);
-
-            _logger.LogInformation("PostgreSQL dump created at {OutputFilePath}.", outputFilePath);
+            _logger.LogInformation("Streaming PostgreSQL dump.");
+            TResult result = await ExecuteAsync(CreateProcessStartInfo(settings), readDump, cancellationToken);
+            _logger.LogInformation("PostgreSQL dump stream completed.");
+            return result;
         }
 
         public async Task<PostgresRestoreResult> RestoreFromFileAsync(string inputFilePath, CancellationToken cancellationToken = default)
@@ -82,8 +74,19 @@ namespace Cotton.Server.Services
             }
         }
 
-        private async Task<string> ExecuteAsync(ProcessStartInfo processStartInfo, CancellationToken cancellationToken)
+        private Task<string> ExecuteAsync(ProcessStartInfo processStartInfo, CancellationToken cancellationToken) =>
+            ExecuteAsync(processStartInfo, async (stream, token) =>
+            {
+                using StreamReader reader = new(stream, leaveOpen: true);
+                return await reader.ReadToEndAsync(token);
+            }, cancellationToken);
+
+        private async Task<TResult> ExecuteAsync<TResult>(
+            ProcessStartInfo processStartInfo,
+            Func<Stream, CancellationToken, Task<TResult>> readOutput,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using Process process = new Process { StartInfo = processStartInfo };
 
             if (!process.Start())
@@ -91,32 +94,32 @@ namespace Cotton.Server.Services
                 throw new InvalidOperationException($"Failed to start {processStartInfo.FileName} process.");
             }
 
-            Task<string> stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
             try
             {
+                TResult result = await readOutput(process.StandardOutput.BaseStream, cancellationToken);
                 await process.WaitForExitAsync(cancellationToken);
+                string stderr = await stderrTask;
+
+                if (process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{processStartInfo.FileName} failed with exit code {process.ExitCode}. stderr: {stderr}");
+                }
+                return result;
             }
-            catch (OperationCanceledException)
+            finally
             {
-                TryKillProcess(process);
-                throw;
+                if (!process.HasExited)
+                {
+                    TryKillProcess(process);
+                    await process.WaitForExitAsync(CancellationToken.None);
+                }
+                await stderrTask;
             }
-
-            string stderr = await stderrTask;
-            string stdout = await stdoutTask;
-
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException(
-                    $"{processStartInfo.FileName} failed with exit code {process.ExitCode}. stderr: {stderr}. stdout: {stdout}");
-            }
-
-            return stdout;
         }
 
-        private static ProcessStartInfo CreateProcessStartInfo(DbSettings settings, string outputFilePath)
+        private static ProcessStartInfo CreateProcessStartInfo(DbSettings settings)
         {
             ProcessStartInfo processStartInfo = new ProcessStartInfo
             {
@@ -140,8 +143,6 @@ namespace Cotton.Server.Services
             processStartInfo.ArgumentList.Add(settings.Username);
             processStartInfo.ArgumentList.Add("--dbname");
             processStartInfo.ArgumentList.Add(settings.Database);
-            processStartInfo.ArgumentList.Add("--file");
-            processStartInfo.ArgumentList.Add(outputFilePath);
             processStartInfo.Environment["PGPASSWORD"] = settings.Password;
 
             return processStartInfo;

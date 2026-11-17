@@ -6,13 +6,14 @@ Cotton stores PostgreSQL custom-format dumps inside the same encrypted content-a
 
 The scheduled backup flow is:
 
-1. Run `pg_dump` into a restricted temporary file.
-2. Split the dump using the configured chunk size.
+1. Run `pg_dump` with binary standard output.
+2. Read the output stream using the configured chunk size. The pipe applies backpressure while each block is stored; no complete temporary dump is created.
 3. Hash and ingest each block through the normal compression, encryption, deduplication, and storage pipeline.
-4. Compute the complete dump hash and size.
+4. Compute the complete dump hash and size, and wait for a successful `pg_dump` exit.
 5. Write an immutable JSON manifest containing the format, source metadata, ordered chunks, lengths, total size, and whole-dump hash.
 6. Atomically replace the fixed pointer with the retained history, including the new manifest reference.
-7. Remove the plaintext temporary file in `finally`.
+
+Cancellation or a storage failure stops and reaps the dump process before releasing the backup gate.
 
 The manifest is content-addressed. The pointer is intentionally mutable and has a storage key scoped to the master encryption key. Filesystem storage publishes a completed temporary file using an atomic replacement; S3 storage replaces the object with a single PUT. The old pointer is never deleted before publishing its replacement.
 
@@ -86,7 +87,7 @@ If any retained manifest cannot be resolved, garbage collection aborts because i
 
 Backup chunks, manifest, and pointer pass through the normal encrypted storage pipeline. Recovering them requires the correct backend and master key.
 
-The PostgreSQL password is supplied to the dump tools through process environment rather than command-line arguments. Plaintext dumps exist only in the configured temporary area during backup or restore and are cleaned up on success, failure, or cancellation.
+The PostgreSQL password is supplied to the dump tools through process environment rather than command-line arguments. Backup creation streams plaintext through a pipe and a chunk-sized application buffer directly into the encrypted storage pipeline. Restore still rebuilds a complete plaintext dump in the configured temporary area and removes it on success, failure, or cancellation.
 
 Backup integrity uses both authenticated storage encryption and explicit whole-dump hash and length verification before `pg_restore`.
 
@@ -95,6 +96,7 @@ Backup integrity uses both authenticated storage encryption and explicit whole-d
 - `pg_dump` and `pg_restore` compatible with the deployed PostgreSQL version must be available on `PATH`.
 - The storage backend and master key must be backed up together; losing the key makes stored backups unrecoverable.
 - Automatic restore must point at the intended empty database and existing storage backend.
+- Restore requires temporary space for the complete plaintext dump. A temporary directory backed by tmpfs consumes host memory; use a disk-backed temporary directory when restoring a large database.
 - Operators should test restoration, not merely observe successful backup creation.
 - A backup does not replace independent PostgreSQL and storage-provider disaster-recovery policy.
 

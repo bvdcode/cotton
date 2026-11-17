@@ -7,7 +7,9 @@ namespace Cotton.Server.Abstractions
 {
     public interface IPostgresDumpService
     {
-        Task DumpToFileAsync(string outputFilePath, CancellationToken cancellationToken = default);
+        Task<TResult> ReadDumpAsync<TResult>(
+            Func<Stream, CancellationToken, Task<TResult>> readDump,
+            CancellationToken cancellationToken = default);
 
         Task<PostgresRestoreResult> RestoreFromFileAsync(string inputFilePath, CancellationToken cancellationToken = default);
     }
