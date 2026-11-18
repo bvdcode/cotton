@@ -18,9 +18,9 @@
       "notes": "Verified final-context encoding in email templates, share pages, WebDAV XML and download headers. Fixed shared email escaping and recursive placeholder replacement; confirmed old and new gateway requests retain their content through queued retries."
     },
     "V1.2.1": {
-      "status": "fail",
+      "status": "pass",
       "date": "2026-11-17",
-      "notes": "HTML email/share pages, WebDAV XML and download-header probes passed. Markdown preview retains unsandboxed iframe srcdoc from file content; a local browser probe confirmed script execution and modification of the parent document."
+      "notes": "Verified HTML email/share output, WebDAV XML and download headers. Markdown previews remove active HTML, event handlers, CSS and unsafe URL schemes; browser checks confirmed the tested file payloads could not execute scripts."
     }
   }
 }

@@ -2771,6 +2771,9 @@
         "save": "Сохранить",
         "saving": "Сохранение..."
       },
+      "markdown": {
+        "blockedIframe": "В Markdown обнаружен iframe. Встроенное содержимое заблокировано."
+      },
       "deleteToast": "Файл был удалён",
       "deleteUndoFailed": "Не удалось восстановить удалённый файл.",
       "editorModes": {

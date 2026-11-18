@@ -2671,6 +2671,9 @@
         "save": "保存",
         "saving": "正在保存……"
       },
+      "markdown": {
+        "blockedIframe": "此 Markdown 文件中检测到 iframe。嵌入内容已被阻止。"
+      },
       "deleteToast": "文件已删除",
       "deleteUndoFailed": "无法恢复已删除的文件。",
       "editorModes": {

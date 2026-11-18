@@ -2661,6 +2661,9 @@
         "save": "Guardar",
         "saving": "Guardando..."
       },
+      "markdown": {
+        "blockedIframe": "Se ha detectado un iframe en este archivo Markdown. El contenido incrustado se ha bloqueado."
+      },
       "deleteToast": "Se eliminó el archivo",
       "deleteUndoFailed": "No se pudo restaurar el archivo eliminado.",
       "editorModes": {
