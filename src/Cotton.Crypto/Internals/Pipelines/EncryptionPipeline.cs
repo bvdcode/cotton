@@ -96,7 +96,8 @@ namespace Cotton.Crypto.Internals.Pipelines
                         int read = 0;
                         try
                         {
-                            read = await input.ReadAsync(buffer.AsMemory(0, chunkSize), ct).ConfigureAwait(false);
+                            read = await input.ReadAtLeastAsync(buffer.AsMemory(0, chunkSize), chunkSize,
+                                throwOnEndOfStream: false, cancellationToken: ct).ConfigureAwait(false);
                         }
                         catch
                         {
