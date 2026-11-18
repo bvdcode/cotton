@@ -6,7 +6,6 @@ using Amazon.S3.Model;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Helpers;
 using Cotton.Storage.Streams;
-using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Mime;
 
@@ -15,10 +14,9 @@ namespace Cotton.Storage.Backends
     /// <summary>
     /// S3-compatible backend that stores opaque Cotton chunks as bucket objects.
     /// </summary>
-    public class S3StorageBackend(IS3Provider _s3Provider, ILogger<S3StorageBackend>? _logger = null) : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
+    public class S3StorageBackend(IS3Provider _s3Provider) : IStorageBackend, IStorageBackendUsesEncryptedConfiguration
     {
         private const string InvalidRangeErrorCode = "InvalidRange";
-        private const int WriteBufferSize = 2 * 1024 * 1024;
 
         private static string GetS3Key(string uid)
         {
@@ -129,47 +127,19 @@ namespace Cotton.Storage.Backends
                 return await GetSizeAsync(uid, cancellationToken).ConfigureAwait(false);
             }
 
-            string tmpPath = Path.GetTempFileName();
-            try
+            await using PooledUploadStream body = await PooledUploadStream.CreateAsync(source, cancellationToken)
+                .ConfigureAwait(false);
+            PutObjectRequest request = new PutObjectRequest()
             {
-                await using (FileStream fs = new FileStream(
-                    tmpPath,
-                    FileMode.Create,
-                    FileAccess.Write,
-                    FileShare.None,
-                    bufferSize: WriteBufferSize,
-                    useAsync: true))
-                {
-                    if (source.CanSeek)
-                    {
-                        source.Seek(0, SeekOrigin.Begin);
-                    }
-
-                    await source.CopyToAsync(fs, cancellationToken).ConfigureAwait(false);
-                    await fs.FlushAsync(cancellationToken).ConfigureAwait(false);
-                }
-                long storedSizeBytes = new FileInfo(tmpPath).Length;
-                PutObjectRequest req = new PutObjectRequest
-                {
-                    BucketName = bucket,
-                    Key = key,
-                    FilePath = tmpPath,
-                    ContentType = MediaTypeNames.Application.Octet,
-                }.WithFileBodyCompatibility();
-                await s3.PutObjectAsync(req, cancellationToken).ConfigureAwait(false);
-                return storedSizeBytes;
-            }
-            finally
-            {
-                try
-                {
-                    File.Delete(tmpPath);
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogError(ex, "Failed to delete temp file {Path}", tmpPath);
-                }
-            }
+                BucketName = bucket,
+                Key = key,
+                InputStream = body,
+                AutoCloseStream = false,
+                ContentType = MediaTypeNames.Application.Octet,
+            }.WithFileBodyCompatibility();
+            request.Headers.ContentLength = body.Length;
+            await s3.PutObjectAsync(request, cancellationToken).ConfigureAwait(false);
+            return body.Length;
         }
 
         public void CleanupTempFiles(TimeSpan ttl)

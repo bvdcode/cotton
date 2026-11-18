@@ -8,8 +8,7 @@ using Cotton.Storage.Backends;
 namespace Cotton.Server.Providers
 {
     public class StorageBackendFactory(
-        ILogger<FileSystemStorageBackend> _fileSystemLogger,
-        ILogger<S3StorageBackend> _s3Logger)
+        ILogger<FileSystemStorageBackend> _fileSystemLogger)
     {
         public IStorageBackend Create(
             StorageType storageType,
@@ -20,8 +19,7 @@ namespace Cotton.Server.Providers
             {
                 StorageType.Local => new FileSystemStorageBackend(_fileSystemLogger, localBasePath),
                 StorageType.S3 => new S3StorageBackend(
-                    s3Provider ?? throw new InvalidOperationException("S3 provider is required for S3 storage."),
-                    _s3Logger),
+                    s3Provider ?? throw new InvalidOperationException("S3 provider is required for S3 storage.")),
                 _ => throw new NotSupportedException($"Storage type {storageType} is not supported.")
             };
         }

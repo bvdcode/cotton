@@ -63,8 +63,7 @@ namespace Cotton.Server.Services
             CancellationToken cancellationToken)
         {
             StorageBackendFactory backendFactory = new(
-                _loggerFactory.CreateLogger<FileSystemStorageBackend>(),
-                _loggerFactory.CreateLogger<S3StorageBackend>());
+                _loggerFactory.CreateLogger<FileSystemStorageBackend>());
             IStorageBackend backend = backendFactory.Create(
                 storageType,
                 s3Provider,

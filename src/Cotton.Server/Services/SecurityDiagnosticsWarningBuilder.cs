@@ -78,7 +78,7 @@ namespace Cotton.Server.Services
             warnings.Add(Create(
                 "temp-directory-not-writable",
                 "critical",
-                $"Cotton cannot write to the OS temp directory ({tempPath}). Database dumps/restores, S3 upload spooling, and preview tooling require writable scratch space. Mount a writable /tmp when using read_only: true, or bind-mount a fast writable disk at /tmp.{error}"));
+                $"Cotton cannot write to the OS temp directory ({tempPath}). Database restores, archive downloads, and preview/text extraction tooling require writable scratch space. Mount a writable /tmp when using read_only: true, or bind-mount a fast writable disk at /tmp.{error}"));
         }
 
         private static void AddDatabaseIntegrityWarnings(

@@ -260,8 +260,9 @@ namespace Cotton.Storage.Tests.Backends
             cipher.Dispose();
         }
 
-        [Test]
-        public async Task S3Backend_FullPipeline_LargeFile_Success()
+        [TestCase(4 * 1024 * 1024)]
+        [TestCase(16 * 1024 * 1024)]
+        public async Task S3Backend_FullPipeline_LargeFile_Success(int size)
         {
             // Arrange
             string uid = NewUid();
@@ -285,7 +286,7 @@ namespace Cotton.Storage.Tests.Backends
                 processors,
                 new StorageWriteAdmissionGate(1));
 
-            byte[] originalData = new byte[3 * 1024 * 1024]; // 3 MB, stays above the S3 backend write buffer without burning test-bucket quota
+            byte[] originalData = new byte[size];
             RandomNumberGenerator.Fill(originalData);
 
             // Act
