@@ -10,7 +10,7 @@ interface RefreshBatch {
   running: boolean;
 }
 
-const pending = new WeakMap<QueryClient, RefreshBatch>();
+const pending = new WeakMap<QueryClient, Map<string, RefreshBatch>>();
 
 export function refreshFolderListings(
   client: QueryClient,
@@ -33,30 +33,43 @@ export function refreshFolderListings(
     predicate: (query) => selected.has(query),
     refetchType: "none",
   });
-  let batch = pending.get(client);
+  let folders = pending.get(client);
+  if (!folders) {
+    folders = new Map();
+    pending.set(client, folders);
+  }
+  let batch = folders.get(nodeId);
   if (!batch) {
     batch = { queries: new Set(), waiters: [], timer: null, running: false };
-    pending.set(client, batch);
+    folders.set(nodeId, batch);
   }
   for (const query of queries) {
     batch.queries.add(query);
   }
   const completed = new Promise<void>((resolve) => batch.waiters.push(resolve));
-  schedule(client, batch);
+  schedule(client, nodeId, batch);
   return completed;
 }
 
-function schedule(client: QueryClient, batch: RefreshBatch): void {
+function schedule(
+  client: QueryClient,
+  nodeId: string,
+  batch: RefreshBatch,
+): void {
   if (batch.timer !== null || batch.running) {
     return;
   }
   batch.timer = setTimeout(
-    () => void flush(client, batch),
+    () => void flush(client, nodeId, batch),
     FOLDER_REFRESH_DELAY_MS,
   );
 }
 
-async function flush(client: QueryClient, batch: RefreshBatch): Promise<void> {
+async function flush(
+  client: QueryClient,
+  nodeId: string,
+  batch: RefreshBatch,
+): Promise<void> {
   batch.timer = null;
   batch.running = true;
   const queries = new Set(batch.queries);
@@ -66,7 +79,7 @@ async function flush(client: QueryClient, batch: RefreshBatch): Promise<void> {
     await Promise.allSettled(
       [...queries].flatMap((query) => (query.promise ? [query.promise] : [])),
     );
-    if (pending.get(client) === batch) {
+    if (pending.get(client)?.get(nodeId) === batch) {
       await client.invalidateQueries(
         { predicate: (query) => queries.has(query) },
         { cancelRefetch: false },
@@ -77,26 +90,28 @@ async function flush(client: QueryClient, batch: RefreshBatch): Promise<void> {
       resolve();
     }
     batch.running = false;
-    if (pending.get(client) === batch) {
+    if (pending.get(client)?.get(nodeId) === batch) {
       if (batch.queries.size > 0) {
-        schedule(client, batch);
+        schedule(client, nodeId, batch);
       } else {
-        pending.delete(client);
+        pending.get(client)?.delete(nodeId);
       }
     }
   }
 }
 
 export function clearFolderListingRefresh(client: QueryClient): void {
-  const batch = pending.get(client);
-  if (!batch) {
+  const folders = pending.get(client);
+  if (!folders) {
     return;
   }
-  if (batch.timer !== null) {
-    clearTimeout(batch.timer);
-  }
   pending.delete(client);
-  for (const resolve of batch.waiters) {
-    resolve();
+  for (const batch of folders.values()) {
+    if (batch.timer !== null) {
+      clearTimeout(batch.timer);
+    }
+    for (const resolve of batch.waiters) {
+      resolve();
+    }
   }
 }

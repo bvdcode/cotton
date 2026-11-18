@@ -126,10 +126,8 @@ export function useFilesRealtimeEvents({
     }
 
     return subscribeToPreviewGenerated((previews) => {
-      const currentNodeId = nodeIdRef.current;
-      const files = currentNodeId ? previews.get(currentNodeId) : undefined;
-      if (currentNodeId && files) {
-        updateFolderFilePreviews(queryClient, currentNodeId, files);
+      for (const [folderId, files] of previews) {
+        updateFolderFilePreviews(queryClient, folderId, files);
       }
     });
   }, [isAuthenticated, queryClient]);

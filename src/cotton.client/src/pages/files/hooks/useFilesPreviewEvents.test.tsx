@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("preview generated events", () => {
-  it("patches the active folder without scheduling a reload and follows navigation", () => {
+  it("patches cached previews across navigation without reloading or creating absent caches", () => {
     const client = new QueryClient();
     const key = queryKeys.nodeChildren.overview("folder-1", "user-1", 1000);
     client.setQueryData<NodeResponse>(key, {
@@ -38,6 +38,16 @@ describe("preview generated events", () => {
         ...createFolder(),
         nodes: [],
         files: [createFile()],
+      },
+      totalCount: 1,
+    });
+    const otherKey = queryKeys.nodeChildren.complete("other-folder", "user-1");
+    client.setQueryData<NodeResponse>(otherKey, {
+      content: {
+        node: createFolder({ id: "other-folder" }),
+        ...createFolder({ id: "other-folder" }),
+        nodes: [],
+        files: [createFile({ id: "other-file", nodeId: "other-folder" })],
       },
       totalCount: 1,
     });
@@ -57,12 +67,29 @@ describe("preview generated events", () => {
     events.preview?.(new Map([["folder-1", new Map([["off-page", "ready"]])]]));
     rerender({ nodeId: "other-folder" });
     events.preview?.(
-      new Map([["folder-1", new Map([["file-1", "obsolete"]])]]),
+      new Map([
+        ["folder-1", new Map([["file-1", "new-preview"]])],
+        ["other-folder", new Map([["other-file", "other-preview"]])],
+        ["uncached-folder", new Map([["uncached-file", "unused"]])],
+      ]),
     );
+    rerender({ nodeId: "folder-1" });
     expect(
       client.getQueryData<NodeResponse>(key)?.content.files[0]
         .previewHashEncryptedHex,
-    ).toBe("ready");
+    ).toBe("new-preview");
+    expect(
+      client.getQueryData<NodeResponse>(otherKey)?.content.files[0]
+        .previewHashEncryptedHex,
+    ).toBe("other-preview");
+    events.preview?.(
+      new Map([["other-folder", new Map([["other-file", "latest"]])]]),
+    );
+    expect(
+      client.getQueryData<NodeResponse>(otherKey)?.content.files[0]
+        .previewHashEncryptedHex,
+    ).toBe("latest");
+    expect(client.getQueryCache().getAll()).toHaveLength(2);
     expect(onInvalidate).not.toHaveBeenCalled();
     unmount();
     expect(events.unsubscribe).toHaveBeenCalledOnce();

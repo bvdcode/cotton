@@ -129,13 +129,74 @@ describe("folder listing refresh", () => {
     expect(stats).not.toHaveBeenCalled();
   });
 
+  it.each([false, true])(
+    "keeps other folders refreshing while a slow read is pending, already running: %s",
+    async (alreadyRunning) => {
+      let finish: (value: number) => void = () => {};
+      const slow = vi.fn(
+        () =>
+          new Promise<number>((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const fast = vi.fn(async () => 1);
+      observe(key, slow);
+      observe(queryKeys.nodeChildren.tiles("other", "user"), fast);
+      if (alreadyRunning) {
+        void client.refetchQueries({ queryKey: key });
+      }
+      const slowRefresh = refreshFolderListings(client, "folder", "user");
+      await vi.advanceTimersByTimeAsync(FOLDER_REFRESH_DELAY_MS);
+      expect(slow).toHaveBeenCalledOnce();
+
+      for (let index = 0; index < 2; index++) {
+        const fastRefresh = refreshFolderListings(client, "other", "user");
+        await vi.advanceTimersByTimeAsync(FOLDER_REFRESH_DELAY_MS);
+        await fastRefresh;
+        expect(fast).toHaveBeenCalledTimes(index + 1);
+        expect(slow).toHaveBeenCalledOnce();
+      }
+
+      slow.mockResolvedValue(2);
+      finish(1);
+      await slowRefresh;
+      expect(slow).toHaveBeenCalledTimes(alreadyRunning ? 2 : 1);
+    },
+  );
+
   it("drops queued work when the session is cleared", async () => {
     const fetch = vi.fn(async () => 1);
     observe(key, fetch);
+    observe(queryKeys.nodeChildren.tiles("other", "user"), fetch);
     const refreshed = refreshFolderListings(client, "folder");
+    const otherRefreshed = refreshFolderListings(client, "other");
     clearFolderListingRefresh(client);
-    await refreshed;
+    await Promise.all([refreshed, otherRefreshed]);
     await vi.advanceTimersByTimeAsync(FOLDER_REFRESH_DELAY_MS * 2);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not restart cleared work when an old read finishes after a new session starts", async () => {
+    let finish: (value: number) => void = () => {};
+    const fetch = vi.fn(
+      () =>
+        new Promise<number>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    observe(key, fetch);
+    void client.refetchQueries({ queryKey: key });
+    const oldRefresh = refreshFolderListings(client, "folder");
+    await vi.advanceTimersByTimeAsync(FOLDER_REFRESH_DELAY_MS);
+    const queued = refreshFolderListings(client, "folder");
+    clearFolderListingRefresh(client);
+    await queued;
+    const currentRefresh = refreshFolderListings(client, "folder");
+    fetch.mockResolvedValue(2);
+    finish(1);
+    await oldRefresh;
+    await vi.advanceTimersByTimeAsync(FOLDER_REFRESH_DELAY_MS);
+    await currentRefresh;
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
