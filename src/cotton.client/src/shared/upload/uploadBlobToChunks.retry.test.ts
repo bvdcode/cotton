@@ -105,7 +105,36 @@ describe("uploadBlobToChunks", () => {
     mocks.uploadChunk.mockResolvedValue(undefined);
   });
 
-  it("recovers after a minute-long gateway timeout without reuploading a stored chunk", async () => {
+  it("shares the network limit across four concurrent files", async () => {
+    const releaseUploads = createDeferred<void>();
+    let activeRequests = 0;
+    let peakRequests = 0;
+    mocks.acquire.mockImplementation(async () => createWorker());
+    mocks.chunkExists.mockResolvedValue(false);
+    mocks.uploadChunk.mockImplementation(async () => {
+      activeRequests += 1;
+      peakRequests = Math.max(peakRequests, activeRequests);
+      await releaseUploads.promise;
+      activeRequests -= 1;
+    });
+    const uploads = Array.from({ length: 4 }, (_, index) => uploadBlobToChunks({
+      blob: new Blob([new Uint8Array(16)]),
+      fileName: `parallel-${index}.bin`,
+      server: { maxChunkSizeBytes: 1, supportedHashAlgorithm: "sha256" },
+      client: { concurrency: 8 },
+    }));
+
+    try {
+      await vi.waitFor(() => expect(mocks.uploadChunk).toHaveBeenCalledTimes(8));
+    } finally {
+      releaseUploads.resolve();
+      await Promise.all(uploads);
+    }
+    expect(peakRequests).toBe(8);
+    expect(mocks.uploadChunk).toHaveBeenCalledTimes(64);
+  });
+
+  it.each([408, 502, 503, 504])("recovers after an HTTP %s timeout without reuploading a stored chunk", async (status) => {
     vi.useFakeTimers();
     const worker = createWorker();
     const chunkBytes = 128 * 1024;
@@ -120,7 +149,7 @@ describe("uploadBlobToChunks", () => {
       }) => {
         reportProgress(chunkBytes);
         return new Promise<void>((_resolve, reject) => {
-          setTimeout(() => reject(createResponseError(504)), 60000);
+          setTimeout(() => reject(createResponseError(status)), 60000);
         });
       },
     );
@@ -157,7 +186,7 @@ describe("uploadBlobToChunks", () => {
     expect(mocks.release).toHaveBeenCalledWith(worker);
   });
 
-  it("rehashes retry segments without restarting the whole-file hash", async () => {
+  it.each(["ERR_NETWORK", 408, 502, 503, 504])("rehashes retry segments without restarting the whole-file hash (%s)", async (failure) => {
     const worker = createWorker();
     const chunkBytes = 256 * 1024;
     let uploadCalls = 0;
@@ -166,7 +195,10 @@ describe("uploadBlobToChunks", () => {
     mocks.uploadChunk.mockImplementation(async () => {
       uploadCalls += 1;
       if (uploadCalls === 1) {
-        throw new AxiosError("interrupted", "ERR_NETWORK");
+        if (typeof failure === "string") {
+          throw new AxiosError("interrupted", failure);
+        }
+        throw createResponseError(failure);
       }
     });
 

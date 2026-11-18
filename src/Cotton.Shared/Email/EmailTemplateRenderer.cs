@@ -4,6 +4,7 @@
 using Cotton.Models.Enums;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace Cotton.Email
@@ -36,7 +37,7 @@ namespace Cotton.Email
         };
 
         /// <summary>
-        /// Renders the specified email template with the given variables.
+        /// Renders the specified email template, encoding plain-text variables for HTML output.
         /// Falls back to English if the requested language template is not available.
         /// </summary>
         /// <param name="template">The email template to render.</param>
@@ -56,13 +57,25 @@ namespace Cotton.Email
                 }
             }
 
-            foreach (KeyValuePair<string, string> kvp in variables)
+            return PlaceholderRegex.Replace(html, match =>
             {
-                html = html.Replace("{{" + kvp.Key + "}}", kvp.Value);
-            }
+                string name = match.Value[2..^2];
+                if (!variables.TryGetValue(name, out string? value))
+                {
+                    return string.Empty;
+                }
 
-            html = PlaceholderRegex.Replace(html, string.Empty);
-            return html;
+                string encoded = WebUtility.HtmlEncode(value ?? string.Empty);
+                if (name == EmailTemplateParameterNames.SecurityContent)
+                {
+                    return encoded
+                        .Replace("\r\n", "\n", StringComparison.Ordinal)
+                        .Replace('\r', '\n')
+                        .Replace("\n", "<br />", StringComparison.Ordinal);
+                }
+
+                return encoded;
+            });
         }
 
         /// <summary>
@@ -111,6 +124,7 @@ namespace Cotton.Email
                 [EmailTemplateParameterNames.Token] = token,
                 [EmailTemplateParameterNames.ConfirmationUrl] = baseUrl + "/verify-email?token=" + escapedToken,
                 [EmailTemplateParameterNames.ResetUrl] = baseUrl + "/reset-password?token=" + escapedToken,
+                [EmailTemplateParameterNames.ServerUrl] = baseUrl,
                 [EmailTemplateParameterNames.Year] = DateTime.UtcNow.Year.ToString(),
             };
         }

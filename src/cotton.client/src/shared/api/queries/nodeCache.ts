@@ -5,6 +5,7 @@ import { applyDisplayMetaToFiles } from "../../crypto/displayMeta";
 import { queryKeys } from "./queryKeys";
 import { cachedFolderPages, type NodeNavigation } from "./nodeNavigation";
 import { invalidateFolderInfoCache } from "./folderInfo";
+import { refreshFolderListings } from "./folderRefresh";
 
 type ListingData = NodeResponse | InfiniteData<NodeResponse, number>;
 
@@ -87,20 +88,41 @@ export function upsertCachedFile(
   parentId: string,
   file: NodeFileManifestDto,
 ): boolean {
-  let updated = updateCachedFile(client, userId, parentId, file.id, () => file);
+  return upsertCachedFiles(client, userId, parentId, [file]);
+}
+
+export function upsertCachedFiles(
+  client: QueryClient,
+  userId: string,
+  parentId: string,
+  uploadedFiles: readonly NodeFileManifestDto[],
+): boolean {
+  const incoming = new Map(uploadedFiles.map((file) => [file.id, file]));
+  let updated = false;
   updateCachedListings(client, userId, (page, complete) => {
-    if (
-      !complete ||
-      page.content.node.id !== parentId ||
-      page.content.files.some((item) => item.id === file.id)
-    ) {
+    if (page.content.node.id !== parentId) {
+      return page;
+    }
+    const remaining = new Map(incoming);
+    let changed = false;
+    const files = page.content.files.map((file) => {
+      const replacement = remaining.get(file.id);
+      remaining.delete(file.id);
+      if (replacement && replacement !== file) {
+        changed = true;
+        return replacement;
+      }
+      return file;
+    });
+    const added = complete ? [...remaining.values()] : [];
+    if (!changed && added.length === 0) {
       return page;
     }
     updated = true;
     return {
       ...page,
-      totalCount: page.totalCount + 1,
-      content: { ...page.content, files: [...page.content.files, file] },
+      totalCount: page.totalCount + added.length,
+      content: { ...page.content, files: [...files, ...added] },
     };
   });
   return updated;
@@ -152,11 +174,7 @@ export function invalidateCachedFolder(
   userId: string,
 ): void {
   invalidateFolderInfoCache(client);
-  void client.invalidateQueries({
-    queryKey: [...queryKeys.nodeChildren.all(nodeId), userId],
-    predicate: ({ queryKey }) =>
-      queryKey[3] !== "folderInfo" && queryKey[3] !== "folderSizes",
-  });
+  void refreshFolderListings(client, nodeId, userId);
 }
 
 export function removeCachedFolder(

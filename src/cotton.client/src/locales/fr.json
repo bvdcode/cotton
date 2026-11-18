@@ -2662,6 +2662,9 @@
         "save": "Enregistrer",
         "saving": "Enregistrement..."
       },
+      "markdown": {
+        "blockedIframe": "Un iframe a été détecté dans ce fichier Markdown. Le contenu intégré a été bloqué."
+      },
       "deleteToast": "Le fichier a été supprimé",
       "deleteUndoFailed": "Impossible de restaurer le fichier supprimé.",
       "editorModes": {

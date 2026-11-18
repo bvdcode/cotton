@@ -9,9 +9,17 @@ vi.mock("@mui/material", async (load) => ({
   useMediaQuery: () => media.reduced,
 }));
 
-function Grid({ ids, revision = 0 }: { ids: string[]; revision?: number }) {
+function Grid({
+  ids,
+  revision = 0,
+  enabled = true,
+}: {
+  ids: string[];
+  revision?: number;
+  enabled?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  useTileMovement(ref, ids, 0);
+  useTileMovement(ref, ids, 0, enabled);
   return (
     <div ref={ref} data-revision={revision}>
       {ids.map((id, index) => (
@@ -86,4 +94,30 @@ it("does not animate when reduced motion is requested", () => {
   view.rerender(<Grid ids={["b", "c"]} />);
   act(() => vi.advanceTimersByTime(20));
   expect(document.querySelectorAll("[data-tile-id]")).toHaveLength(2);
+});
+
+it("does not measure or animate recycled virtual rows and cancels active motion when virtualization starts", () => {
+  const cancel = vi.fn();
+  const animate = vi.fn(() => ({ cancel, playState: "idle" }));
+  Object.defineProperty(HTMLElement.prototype, "animate", {
+    configurable: true,
+    value: animate,
+  });
+  const view = render(<Grid ids={["a", "b", "c"]} />);
+  view.rerender(<Grid ids={["b", "c"]} />);
+  act(() => vi.advanceTimersByTime(20));
+  expect(animate).toHaveBeenCalled();
+  view.rerender(<Grid ids={["b", "c"]} enabled={false} />);
+  expect(cancel).toHaveBeenCalled();
+  animate.mockClear();
+  const measure = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+  measure.mockClear();
+  view.rerender(<Grid ids={["c", "d", "e"]} enabled={false} />);
+  act(() => vi.advanceTimersByTime(20));
+  expect(animate).not.toHaveBeenCalled();
+  expect(measure).not.toHaveBeenCalled();
+  view.rerender(<Grid ids={["c", "d"]} />);
+  act(() => vi.advanceTimersByTime(20));
+  expect(animate).not.toHaveBeenCalled();
+  Reflect.deleteProperty(HTMLElement.prototype, "animate");
 });

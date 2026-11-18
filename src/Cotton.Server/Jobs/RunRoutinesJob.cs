@@ -15,7 +15,8 @@ namespace Cotton.Server.Jobs
 
         public async Task Execute(IJobExecutionContext context)
         {
-            string? requested = context.MergedJobDataMap.GetString(RequestedRoutineKey);
+            JobDataMap data = context.MergedJobDataMap;
+            string? requested = data.ContainsKey(RequestedRoutineKey) ? data.GetString(RequestedRoutineKey) : null;
             Guid? routineId = Guid.TryParse(requested, out Guid id) ? id : null;
             await mediator.Send(new RunDueRoutinesRequest(routineId), context.CancellationToken);
         }

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { compareNames } from "@shared/utils/compareNames";
 import { useFileInteractionHandlers } from "@shared/hooks/useFileInteractionHandlers";
 import type {
   FileListFileDto,
@@ -49,9 +50,7 @@ export const useFileListSourceLogic = ({
       }
     }
 
-    files.sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { numeric: true }),
-    );
+    files.sort((a, b) => compareNames(a.name, b.name));
     return files;
   }, [source.tiles]);
 

@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "appName": "Cotton",
+    "assessor": "Vadim Belov",
+    "org": "",
+    "scope": "Cotton web application and server APIs",
+    "date": "2026-11-17"
+  },
+  "reqs": {
+    "V1.1.1": {
+      "status": "pass",
+      "date": "2026-11-16",
+      "notes": "Verified decoding before validation in JSON, query parameters, filename headers and WebDAV. Fixed repeated WebDAV decoding; confirmed literal percent-encoded names remain distinct and cannot bypass file locks. Local integration tests passed."
+    },
+    "V1.1.2": {
+      "status": "pass",
+      "date": "2026-11-16",
+      "notes": "Verified final-context encoding in email templates, share pages, WebDAV XML and download headers. Fixed shared email escaping and recursive placeholder replacement; confirmed old and new gateway requests retain their content through queued retries."
+    },
+    "V1.2.1": {
+      "status": "pass",
+      "date": "2026-11-17",
+      "notes": "Verified HTML email/share output, WebDAV XML and download headers. Markdown previews remove active HTML, event handlers, CSS and unsafe URL schemes; browser checks confirmed the tested file payloads could not execute scripts."
+    }
+  }
+}

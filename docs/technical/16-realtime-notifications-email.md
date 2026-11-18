@@ -57,7 +57,9 @@ Transactional email uses one renderer and shared visual shell. The current messa
 
 Individual security events provide title, message, context, and optional action data to the generic security-alert variant instead of adding one HTML document per event. Confirmation and password reset retain their purpose-specific bodies while sharing the same header, footer, branding, and transport path.
 
-The renderer selects an available language variant and falls back to English when that variant is missing. Action URLs must be derived from the configured or trusted public base URL, and callers must supply values safe for HTML substitution.
+The renderer selects an available language variant and falls back to English when that variant is missing. Callers supply plain-text values. The shared renderer HTML-encodes values during a single substitution pass and formats line breaks in security-message content. Text supplied by a caller is never processed as template syntax. Action URLs must be derived from the configured or trusted public base URL.
+
+Managed email requests identify their parameter format. Bridge converts older HTML-encoded security messages to plain text before validation and stores the format with the normalized parameters. Queue delivery and retries preserve those values. Updated Bridge deployments require the Cotton package containing the shared renderer changes.
 
 ## Security email behavior
 

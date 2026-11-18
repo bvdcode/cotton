@@ -30,5 +30,19 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(WebDavRequestHeaders.GetOverwrite(headers), Is.False);
             });
         }
+
+        [TestCase("invoice%2541.txt", "invoice%41.txt")]
+        [TestCase("report%20%2350%25.txt", "report #50%.txt")]
+        [TestCase("report%252F.txt", "report%2F.txt")]
+        [TestCase("caf%C3%A9.txt", "café.txt")]
+        public void Destination_DecodesOnce(string encodedName, string expectedName)
+        {
+            HeaderDictionary headers = new()
+            {
+                ["Destination"] = "https://cloud.example/api/v1/webdav/" + encodedName,
+            };
+
+            Assert.That(WebDavRequestHeaders.GetDestinationPath(headers), Is.EqualTo(expectedName));
+        }
     }
 }

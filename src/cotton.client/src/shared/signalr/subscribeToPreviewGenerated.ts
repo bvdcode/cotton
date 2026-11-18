@@ -1,16 +1,16 @@
 import { eventHub } from "./eventHub";
 import { HUB_METHODS } from "./hubMethods";
 
-type PreviewGeneratedHandler = (
-  nodeId: string,
-  nodeFileId: string,
-  previewHashEncryptedHex: string,
-) => void;
+export type PreviewUpdates = ReadonlyMap<string, ReadonlyMap<string, string>>;
+type PreviewGeneratedHandler = (previews: PreviewUpdates) => void;
+export const PREVIEW_UPDATE_DELAY_MS = 250;
 
 export const subscribeToPreviewGenerated = (
   handler: PreviewGeneratedHandler,
-): (() => void) =>
-  eventHub.on(
+): (() => void) => {
+  let pending = new Map<string, Map<string, string>>();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const unsubscribe = eventHub.on(
     HUB_METHODS.PreviewGenerated,
     (nodeId, nodeFileId, previewHashEncryptedHex) => {
       if (
@@ -18,7 +18,23 @@ export const subscribeToPreviewGenerated = (
         typeof nodeFileId === "string" &&
         typeof previewHashEncryptedHex === "string"
       ) {
-        handler(nodeId, nodeFileId, previewHashEncryptedHex);
+        const files = pending.get(nodeId) ?? new Map<string, string>();
+        files.set(nodeFileId, previewHashEncryptedHex);
+        pending.set(nodeId, files);
+        timer ??= setTimeout(() => {
+          const previews = pending;
+          pending = new Map();
+          timer = null;
+          handler(previews);
+        }, PREVIEW_UPDATE_DELAY_MS);
       }
     },
   );
+  return () => {
+    unsubscribe();
+    if (timer !== null) {
+      clearTimeout(timer);
+    }
+    pending.clear();
+  };
+};

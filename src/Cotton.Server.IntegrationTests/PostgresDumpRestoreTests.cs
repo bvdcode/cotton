@@ -5,9 +5,11 @@ using Cotton.Server.Models.DatabaseBackup;
 using Cotton.Server.Services.Search;
 using EasyExtensions.EntityFrameworkCore.Npgsql.Extensions;
 using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 
 namespace Cotton.Server.IntegrationTests
 {
+    [NonParallelizable]
     public class PostgresDumpRestoreTests() : IntegrationTestBase($"cotton_portable_restore_tests_{Guid.NewGuid():N}")
     {
         [SetUp]
@@ -20,6 +22,71 @@ namespace Cotton.Server.IntegrationTests
         public async Task TearDown()
         {
             await DbContext.Database.EnsureDeletedAsync();
+        }
+
+        [Test]
+        public async Task Dump_StreamsBinaryArchiveWithoutSeeking()
+        {
+            string header = await CreateDumpService().ReadDumpAsync(async (stream, token) =>
+            {
+                Assert.That(stream.CanSeek, Is.False);
+                byte[] prefix = new byte[5];
+                await stream.ReadExactlyAsync(prefix, token);
+                await stream.CopyToAsync(Stream.Null, token);
+                return Encoding.ASCII.GetString(prefix);
+            });
+            Assert.That(header, Is.EqualTo("PGDMP"));
+        }
+
+        [Test]
+        public async Task Dump_ConsumerFailure_StopsProducer()
+        {
+            HashSet<int> existing = GetDumpProcessIds();
+            IOException failure = new("Storage write failed.");
+            IOException? actual = await Assert.ThrowsAsync<IOException>(() => CreateDumpService()
+                .ReadDumpAsync<int>((stream, token) => Task.FromException<int>(failure))
+                .WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.That(actual, Is.SameAs(failure));
+            Assert.That(GetDumpProcessIds().Except(existing), Is.Empty);
+        }
+
+        [Test]
+        public async Task Dump_CancellationDuringConsumption_StopsProducer()
+        {
+            HashSet<int> existing = GetDumpProcessIds();
+            using CancellationTokenSource cancellation = new();
+            await Assert.CatchAsync<OperationCanceledException>(() => CreateDumpService().ReadDumpAsync(async (stream, token) =>
+            {
+                byte[] prefix = new byte[5];
+                await stream.ReadExactlyAsync(prefix, token);
+                await cancellation.CancelAsync();
+                await Task.Delay(Timeout.Infinite, token);
+                return 0;
+            }, cancellation.Token).WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.That(GetDumpProcessIds().Except(existing), Is.Empty);
+        }
+
+        [Test]
+        public async Task Dump_FailedProcess_DoesNotReturnConsumerResult()
+        {
+            InvalidOperationException? failure = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                CreateDumpService($"missing_{Guid.NewGuid():N}").ReadDumpAsync(async (stream, token) =>
+                {
+                    await stream.CopyToAsync(Stream.Null, token);
+                    return 123;
+                }));
+            Assert.That(failure!.Message, Does.Contain("pg_dump failed with exit code"));
+        }
+
+        [Test]
+        public async Task Dump_PreCanceled_DoesNotStartProducer()
+        {
+            HashSet<int> existing = GetDumpProcessIds();
+            using CancellationTokenSource cancellation = new();
+            await cancellation.CancelAsync();
+            await Assert.CatchAsync<OperationCanceledException>(() => CreateDumpService()
+                .ReadDumpAsync((stream, token) => Task.FromResult(0), cancellation.Token));
+            Assert.That(GetDumpProcessIds().Except(existing), Is.Empty);
         }
 
         [Test]
@@ -66,7 +133,20 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(await DbContext.FileEmbeddings.AnyAsync(), Is.False);
         }
 
-        private PostgresDumpService CreateDumpService()
+        private static HashSet<int> GetDumpProcessIds()
+        {
+            HashSet<int> ids = [];
+            foreach (Process process in Process.GetProcessesByName("pg_dump"))
+            {
+                using (process)
+                {
+                    ids.Add(process.Id);
+                }
+            }
+            return ids;
+        }
+
+        private PostgresDumpService CreateDumpService(string? databaseName = null)
         {
             IConfiguration configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -74,7 +154,7 @@ namespace Cotton.Server.IntegrationTests
                 ["DatabaseSettings:Port"] = TestPostgresPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["DatabaseSettings:Username"] = TestPostgresUsername,
                 ["DatabaseSettings:Password"] = TestPostgresPassword,
-                ["DatabaseSettings:Database"] = CurrentDatabaseName
+                ["DatabaseSettings:Database"] = databaseName ?? CurrentDatabaseName
             }).Build();
             return new(configuration, NullLogger<PostgresDumpService>.Instance);
         }

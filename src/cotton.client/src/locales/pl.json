@@ -2682,6 +2682,9 @@
         "save": "Zapisz",
         "saving": "Zapisywanie..."
       },
+      "markdown": {
+        "blockedIframe": "W pliku Markdown wykryto iframe. Osadzona zawartość została zablokowana."
+      },
       "deleteToast": "Plik został usunięty",
       "deleteUndoFailed": "Nie udało się przywrócić usuniętego pliku.",
       "editorModes": {

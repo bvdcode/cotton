@@ -2663,6 +2663,9 @@
         "save": "Opslaan",
         "saving": "Bezig met opslaan..."
       },
+      "markdown": {
+        "blockedIframe": "Er is een iframe gevonden in dit Markdown-bestand. Ingesloten inhoud is geblokkeerd."
+      },
       "deleteToast": "Bestand is verwijderd",
       "deleteUndoFailed": "Kan het verwijderde bestand niet herstellen.",
       "editorModes": {

@@ -29,7 +29,7 @@ namespace Cotton.Server.Services.Startup
             {
                 Kind = BlockerKind,
                 Title = "Cotton cannot write to the OS temp directory.",
-                Message = $"Cotton uses the OS temp directory ({FormatTempPath(result.TempPath)}) for database backups/restores, S3 upload spooling, and preview tooling. Make it writable and restart. In Docker Compose with read_only: true, mount writable scratch storage at /tmp, for example tmpfs: [\"/tmp\"], or bind-mount a fast writable disk at /tmp. {FormatError(result.Error)}".Trim(),
+                Message = $"Cotton uses the OS temp directory ({FormatTempPath(result.TempPath)}) for database restores, archive downloads, and preview/text extraction tooling. Make it writable and restart. In Docker Compose with read_only: true, mount writable scratch storage at /tmp, for example tmpfs: [\"/tmp\"], or bind-mount a fast writable disk at /tmp. {FormatError(result.Error)}".Trim(),
             });
         }
 

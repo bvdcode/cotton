@@ -7,7 +7,6 @@ using Cotton.Server.Abstractions;
 using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Microsoft.Extensions.Logging;
-using System.Net;
 
 namespace Cotton.Server.Extensions
 {
@@ -33,11 +32,9 @@ namespace Cotton.Server.Extensions
                 TimeZoneInfo timeZone = settings.GetServerSettings().GetTimezoneInfo();
                 Dictionary<string, string> parameters = new()
                 {
-                    [EmailTemplateParameterNames.SecurityTitle] = EncodeText(title),
-                    [EmailTemplateParameterNames.SecurityContent] = EncodeMultilineText(content),
-                    [EmailTemplateParameterNames.OccurredAt] = EncodeText(
-                        SecurityEmailTimestampFormatter.Format(occurredAt, timeZone)),
-                    [EmailTemplateParameterNames.ServerUrl] = WebUtility.HtmlEncode(serverBaseUrl),
+                    [EmailTemplateParameterNames.SecurityTitle] = title,
+                    [EmailTemplateParameterNames.SecurityContent] = content ?? string.Empty,
+                    [EmailTemplateParameterNames.OccurredAt] = SecurityEmailTimestampFormatter.Format(occurredAt, timeZone),
                 };
 
                 bool sent = await notifications.SendEmailAsync(
@@ -55,18 +52,6 @@ namespace Cotton.Server.Extensions
             {
                 logger.LogWarning(ex, "Security email delivery failed for user {UserId}.", userId);
             }
-        }
-
-        private static string EncodeText(string? value)
-        {
-            return WebUtility.HtmlEncode(value ?? string.Empty);
-        }
-
-        private static string EncodeMultilineText(string? value)
-        {
-            return EncodeText(value)
-                .Replace("\r\n", "<br />", StringComparison.Ordinal)
-                .Replace("\n", "<br />", StringComparison.Ordinal);
         }
     }
 }

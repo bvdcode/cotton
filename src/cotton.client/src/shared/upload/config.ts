@@ -3,7 +3,7 @@ export const uploadConfig = {
   // endpoint still receives the hash so the server can validate bytes on ingest.
   sendChunkHashForValidation: true,
 
-  // Fixed network consumer pool for prepared chunks inside one file.
+  // Shared network upload capacity across all active files.
   maxChunkUploadConcurrency: 8,
 
   // Native WebCrypto chunk digests run concurrently. Ordered batch copies feed

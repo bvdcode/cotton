@@ -9,6 +9,11 @@ namespace Cotton.Email
     public static class EmailTemplateParameterNames
     {
         /// <summary>
+        /// Encoding format of the template parameters.
+        /// </summary>
+        public const string Format = "format";
+
+        /// <summary>
         /// Recipient display name.
         /// </summary>
         public const string RecipientName = "recipient_name";

@@ -56,6 +56,8 @@ Synchronous `Stream` members are retained where the base contract requires them,
 
 - Credentials are decrypted before the client is constructed.
 - Reads and writes are streamed.
+- S3 writes buffer transformed object data in a shared BCL array pool, in 8 MiB blocks with a 128 MiB total budget including retained blocks. Completed buffers upload in parallel; filling the next object waits for available blocks with cancellation support. One object is buffered at a time to prevent partial buffers from exhausting the pool while waiting for each other.
+- Each object uses one PUT with a seekable body and its exact content length. No multipart support or temporary files are required, and payload signing remains enabled. An individual stored object must fit the buffer budget; regular files are split into the configured 4, 8, or 16 MiB chunks before storage.
 - Compatibility options are limited to observable provider differences; they must not weaken object identity or integrity checks.
 - Hashing of response streams is asynchronous so slow object storage does not block worker threads.
 - Transport failures remain distinguishable from missing objects and authentication failures.

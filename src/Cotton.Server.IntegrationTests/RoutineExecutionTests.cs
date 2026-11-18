@@ -2,8 +2,10 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Routines;
-using Cotton.Server.Handlers.Routines;
 using EasyExtensions.Mediator;
+using Quartz;
+using Quartz.Impl;
+using Quartz.Spi;
 using System.Net.Http.Headers;
 
 namespace Cotton.Server.IntegrationTests
@@ -73,7 +75,8 @@ namespace Cotton.Server.IntegrationTests
             RoutineDto routine = await CreateAsync(folder.Id, false, false);
             (await _client!.PostAsJsonAsync("/api/v1/items/delete", new BatchItemsRequestDto
             {
-                Items = [new BatchItemRequestDto { Id = folder.Id, Kind = BatchItemKind.Folder }], SkipTrash = true
+                Items = [new BatchItemRequestDto { Id = folder.Id, Kind = BatchItemKind.Folder }],
+                SkipTrash = true
             })).EnsureSuccessStatusCode();
             await RunJobAsync();
             List<RoutineRunDto>? runs = await _client!.GetFromJsonAsync<List<RoutineRunDto>>($"/api/v1/routines/{routine.Id}/runs");
@@ -150,7 +153,10 @@ namespace Cotton.Server.IntegrationTests
 
         private static RoutineDraftDto Draft(Guid folderId) => new()
         {
-            Name = "Cleanup", Enabled = true, TargetNodeId = folderId, IntervalHours = 24,
+            Name = "Cleanup",
+            Enabled = true,
+            TargetNodeId = folderId,
+            IntervalHours = 24,
             Settings = new() { OlderThanDays = 30, DateField = RoutineDateField.CreatedAt },
         };
 
@@ -172,7 +178,17 @@ namespace Cotton.Server.IntegrationTests
         private async Task RunJobAsync(Guid? requested = null)
         {
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new RunDueRoutinesRequest(requested));
+            IScheduler scheduler = await scope.ServiceProvider.GetRequiredService<ISchedulerFactory>().GetScheduler();
+            RunRoutinesJob job = new(scope.ServiceProvider.GetRequiredService<IMediator>());
+            IJobDetail detail = JobBuilder.Create<RunRoutinesJob>().Build();
+            IOperableTrigger trigger = (IOperableTrigger)TriggerBuilder.Create().Build();
+            if (requested.HasValue)
+            {
+                trigger.JobDataMap[RunRoutinesJob.RequestedRoutineKey] = requested.Value.ToString();
+            }
+            TriggerFiredBundle bundle = new(detail, trigger, null, false, DateTimeOffset.UtcNow, null, null, null);
+            using JobExecutionContextImpl context = new(scheduler, bundle, job);
+            await job.Execute(context);
         }
     }
 }

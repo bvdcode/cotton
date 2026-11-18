@@ -109,6 +109,30 @@ it("does not treat an identical snapshot as activity", () => {
     screen.getByRole("button", { name: "actions.expand" }),
   ).toBeInTheDocument();
 });
+it("waits after a status change even when byte progress is unchanged", () => {
+  render(<TaskQueueWidget />);
+  act(() => vi.advanceTimersByTime(4000));
+  act(() => {
+    store.snapshot = {
+      ...store.snapshot!,
+      tasks: store.snapshot!.tasks.map((task) => ({
+        ...task,
+        status: "finalizing",
+      })),
+    };
+    for (const listener of store.listeners) {
+      listener();
+    }
+  });
+  act(() => vi.advanceTimersByTime(4000));
+  expect(
+    screen.getByRole("button", { name: "actions.collapse" }),
+  ).toBeInTheDocument();
+  act(() => vi.advanceTimersByTime(1000));
+  expect(
+    screen.getByRole("button", { name: "actions.expand" }),
+  ).toBeInTheDocument();
+});
 it("stays open during scrolling and waits after the last scroll", () => {
   render(<TaskQueueWidget />);
   for (let i = 0; i < 3; i++) {

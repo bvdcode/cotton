@@ -85,7 +85,7 @@ namespace Cotton.Server.Services
             string recipientName = GetRecipientDisplayName(user);
             string subject = "Cotton SMTP test email";
             string body = BuildSmtpTestBody(recipientName, serverBaseUrl);
-            SendSmtpEmail(user.Email, recipientName, subject, body, emailConfig);
+            SendSmtpEmail(user.Email, recipientName, subject, body, emailConfig, isBodyHtml: false);
         }
 
         private async Task<bool> SendViaCottonBridgeAsync(
@@ -177,7 +177,7 @@ namespace Cotton.Server.Services
 
             try
             {
-                SendSmtpEmail(email, recipientName, subject, body, CreateEmailConfig(settings));
+                SendSmtpEmail(email, recipientName, subject, body, CreateEmailConfig(settings), isBodyHtml: true);
                 return true;
             }
             catch (Exception ex)
@@ -237,7 +237,8 @@ namespace Cotton.Server.Services
             string recipientName,
             string subject,
             string body,
-            EmailConfig settings)
+            EmailConfig settings,
+            bool isBodyHtml)
         {
             if (!ServerSettingsValidator.TryParsePort(settings.Port, out int port))
             {
@@ -260,7 +261,7 @@ namespace Cotton.Server.Services
                 SubjectEncoding = Encoding.UTF8,
                 Body = body,
                 BodyEncoding = Encoding.UTF8,
-                IsBodyHtml = body.Contains("<html", StringComparison.OrdinalIgnoreCase),
+                IsBodyHtml = isBodyHtml,
             };
 
             MailAddress recipient = new MailAddress(recipientEmail, recipientName);

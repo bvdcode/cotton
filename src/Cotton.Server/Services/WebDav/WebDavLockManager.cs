@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Validators;
 using System.Collections.Concurrent;
 
 namespace Cotton.Server.Services.WebDav
@@ -59,7 +60,10 @@ namespace Cotton.Server.Services.WebDav
 
         private static string NormalizePath(string path)
         {
-            return path.Trim(WebDavPathResolver.PathSeparator);
+            return string.Join(WebDavPathResolver.PathSeparator, path
+                .Replace('\\', WebDavPathResolver.PathSeparator)
+                .Split(WebDavPathResolver.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+                .Select(segment => NameValidator.GetNameKey(segment.Trim().TrimEnd('.'))));
         }
 
         private static string GetKey(Guid userId, string path)

@@ -264,7 +264,7 @@ services:
       COTTON_PROCESS_HARDENING: "true"
 ```
 
-With `read_only: true`, `/tmp` must remain writable because database dump/restore, S3 upload spooling, and preview tooling use the OS temp directory. `tmpfs: ["/tmp"]` is the simple Compose option; binding a fast writable disk at `/tmp` is valid too.
+With `read_only: true`, `/tmp` must remain writable because database restores, archive downloads, and preview/text extraction tooling use the OS temp directory. `tmpfs: ["/tmp"]` is the simple Compose option; binding a fast writable disk at `/tmp` is valid too.
 
 Extra hardening (custom seccomp/AppArmor, encrypted swap, `kernel.yama.ptrace_scope`, TPM/HSM/KMS, a separate key-agent) can be valuable but is expert territory and can break volume permissions, previews, or restore if applied blindly. The honest boundary: if an attacker can execute code inside the Cotton process, software flags cannot fully hide the in-memory key — these settings mostly protect against accidental dumps, diagnostics surfaces, and over-privileged neighbors.
 

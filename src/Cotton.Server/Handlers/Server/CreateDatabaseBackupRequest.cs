@@ -49,46 +49,41 @@ namespace Cotton.Server.Handlers.Server
             Stopwatch sw = Stopwatch.StartNew();
             DateTime startedAtUtc = DateTime.UtcNow;
             string backupId = Guid.NewGuid().ToString("N");
-            string dumpPath = BuildDumpFilePath(startedAtUtc, backupId);
+            Guid ownerId = await ResolveBackupOwnerIdAsync(ct);
+            _logger.LogInformation("Database backup started. BackupId={BackupId}, OwnerId={OwnerId}", backupId, ownerId);
 
-            try
+            DumpUploadResult uploadResult = await _dumper.ReadDumpAsync(
+                (stream, token) => UploadDumpWithChunkerAsync(stream, ownerId, token), ct);
+            if (uploadResult.Chunks.Count == 0)
             {
-                Guid ownerId = await ResolveBackupOwnerIdAsync(ct);
-                _logger.LogInformation("Database backup started. BackupId={BackupId}, OwnerId={OwnerId}", backupId, ownerId);
-
-                await _dumper.DumpToFileAsync(dumpPath, ct);
-                DumpUploadResult uploadResult = await UploadDumpWithChunkerAsync(dumpPath, ownerId, ct);
-
-                BackupManifest manifest = new BackupManifest(
-                    SchemaVersion: 1,
-                    BackupId: backupId,
-                    Elapsed: sw.Elapsed,
-                    CreatedAtUtc: startedAtUtc,
-                    Contains: "postgres_database_dump",
-                    DumpFormat: "pg_dump_custom",
-                    SourceDatabase: GetConfigOrDefault("DatabaseSettings:Database", "cotton_dev"),
-                    SourceHost: GetConfigOrDefault("DatabaseSettings:Host", "localhost"),
-                    SourcePort: GetConfigOrDefault("DatabaseSettings:Port", "5432"),
-                    HashAlgorithm: Hasher.SupportedHashAlgorithm,
-                    ChunkSizeBytes: uploadResult.ChunkSizeBytes,
-                    DumpSizeBytes: uploadResult.DumpSizeBytes,
-                    DumpContentHash: uploadResult.DumpContentHash,
-                    ChunkCount: uploadResult.Chunks.Count,
-                    Chunks: uploadResult.Chunks);
-
-                ResolvedBackupManifest published = await _manifests.PublishAsync(manifest, ct);
-
-                _logger.LogInformation(
-                    "Database backup completed. BackupId={BackupId}, DumpSizeBytes={DumpSizeBytes}, elapsed: {elapsed}",
-                    backupId,
-                    uploadResult.DumpSizeBytes,
-                    sw.Elapsed.ToString(@"hh\:mm\:ss"));
-                return BackupManifestReference.FromManifest(published.ManifestStorageKey, manifest).ToDto(published.Pointer.UpdatedAtUtc);
+                throw new InvalidDataException("PostgreSQL produced an empty database dump.");
             }
-            finally
-            {
-                TryDeleteDumpFile(dumpPath);
-            }
+
+            BackupManifest manifest = new BackupManifest(
+                SchemaVersion: 1,
+                BackupId: backupId,
+                Elapsed: sw.Elapsed,
+                CreatedAtUtc: startedAtUtc,
+                Contains: "postgres_database_dump",
+                DumpFormat: "pg_dump_custom",
+                SourceDatabase: GetConfigOrDefault("DatabaseSettings:Database", "cotton_dev"),
+                SourceHost: GetConfigOrDefault("DatabaseSettings:Host", "localhost"),
+                SourcePort: GetConfigOrDefault("DatabaseSettings:Port", "5432"),
+                HashAlgorithm: Hasher.SupportedHashAlgorithm,
+                ChunkSizeBytes: uploadResult.ChunkSizeBytes,
+                DumpSizeBytes: uploadResult.DumpSizeBytes,
+                DumpContentHash: uploadResult.DumpContentHash,
+                ChunkCount: uploadResult.Chunks.Count,
+                Chunks: uploadResult.Chunks);
+
+            ResolvedBackupManifest published = await _manifests.PublishAsync(manifest, ct);
+
+            _logger.LogInformation(
+                "Database backup completed. BackupId={BackupId}, DumpSizeBytes={DumpSizeBytes}, elapsed: {elapsed}",
+                backupId,
+                uploadResult.DumpSizeBytes,
+                sw.Elapsed.ToString(@"hh\:mm\:ss"));
+            return BackupManifestReference.FromManifest(published.ManifestStorageKey, manifest).ToDto(published.Pointer.UpdatedAtUtc);
         }
 
         private async Task<Guid> ResolveBackupOwnerIdAsync(CancellationToken ct)
@@ -107,7 +102,7 @@ namespace Cotton.Server.Handlers.Server
             return ownerId.Value;
         }
 
-        private async Task<DumpUploadResult> UploadDumpWithChunkerAsync(string dumpPath, Guid ownerId, CancellationToken ct)
+        private async Task<DumpUploadResult> UploadDumpWithChunkerAsync(Stream dumpStream, Guid ownerId, CancellationToken ct)
         {
             int chunkSize = _settings.GetServerSettings().MaxChunkSizeBytes;
             if (chunkSize <= 0)
@@ -115,11 +110,11 @@ namespace Cotton.Server.Handlers.Server
                 throw new InvalidOperationException("MaxChunkSizeBytes must be positive.");
             }
 
-            await using FileStream dumpStream = new FileStream(dumpPath, FileMode.Open, FileAccess.Read, FileShare.Read, chunkSize, useAsync: true);
             using IncrementalHash fileHasher = IncrementalHash.CreateHash(Hasher.SupportedHashAlgorithmName);
 
             List<BackupChunkInfo> chunks = new List<BackupChunkInfo>();
             byte[] buffer = ArrayPool<byte>.Shared.Rent(chunkSize);
+            long size = 0;
             try
             {
                 int order = 0;
@@ -130,12 +125,8 @@ namespace Cotton.Server.Handlers.Server
 
                     Chunk chunk = await _chunkIngest.UpsertChunkAsync(ownerId, buffer, bytesRead, ct);
                     chunks.Add(new BackupChunkInfo(order, Hasher.ToHexStringHash(chunk.Hash), (int)chunk.PlainSizeBytes));
+                    size += bytesRead;
                     order++;
-                }
-
-                if (chunks.Count == 0)
-                {
-                    throw new InvalidDataException("PostgreSQL produced an empty database dump.");
                 }
             }
             finally
@@ -144,7 +135,6 @@ namespace Cotton.Server.Handlers.Server
             }
 
             string fileHashHex = Hasher.ToHexStringHash(fileHasher.GetHashAndReset());
-            long size = new FileInfo(dumpPath).Length;
             return new DumpUploadResult(size, chunkSize, fileHashHex, chunks);
         }
 
@@ -162,28 +152,6 @@ namespace Cotton.Server.Handlers.Server
             }
 
             return totalRead;
-        }
-
-        private static string BuildDumpFilePath(DateTime startedAtUtc, string backupId)
-        {
-            string directory = Path.Combine(Path.GetTempPath(), "cotton", "db-dumps");
-            Directory.CreateDirectory(directory);
-            return Path.Combine(directory, $"db-{startedAtUtc:yyyyMMdd-HHmmss}-{backupId}.dump");
-        }
-
-        private void TryDeleteDumpFile(string dumpPath)
-        {
-            try
-            {
-                if (File.Exists(dumpPath))
-                {
-                    File.Delete(dumpPath);
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                _logger.LogWarning(ex, "Failed to delete temporary database dump file {DumpPath}.", dumpPath);
-            }
         }
 
         private string GetConfigOrDefault(string key, string fallbackValue)

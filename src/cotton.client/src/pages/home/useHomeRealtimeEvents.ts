@@ -29,18 +29,27 @@ export const useHomeRealtimeEvents = (
       return;
     }
 
-    return subscribeToPreviewGenerated(
-      (nodeId, nodeFileId, previewHashEncryptedHex) => {
-        queryClient.setQueriesData<NodeFileManifestDto[]>(
-          { queryKey: queryKeys.layouts.recentAll(layoutId) },
-          (files) =>
-            files?.map((file) =>
-              file.id === nodeFileId && file.nodeId === nodeId
-                ? { ...file, previewHashEncryptedHex }
-                : file,
-            ),
-        );
-      },
-    );
+    return subscribeToPreviewGenerated((previews) => {
+      queryClient.setQueriesData<NodeFileManifestDto[]>(
+        { queryKey: queryKeys.layouts.recentAll(layoutId) },
+        (files) => {
+          let changed = false;
+          const updated = files?.map((file) => {
+            const previewHashEncryptedHex = previews
+              .get(file.nodeId)
+              ?.get(file.id);
+            if (
+              previewHashEncryptedHex === undefined ||
+              file.previewHashEncryptedHex === previewHashEncryptedHex
+            ) {
+              return file;
+            }
+            changed = true;
+            return { ...file, previewHashEncryptedHex };
+          });
+          return changed ? updated : files;
+        },
+      );
+    });
   }, [enabled, layoutId, queryClient]);
 };

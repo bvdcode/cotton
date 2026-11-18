@@ -2658,6 +2658,9 @@
         "save": "Speichern",
         "saving": "Wird gespeichert..."
       },
+      "markdown": {
+        "blockedIframe": "In dieser Markdown-Datei wurde ein iframe gefunden. Eingebettete Inhalte wurden blockiert."
+      },
       "deleteToast": "Datei wurde gelöscht",
       "deleteUndoFailed": "Die gelöschte Datei konnte nicht wiederhergestellt werden.",
       "editorModes": {

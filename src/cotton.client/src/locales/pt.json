@@ -2665,6 +2665,9 @@
         "save": "Salvar",
         "saving": "Salvando..."
       },
+      "markdown": {
+        "blockedIframe": "Foi detetado um iframe neste ficheiro Markdown. O conteúdo incorporado foi bloqueado."
+      },
       "deleteToast": "O arquivo foi excluído",
       "deleteUndoFailed": "Não foi possível restaurar o arquivo excluído.",
       "editorModes": {

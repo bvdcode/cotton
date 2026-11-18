@@ -78,7 +78,12 @@ export const TilesView: React.FC<IFileListView> = ({
     onNavigateBack,
   });
 
-  useTileMovement(containerRef, orderedIds, leadingItemCount);
+  useTileMovement(
+    containerRef,
+    orderedIds,
+    leadingItemCount,
+    !shouldVirtualize,
+  );
 
   useEffect(() => {
     if (isCreatingFolder) {

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { compareNames } from "../utils/compareNames";
 import type { NodeDto } from "../api/layoutsApi";
 import type {
   FileListFileDto,
@@ -15,9 +16,6 @@ type ContentTilesSortMode = "name" | "updatedAtDesc" | "server";
 interface ContentTilesOptions {
   sortMode?: ContentTilesSortMode;
 }
-
-const compareNames = (a: string, b: string): number =>
-  a.localeCompare(b, undefined, { numeric: true });
 
 const compareUpdatedAtDesc = (
   aUpdatedAt: string,

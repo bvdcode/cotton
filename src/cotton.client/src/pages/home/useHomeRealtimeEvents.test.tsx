@@ -167,7 +167,7 @@ describe("useHomeRealtimeEvents", () => {
     },
   );
 
-  it("moves the subscription with the layout and removes it on logout and unmount", () => {
+  it("moves the subscription with the layout and removes it on logout and unmount", async () => {
     const { rerender, unmount } = renderHook(
       ({ enabled, layoutId }) => useHomeRealtimeEvents(enabled, layoutId),
       { wrapper, initialProps: { enabled: true, layoutId: "layout-1" } },
@@ -177,9 +177,11 @@ describe("useHomeRealtimeEvents", () => {
       hub.emit(HUB_METHODS.PreviewGenerated, file.nodeId, file.id, "abcd"),
     );
     expect(queryClient.getQueryData(imagesKey)).toEqual([file]);
-    expect(queryClient.getQueryData(otherLayoutKey)).toEqual([
-      { ...file, previewHashEncryptedHex: "abcd" },
-    ]);
+    await waitFor(() => {
+      expect(queryClient.getQueryData(otherLayoutKey)).toEqual([
+        { ...file, previewHashEncryptedHex: "abcd" },
+      ]);
+    });
 
     rerender({ enabled: false, layoutId: "layout-2" });
     expect(hub.listeners.get("previewgenerated")?.size).toBe(0);

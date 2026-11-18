@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, IconButton, Typography } from "@mui/material";
+import { Box, IconButton, LinearProgress, Typography } from "@mui/material";
 import { Close, ExpandMore, ExpandLess } from "@mui/icons-material";
 
 interface WidgetHeaderProps {
@@ -41,19 +41,22 @@ export const WidgetHeader: React.FC<WidgetHeaderProps> = ({
       }}
     >
       {hasActive && (
-        <Box
+        <LinearProgress
+          variant="determinate"
+          value={progressPercent}
+          color="success"
+          aria-label={title}
           sx={{
             position: "absolute",
-            top: 0,
-            left: 0,
-            bottom: 0,
-            padding: 3,
-            width: `${progressPercent}%`,
-            bgcolor: "success.main",
+            inset: 0,
+            height: "100%",
+            bgcolor: "transparent",
             opacity: 0.15,
-            transition: "width 0.3s ease-out",
             zIndex: 0,
             pointerEvents: "none",
+            "& .MuiLinearProgress-bar": {
+              transition: "transform 0.3s ease-out",
+            },
           }}
         />
       )}

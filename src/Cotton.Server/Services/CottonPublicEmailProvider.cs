@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Database.Models;
+using Cotton.Email;
 using Cotton.Models.Enums;
 using Cotton.Server.Providers;
 
@@ -55,7 +56,10 @@ namespace Cotton.Server.Services
                     RecipientEmail = recipientEmail,
                     RecipientName = recipientName,
                     Language = MapLanguageCode(languageCode),
-                    Parameters = parameters,
+                    Parameters = new Dictionary<string, string>(parameters)
+                    {
+                        [EmailTemplateParameterNames.Format] = nameof(EmailParameterFormat.PlainText),
+                    },
                 };
 
                 using HttpResponseMessage response = await _httpClient.PostAsJsonAsync("email/send", request);

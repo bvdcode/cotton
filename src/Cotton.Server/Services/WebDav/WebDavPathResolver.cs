@@ -35,7 +35,7 @@ namespace Cotton.Server.Services.WebDav
             bool includeFileContentGraph,
             CancellationToken ct)
         {
-            string cleanPath = NormalizePath(path);
+            string cleanPath = NormalizeAndValidatePath(path);
 
             // Root path
             if (string.IsNullOrEmpty(cleanPath))
@@ -49,9 +49,7 @@ namespace Cotton.Server.Services.WebDav
                 };
             }
 
-            string[] parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-                .Select(SafeUnescapePathSegment)
-                .ToArray();
+            string[] parts = cleanPath.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
             string parentPath = string.Join(PathSeparator, parts.Take(parts.Length - 1));
             ResolvedNodePath? parent = await _navigator.ResolveNodePathAsync(userId, parentPath, DefaultNodeType, ct);
             if (parent is null)
@@ -114,10 +112,8 @@ namespace Cotton.Server.Services.WebDav
 
         public async Task<WebDavParentResult> GetParentNodeAsync(Guid userId, string path, CancellationToken ct = default)
         {
-            // Decode percent-encoded sequences so Windows WebDAV clients can upload names containing
-            // reserved URL characters like '#' and '%' (sent as %23, %25).
-            string decodedPath = Uri.UnescapeDataString(path ?? string.Empty);
-            (Node Parent, string ResourceName)? resolved = await _navigator.ResolveParentAndNameAsync(userId, decodedPath, DefaultNodeType, ct);
+            string cleanPath = NormalizeAndValidatePath(path);
+            (Node Parent, string ResourceName)? resolved = await _navigator.ResolveParentAndNameAsync(userId, cleanPath, DefaultNodeType, ct);
             if (resolved is null)
             {
                 return new WebDavParentResult { Found = false };
@@ -134,29 +130,17 @@ namespace Cotton.Server.Services.WebDav
         private static string CombinePath(string parentPath, string name) =>
             string.IsNullOrEmpty(parentPath) ? name : parentPath + PathSeparator + name;
 
-        private static string NormalizePath(string? path)
+        private static string NormalizeAndValidatePath(string? path)
         {
             string p = (path ?? string.Empty).Replace('\\', PathSeparator);
+            foreach (string part in p.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!NameValidator.TryNormalizeAndValidate(part, out _, out string error))
+                {
+                    throw new BadHttpRequestException(error);
+                }
+            }
             return p.Trim(PathSeparator);
-        }
-
-        private static string SafeUnescapePathSegment(string segment)
-        {
-            if (string.IsNullOrEmpty(segment))
-            {
-                return string.Empty;
-            }
-
-            try
-            {
-                return Uri.UnescapeDataString(segment);
-            }
-            catch (UriFormatException)
-            {
-                // Some clients may send raw '%' (not percent-encoded) or otherwise malformed escapes.
-                // Treat it as a literal segment to avoid failing the whole request.
-                return segment;
-            }
         }
     }
 }

@@ -39,8 +39,7 @@ namespace Cotton.Server.IntegrationTests
             await DbContext.Database.MigrateAsync();
             _s3Provider = new S3Provider(_configuration);
             StorageBackendFactory factory = new(
-                NullLogger<FileSystemStorageBackend>.Instance,
-                NullLogger<S3StorageBackend>.Instance);
+                NullLogger<FileSystemStorageBackend>.Instance);
             _backend = factory.Create(StorageType.S3, _s3Provider);
             await _backend.DeleteAsync(MasterKeySentinelStore.SentinelStorageKey);
         }

@@ -13,11 +13,15 @@ namespace Cotton.Server.IntegrationTests
 {
     public class Http2TransportExtensionsTests
     {
-        [Test]
-        public void ConfigureHttp2TransportAppliesConfiguredFlowControlWindows()
+        [TestCase(16 * 1024 * 1024, 1024 * 1024, 8)]
+        [TestCase(2 * 1024 * 1024, 1024 * 1024, 1)]
+        [TestCase(65_535, 65_535, 1)]
+        [TestCase(int.MaxValue, 65_535, 100)]
+        public void ConfigureHttp2TransportAppliesConfiguredFlowControlWindows(
+            int connectionWindowSize,
+            int streamWindowSize,
+            int maxStreams)
         {
-            const int connectionWindowSize = 16 * 1024 * 1024;
-            const int streamWindowSize = 1024 * 1024;
             WebApplicationBuilder builder = WebApplication.CreateBuilder();
             builder.Configuration[
                 $"{Http2TransportOptions.SectionName}:{nameof(Http2TransportOptions.InitialConnectionWindowSize)}"] =
@@ -40,6 +44,7 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(
                     options.Limits.Http2.InitialStreamWindowSize,
                     Is.EqualTo(streamWindowSize));
+                Assert.That(options.Limits.Http2.MaxStreamsPerConnection, Is.EqualTo(maxStreams));
             });
         }
     }
