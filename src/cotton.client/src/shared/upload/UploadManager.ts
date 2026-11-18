@@ -2,8 +2,8 @@ import { reportClientError } from "@shared/utils/clientDiagnostics";
 import { getApiErrorMessage } from "../api/httpClient";
 import type { Guid } from "../api/layoutsApi";
 import type { NodeFileManifestDto } from "../api/nodesApi";
-import { refreshNodeContent } from "../store/nodesActions";
-import { useNodesStore } from "../store/nodesStore";
+import { uploadConfig } from "./config";
+import { UploadListingUpdates } from "./UploadListingUpdates";
 import { getCachedServerSettings } from "../api/queries/serverSettings";
 import {
   getEncryptionErrorKey,
@@ -60,6 +60,8 @@ export class UploadManager {
   private tasks: UploadTaskInternal[] = [];
   private readonly external = new UploadExternalTasks(() => this.emit());
   private pumping = false;
+  private snapshotDirty = false;
+  private notifyTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly runner = new UploadTaskRunner({
     createEncryptionTask: (task, bytesTotal) =>
       this.createTask({
@@ -87,8 +89,7 @@ export class UploadManager {
       speedBytesPerSec: 0,
     },
   };
-  private readonly refreshNodeIds = new Set<Guid>();
-  private refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly listingUpdates = new UploadListingUpdates();
   private readonly quota = new UploadQuotaTracker(() => this.pump());
 
   private readonly progress = new UploadProgressTracker(
@@ -124,10 +125,14 @@ export class UploadManager {
 
   setOpen(open: boolean) {
     this.open = open;
-    this.emit();
+    this.emit(true);
   }
 
   getSnapshot(): AppTaskSnapshot {
+    if (this.snapshotDirty) {
+      this.snapshotDirty = false;
+      this.updateSnapshot();
+    }
     return this.snapshot;
   }
 
@@ -135,7 +140,7 @@ export class UploadManager {
     const handle = this.external.createTask(options);
     this.open = true;
     this.pruneFinishedTasks();
-    this.emit();
+    this.emit(true);
     return handle;
   }
 
@@ -175,7 +180,7 @@ export class UploadManager {
       this.open = false;
     }
 
-    this.emit();
+    this.emit(true);
   }
 
   setFilePickerOpen(
@@ -251,7 +256,7 @@ export class UploadManager {
 
     this.open = true;
     this.pruneFinishedTasks();
-    this.emit();
+    this.emit(true);
     this.pump();
     return taskIds;
   }
@@ -262,7 +267,29 @@ export class UploadManager {
     this.progress.countTasks(this.tasks);
   }
 
-  private emit() {
+  private emit(immediate = false): void {
+    this.snapshotDirty = true;
+    if (immediate) {
+      if (this.notifyTimeout !== null) {
+        clearTimeout(this.notifyTimeout);
+        this.notifyTimeout = null;
+      }
+      this.notify();
+      return;
+    }
+    this.notifyTimeout ??= setTimeout(() => {
+      this.notifyTimeout = null;
+      this.notify();
+    }, uploadConfig.progressEmitIntervalMs);
+  }
+
+  private notify(): void {
+    for (const listener of this.listeners) {
+      listener();
+    }
+  }
+
+  private updateSnapshot(): void {
     const tasks = [
       ...this.external.getPublicTasks(),
       ...this.tasks.map((task) => toAppTask(task)),
@@ -286,22 +313,6 @@ export class UploadManager {
         speedBytesPerSec: this.progress.getSpeed(),
       },
     };
-    for (const l of this.listeners) l();
-  }
-
-  private scheduleNodeRefresh(nodeId: Guid) {
-    this.refreshNodeIds.add(nodeId);
-    if (this.refreshTimeout) return;
-
-    this.refreshTimeout = setTimeout(() => {
-      const ids = Array.from(this.refreshNodeIds);
-      this.refreshNodeIds.clear();
-      this.refreshTimeout = null;
-
-      for (const id of ids) {
-        void refreshNodeContent(id);
-      }
-    }, 300);
   }
 
   private hasActiveTasks(): boolean {
@@ -364,9 +375,6 @@ export class UploadManager {
     uploadedFile: NodeFileManifestDto | undefined,
   ): void {
     if (uploadedFile) {
-      if (!task._sharedUpload) {
-        useNodesStore.getState().upsertFileInCache(task.nodeId, uploadedFile);
-      }
       try {
         task._onFileUploaded?.(uploadedFile);
       } catch (listenerError) {
@@ -389,7 +397,7 @@ export class UploadManager {
     this.emit();
 
     if (refreshPrivateNode) {
-      this.scheduleNodeRefresh(task.nodeId);
+      this.listingUpdates.enqueue(task.nodeId, uploadedFile);
     }
   }
 
@@ -420,15 +428,15 @@ export class UploadManager {
 
   destroy(): void {
     this.progress.destroy();
+    if (this.notifyTimeout !== null) {
+      clearTimeout(this.notifyTimeout);
+      this.notifyTimeout = null;
+    }
     if (this.pruneIntervalId) {
       clearInterval(this.pruneIntervalId);
       this.pruneIntervalId = null;
     }
-    if (this.refreshTimeout) {
-      clearTimeout(this.refreshTimeout);
-      this.refreshTimeout = null;
-      this.refreshNodeIds.clear();
-    }
+    this.listingUpdates.destroy();
     this.runner.destroy(this.tasks);
     globalHashWorkerPool.destroy();
   }

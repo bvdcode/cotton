@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createFile, createFolder } from "../../../test/fileFixtures";
 import type { NodeResponse } from "../nodesApi";
 import { queryKeys } from "./queryKeys";
-import { updateFolderFilePreview } from "./folderPreviews";
+import { updateFolderFilePreviews } from "./folderPreviews";
 
 const page = (fileId: string): NodeResponse => ({
   content: {
@@ -41,7 +41,11 @@ describe("folder preview updates", () => {
     const stats = client.getQueryData(statsKey);
     const other = client.getQueryData(otherKey);
 
-    updateFolderFilePreview(client, "folder-1", "target", "ready");
+    updateFolderFilePreviews(
+      client,
+      "folder-1",
+      new Map([["target", "ready"]]),
+    );
 
     expect(
       client.getQueryData<NodeResponse>(overviewKey)?.content.files[0]
@@ -73,11 +77,23 @@ describe("folder preview updates", () => {
     const key = queryKeys.nodeChildren.tiles("folder-1", "user-1");
     client.setQueryData(key, { pages: [page("target")], pageParams: [1] });
     const before = client.getQueryData(key);
-    updateFolderFilePreview(client, "folder-1", "missing", "ready");
+    updateFolderFilePreviews(
+      client,
+      "folder-1",
+      new Map([["missing", "ready"]]),
+    );
     expect(client.getQueryData(key)).toBe(before);
-    updateFolderFilePreview(client, "folder-1", "target", "ready");
+    updateFolderFilePreviews(
+      client,
+      "folder-1",
+      new Map([["target", "ready"]]),
+    );
     const updated = client.getQueryData(key);
-    updateFolderFilePreview(client, "folder-1", "target", "ready");
+    updateFolderFilePreviews(
+      client,
+      "folder-1",
+      new Map([["target", "ready"]]),
+    );
     expect(client.getQueryData(key)).toBe(updated);
     expect(client.getQueryState(key)?.isInvalidated).toBe(false);
     expect(client.getQueryCache().getAll()).toHaveLength(1);

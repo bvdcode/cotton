@@ -5,6 +5,7 @@ import { findCachedChildFolder } from "./folderNavigation";
 import { queryClient } from "./queryClient";
 import { queryKeys } from "./queryKeys";
 import type { InfiniteData } from "@tanstack/react-query";
+import { clearFolderListingRefresh } from "./folderRefresh";
 
 export const NODE_NAVIGATION_STALE_TIME = 30_000;
 const ROOT_NODE_STALE_TIME = 600_000;
@@ -123,6 +124,7 @@ export const rootNodeOptions = (userId: string) =>
   });
 
 export function clearNodeQueries(client: QueryClient): void {
+  clearFolderListingRefresh(client);
   for (const key of [["nodeChildren"], ["nodeNavigation"], ["nodeRoot"]]) {
     void client.cancelQueries({ queryKey: key });
     client.removeQueries({ queryKey: key });

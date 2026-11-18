@@ -28,6 +28,10 @@ export type NodesState = {
     parentNodeId: string,
     file: NodeContentDto["files"][number],
   ) => boolean;
+  upsertFilesInCache: (
+    parentNodeId: string,
+    files: readonly NodeContentDto["files"][number][],
+  ) => void;
   optimisticRenameFile: (
     parentNodeId: string,
     fileId: string,

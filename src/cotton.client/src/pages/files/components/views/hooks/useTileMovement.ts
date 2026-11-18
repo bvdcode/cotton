@@ -40,6 +40,7 @@ export function useTileMovement(
   container: RefObject<HTMLElement | null>,
   ids: readonly string[],
   leadingItems: number,
+  enabled = true,
 ) {
   const theme = useTheme();
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
@@ -50,7 +51,7 @@ export function useTileMovement(
 
   useLayoutEffect(() => {
     const host = container.current;
-    if (!host) {
+    if (!host || !enabled) {
       return;
     }
     const capture = () => {
@@ -66,6 +67,7 @@ export function useTileMovement(
     return () => {
       if (pendingFrame.current !== null) {
         cancelAnimationFrame(pendingFrame.current);
+        pendingFrame.current = null;
       }
       observer.disconnect();
       resize.disconnect();
@@ -73,12 +75,13 @@ export function useTileMovement(
         animation.cancel();
       }
       active.clear();
+      previous.current.clear();
     };
-  }, [container]);
+  }, [container, enabled]);
 
   useLayoutEffect(() => {
     const host = container.current;
-    if (!host) {
+    if (!host || !enabled) {
       return;
     }
     const changed =
@@ -141,5 +144,5 @@ export function useTileMovement(
       }
       previous.current = next;
     });
-  }, [container, ids, leadingItems, reducedMotion, theme]);
+  }, [container, enabled, ids, leadingItems, reducedMotion, theme]);
 }

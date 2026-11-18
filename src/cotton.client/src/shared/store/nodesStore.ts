@@ -8,6 +8,7 @@ import {
 import {
   addCachedFolder,
   upsertCachedFile,
+  upsertCachedFiles,
   updateCachedListings,
   invalidateCachedFolder,
   refreshCachedDisplayMetadata,
@@ -102,6 +103,12 @@ export const useNodesStore = create<NodesState>()((set, get) => ({
     const updated = upsertCachedFile(queryClient, owner, parentId, file);
     invalidateCachedFolder(queryClient, parentId, owner);
     return updated;
+  },
+  upsertFilesInCache: (parentId, files) => {
+    const owner = get().cacheOwnerUserId;
+    if (owner) {
+      upsertCachedFiles(queryClient, owner, parentId, files);
+    }
   },
   optimisticRenameFile: (parentId, fileId, name) => {
     const owner = get().cacheOwnerUserId;

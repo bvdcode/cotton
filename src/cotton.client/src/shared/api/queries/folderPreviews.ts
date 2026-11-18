@@ -2,24 +2,26 @@ import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import type { NodeResponse } from "../nodesApi";
 import { queryKeys } from "./queryKeys";
 
-export function updateFolderFilePreview(
+export function updateFolderFilePreviews(
   queryClient: QueryClient,
   nodeId: string,
-  fileId: string,
-  previewHashEncryptedHex: string,
+  previews: ReadonlyMap<string, string>,
 ): void {
   const updatePage = (page: NodeResponse): NodeResponse => {
-    const index = page.content.files.findIndex(
-      (file) => file.id === fileId && file.nodeId === nodeId,
-    );
-    const file = page.content.files[index];
-    if (!file || file.previewHashEncryptedHex === previewHashEncryptedHex) {
-      return page;
-    }
-
-    const files = page.content.files.slice();
-    files[index] = { ...file, previewHashEncryptedHex };
-    return { ...page, content: { ...page.content, files } };
+    let changed = false;
+    const files = page.content.files.map((file) => {
+      const previewHashEncryptedHex = previews.get(file.id);
+      if (
+        file.nodeId !== nodeId ||
+        previewHashEncryptedHex === undefined ||
+        file.previewHashEncryptedHex === previewHashEncryptedHex
+      ) {
+        return file;
+      }
+      changed = true;
+      return { ...file, previewHashEncryptedHex };
+    });
+    return changed ? { ...page, content: { ...page.content, files } } : page;
   };
 
   const queryKey = queryKeys.nodeChildren.all(nodeId);

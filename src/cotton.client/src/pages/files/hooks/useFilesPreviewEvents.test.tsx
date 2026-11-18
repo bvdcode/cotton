@@ -5,11 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createFile, createFolder } from "../../../test/fileFixtures";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
 import type { NodeResponse } from "../../../shared/api/nodesApi";
+import type { PreviewUpdates } from "../../../shared/signalr/subscribeToPreviewGenerated";
 import { useFilesRealtimeEvents } from "./useFilesRealtimeEvents";
 
 const events = vi.hoisted(() => ({
-  preview: null as
-    ((nodeId: string, fileId: string, hash: string) => void) | null,
+  preview: null as ((previews: PreviewUpdates) => void) | null,
   unsubscribe: vi.fn(),
 }));
 vi.mock("../../../features/auth", () => ({
@@ -49,14 +49,16 @@ describe("preview generated events", () => {
       ({ nodeId }) => useFilesRealtimeEvents({ nodeId, onInvalidate }),
       { initialProps: { nodeId: "folder-1" }, wrapper },
     );
-    events.preview?.("folder-1", "file-1", "ready");
+    events.preview?.(new Map([["folder-1", new Map([["file-1", "ready"]])]]));
     expect(
       client.getQueryData<NodeResponse>(key)?.content.files[0]
         .previewHashEncryptedHex,
     ).toBe("ready");
-    events.preview?.("folder-1", "off-page", "ready");
+    events.preview?.(new Map([["folder-1", new Map([["off-page", "ready"]])]]));
     rerender({ nodeId: "other-folder" });
-    events.preview?.("folder-1", "file-1", "obsolete");
+    events.preview?.(
+      new Map([["folder-1", new Map([["file-1", "obsolete"]])]]),
+    );
     expect(
       client.getQueryData<NodeResponse>(key)?.content.files[0]
         .previewHashEncryptedHex,

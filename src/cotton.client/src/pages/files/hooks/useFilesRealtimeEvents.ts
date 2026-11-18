@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { updateFolderFilePreview } from "../../../shared/api/queries/folderPreviews";
+import { updateFolderFilePreviews } from "../../../shared/api/queries/folderPreviews";
 import {
   HUB_METHODS,
   subscribeToPreviewGenerated,
@@ -125,19 +125,12 @@ export function useFilesRealtimeEvents({
       return;
     }
 
-    return subscribeToPreviewGenerated(
-      (eventNodeId, nodeFileId, previewHashHex) => {
-        if (!nodeIdRef.current || nodeIdRef.current !== eventNodeId) {
-          return;
-        }
-
-        updateFolderFilePreview(
-          queryClient,
-          eventNodeId,
-          nodeFileId,
-          previewHashHex,
-        );
-      },
-    );
+    return subscribeToPreviewGenerated((previews) => {
+      const currentNodeId = nodeIdRef.current;
+      const files = currentNodeId ? previews.get(currentNodeId) : undefined;
+      if (currentNodeId && files) {
+        updateFolderFilePreviews(queryClient, currentNodeId, files);
+      }
+    });
   }, [isAuthenticated, queryClient]);
 }
