@@ -14,7 +14,7 @@ namespace Cotton.Storage.Tests.Backends
         private const int MiB = 1024 * 1024;
 
         [TestCase(4 * MiB, 16)]
-        [TestCase(16 * MiB + 1, 5)]
+        [TestCase((16 * MiB) + 1, 5)]
         [TestCase(32 * MiB, 4)]
         public async Task Write_PoolFull_WaitsAcrossBackendInstancesAndCancellationReleasesPartialBuffer(int size, int activeWrites)
         {
@@ -99,7 +99,7 @@ namespace Cotton.Storage.Tests.Backends
         {
             Mock<IAmazonS3> client = new(MockBehavior.Strict);
             Mock<Stream> source = new();
-            long remaining = 128 * MiB + 1;
+            long remaining = (128 * MiB) + 1;
             source.Setup(x => x.ReadAsync(It.IsAny<Memory<byte>>(), It.IsAny<CancellationToken>()))
                 .Returns<Memory<byte>, CancellationToken>((buffer, ct) =>
                 {
@@ -125,6 +125,5 @@ namespace Cotton.Storage.Tests.Backends
                 });
             Assert.That(await backend.WriteAsync("abcdef123456", source.Object, overwrite: true, deadline.Token), Is.EqualTo(128 * MiB));
         }
-
     }
 }

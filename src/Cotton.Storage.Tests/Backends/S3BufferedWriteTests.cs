@@ -28,8 +28,8 @@ namespace Cotton.Storage.Tests.Backends
         [TestCase(1)]
         [TestCase(4 * MiB)]
         [TestCase(8 * MiB)]
-        [TestCase(8 * MiB + 1)]
-        [TestCase(16 * MiB + 4096)]
+        [TestCase((8 * MiB) + 1)]
+        [TestCase((16 * MiB) + 4096)]
         public async Task Write_NonSeekableSource_UsesOneRewindableSignedPut(int size)
         {
             byte[] content = RandomNumberGenerator.GetBytes(size);
@@ -54,10 +54,10 @@ namespace Cotton.Storage.Tests.Backends
                     Assert.That(await SHA256.HashDataAsync(body, ct), Is.EqualTo(expectedHash));
                     if (size > 8 * MiB)
                     {
-                        body.Seek(8 * MiB - 3, SeekOrigin.Begin);
-                        byte[] crossing = new byte[Math.Min(7, size - (8 * MiB - 3))];
+                        body.Seek((8 * MiB) - 3, SeekOrigin.Begin);
+                        byte[] crossing = new byte[Math.Min(7, size - ((8 * MiB) - 3))];
                         await body.ReadExactlyAsync(crossing, ct);
-                        Assert.That(crossing, Is.EqualTo(content.AsSpan(8 * MiB - 3, crossing.Length).ToArray()));
+                        Assert.That(crossing, Is.EqualTo(content.AsSpan((8 * MiB) - 3, crossing.Length).ToArray()));
                     }
                     return new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK };
                 });

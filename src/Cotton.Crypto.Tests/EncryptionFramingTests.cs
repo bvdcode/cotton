@@ -16,7 +16,7 @@ namespace Cotton.Crypto.Tests
         [TestCase(AesGcmStreamCipher.MinChunkSize, AesGcmStreamCipher.MinChunkSize, 4093)]
         [TestCase(AesGcmStreamCipher.MinChunkSize + 17, AesGcmStreamCipher.MinChunkSize, 4093)]
         [TestCase(2 * AesGcmStreamCipher.MinChunkSize, AesGcmStreamCipher.MinChunkSize, 4093)]
-        [TestCase(2 * AesGcmStreamCipher.DefaultChunkSize + 17, AesGcmStreamCipher.DefaultChunkSize, 131591)]
+        [TestCase((2 * AesGcmStreamCipher.DefaultChunkSize) + 17, AesGcmStreamCipher.DefaultChunkSize, 131591)]
         public async Task Encrypt_ShortReads_PreserveConfiguredBlockSize(int length, int chunkSize, int readSize)
         {
             byte[] data = RandomNumberGenerator.GetBytes(length);

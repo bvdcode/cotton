@@ -16,7 +16,7 @@ namespace Cotton.Storage.Tests.Backends
     {
         [TestCase(0)]
         [TestCase(4 * 1024 * 1024)]
-        [TestCase(16 * 1024 * 1024 + 4096)]
+        [TestCase((16 * 1024 * 1024) + 4096)]
         public async Task Write_RealSdk_RetriesSameSignedBodyWithoutChunkEncoding(int size)
         {
             byte[] data = RandomNumberGenerator.GetBytes(size);
