@@ -1,9 +1,13 @@
 import { StrictMode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { toast } from "../../notifications/toast";
 import { containsMarkdownIframe } from "./containsMarkdownIframe";
 import { MarkdownEditor } from "./MarkdownEditor";
+
+const copyTextToClipboard = vi.hoisted(() => vi.fn());
+
+vi.mock("@uiw/copy-to-clipboard", () => ({ default: copyTextToClipboard }));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -122,6 +126,51 @@ describe("Markdown preview security", () => {
 
     expect(container.querySelector("img")).toBeNull();
     expect(container).toHaveTextContent("<img src=x onerror=alert(1)> &");
+  });
+
+  it.each([
+    ["js", 'const sample = "<iframe>";'],
+    ["html", '<img src="x" onerror="alert(1)">'],
+    ["", "Пример & <текст>"],
+  ])(
+    "copies the original %s code through the built-in control",
+    (lang, code) => {
+      const { container } = preview(`\`\`\`${lang}\n${code}\n\`\`\``);
+      const icons = container.querySelectorAll("pre .copied .octicon-copy");
+
+      expect(icons).toHaveLength(1);
+      expect(
+        container.querySelectorAll("pre .copied .octicon-check"),
+      ).toHaveLength(1);
+      fireEvent.click(icons[0]);
+
+      expect(copyTextToClipboard).toHaveBeenCalledExactlyOnceWith(
+        `${code}\n`,
+        expect.any(Function),
+      );
+    },
+  );
+
+  it("removes forged copy controls and attributes before adding trusted controls", () => {
+    const { container } = preview(
+      '```js\nsafe();\n```\n\n<div class="copied" data-code="forged">Forged</div>\n\n<pre><code>plain</code></pre>\n\n<!--rehype:style=position:fixed&onclick=alert(1)-->',
+    );
+    const controls = container.querySelectorAll(".copied");
+
+    expect(controls).toHaveLength(2);
+    expect(container.querySelector("[data-code='forged']")).toBeNull();
+    expect(
+      container.querySelector(
+        ".wmde-markdown [style], .wmde-markdown [onclick]",
+      ),
+    ).toBeNull();
+    fireEvent.click(screen.getByText("Forged"));
+    expect(copyTextToClipboard).not.toHaveBeenCalled();
+    fireEvent.click(controls[1]);
+    expect(copyTextToClipboard).toHaveBeenCalledExactlyOnceWith(
+      "plain",
+      expect.any(Function),
+    );
   });
 
   it("keeps heading and named-anchor links working with protected identifiers", () => {

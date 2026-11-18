@@ -5,9 +5,11 @@
  * Provides markdown editing and preview capabilities
  */
 
-import MDEditor from "@uiw/react-md-editor";
+import MDEditor, { type MDEditorProps } from "@uiw/react-md-editor";
+import { Box } from "@mui/material";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import rehypeRewrite from "rehype-rewrite";
 import rehypeSanitize from "rehype-sanitize";
 import { toast } from "../../notifications/toast";
 import { containsMarkdownIframe } from "./containsMarkdownIframe";
@@ -21,8 +23,20 @@ const sanitizePlugin: [
   typeof rehypeSanitize,
   typeof markdownSanitizationSchema,
 ] = [rehypeSanitize, markdownSanitizationSchema];
-const previewOptions = {
+const previewOptions: NonNullable<MDEditorProps["previewOptions"]> = {
   rehypePlugins: [sanitizePlugin, restoreMarkdownAnchors],
+  pluginsFilter: (type, plugins) => {
+    if (type === "remark") {
+      return plugins;
+    }
+    const trustedPlugins = plugins.filter(
+      (plugin) => Array.isArray(plugin) && plugin[0] === rehypeRewrite,
+    );
+    return [
+      ...plugins.filter((plugin) => !trustedPlugins.includes(plugin)),
+      ...trustedPlugins,
+    ];
+  },
 };
 
 export const MarkdownEditor: React.FC<IEditorProps> = ({
@@ -46,13 +60,23 @@ export const MarkdownEditor: React.FC<IEditorProps> = ({
     toast.warning(t("preview.markdown.blockedIframe"));
   }, [isEditing, t, value]);
 
+  if (!isEditing) {
+    return (
+      <Box
+        component={MDEditor.Markdown}
+        source={value}
+        {...previewOptions}
+        sx={{ minHeight: "100%", p: 2.5 }}
+      />
+    );
+  }
+
   return (
     <MDEditor
       value={value}
       onChange={(val) => onChange(val || "")}
-      preview={isEditing ? "edit" : "preview"}
+      preview="edit"
       previewOptions={previewOptions}
-      hideToolbar={!isEditing}
       height="100%"
       visibleDragbar={false}
     />

@@ -51,6 +51,7 @@
     "react-i18next": "^17.1.0",
     "react-router-dom": "^7.18.4",
     "react-virtuoso": "^4.18.19",
+    "rehype-rewrite": "^4.0.4",
     "rehype-sanitize": "^6.0.0",
     "three": "^0.186.1",
     "unist-util-visit": "^5.2.0",
