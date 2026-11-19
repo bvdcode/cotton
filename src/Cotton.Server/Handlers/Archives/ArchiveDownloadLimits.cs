@@ -6,7 +6,7 @@ namespace Cotton.Server.Handlers.Archives
     internal static class ArchiveDownloadLimits
     {
         public const int BatchSize = 256;
-        public const int PublicShareMaxEntries = 100_000;
+        public const int PublicShareMaxEntries = 1_000_000;
         public const string PublicShareLimitMessage = "This folder contains too many files and folders for a single archive. Please download the subfolders separately.";
     }
 }
