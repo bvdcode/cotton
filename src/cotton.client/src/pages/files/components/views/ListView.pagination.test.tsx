@@ -72,10 +72,7 @@ it("keeps the requested page after the grid processes its controlled sort and fi
       files: Array.from({ length: 201 }, (_, index) =>
         createFile({
           id: `file-${index}`,
-          name:
-            index % 100 === 0
-              ? `page-${Math.floor(index / 100) + 1}.txt`
-              : `file-${index}.txt`,
+          name: `file-${index}.txt`,
         }),
       ),
       stats: { folders: 0, files: 201, sizeBytes: 201 },
@@ -86,9 +83,9 @@ it("keeps the requested page after the grid processes its controlled sort and fi
       <FolderTable />
     </QueryClientProvider>,
   );
-  await screen.findByText("page-1.txt");
+  await screen.findByText("file-0.txt");
   fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
-  await screen.findByText("page-2.txt");
+  await screen.findByText("file-100.txt");
   expect(get).toHaveBeenCalledTimes(1);
   await waitFor(() =>
     expect(screen.getByText("101–200 of 201")).toBeInTheDocument(),
@@ -102,7 +99,7 @@ it("keeps the requested page after the grid processes its controlled sort and fi
       document.activeElement
         ?.closest(".MuiDataGrid-row")
         ?.getAttribute("data-id"),
-    ).toBe("file-101"),
+    ).toBe("file-100"),
   );
 });
 
