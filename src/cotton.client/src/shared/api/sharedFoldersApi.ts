@@ -1,6 +1,6 @@
 import type { SharedUploadContext, UploadServerParams } from "../upload/types";
 import type { CreateFileFromChunksRequest } from "./filesApi";
-import type { NodeFileManifestDto } from "./nodesApi";
+import type { FolderStatsDto, NodeFileManifestDto } from "./nodesApi";
 import { httpClient } from "./httpClient";
 import type { ArchiveDownloadLinkDto } from "./archiveApi";
 import type { Guid, NodeDto } from "./layoutsApi";
@@ -57,6 +57,18 @@ export const sharedFoldersApi = {
   getInfo: async (token: string): Promise<SharedNodeInfoDto> => {
     const response = await httpClient.get<SharedNodeInfoDto>(
       `/layouts/shared/${encodeToken(token)}`,
+    );
+    return response.data;
+  },
+
+  getStats: async (
+    token: string,
+    nodeId: Guid | null,
+    signal?: AbortSignal,
+  ): Promise<FolderStatsDto> => {
+    const response = await httpClient.get<FolderStatsDto>(
+      `/layouts/shared/${encodeToken(token)}/stats`,
+      { params: { nodeId: nodeId ?? undefined }, signal },
     );
     return response.data;
   },

@@ -67,10 +67,14 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   const [isDownloadingAll, setIsDownloadingAll] = React.useState(false);
   const { previewState, openPreview, closePreview } = useFilePreview();
 
-  const { content, loading, loadError, reload } = useSharedFolderContent(
-    token,
-    currentNode?.id ?? null,
-  );
+  const {
+    content,
+    loading,
+    loadError,
+    reload,
+    stats: folderStats,
+    isSizeCalculating,
+  } = useSharedFolderContent(token, currentNode?.id ?? null);
 
   const upload = useSharedFolderUpload(
     info,
@@ -228,17 +232,12 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
   const stats = React.useMemo(() => {
     const foldersCount = content?.nodes.length ?? 0;
     const filesCount = content?.files.length ?? 0;
-    const sizeBytes = (content?.files ?? []).reduce(
-      (acc, file) => acc + file.sizeBytes,
-      0,
-    );
-
     return {
       folders: foldersCount,
       files: filesCount,
-      sizeBytes,
+      sizeBytes: folderStats?.sizeBytes ?? 0,
     };
-  }, [content?.files, content?.nodes.length]);
+  }, [content?.files.length, content?.nodes.length, folderStats?.sizeBytes]);
 
   const getSignedMediaUrl = React.useCallback(
     async (fileId: string): Promise<string> => {
@@ -326,6 +325,7 @@ export const SharedFolderViewer: React.FC<SharedFolderViewerProps> = ({
           handleNavigateBreadcrumb(breadcrumbIndex);
         }}
         stats={stats}
+        isSizeCalculating={isSizeCalculating}
         viewMode={viewMode as FileBrowserViewMode}
         canGoUp={canGoUp}
         onGoUp={() => {

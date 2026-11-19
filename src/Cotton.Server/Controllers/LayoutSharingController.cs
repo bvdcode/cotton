@@ -98,6 +98,28 @@ namespace Cotton.Server.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet("shared/{token}/stats")]
+        public async Task<IActionResult> GetSharedNodeStats(
+            [FromRoute] string token,
+            [FromQuery] Guid? nodeId = null)
+        {
+            IActionResult? blocked = this.GetPublicShareLookupBlockRejection(
+                _publicShareLookupFailures,
+                token);
+            if (blocked is not null)
+            {
+                return blocked;
+            }
+
+            FolderStatsDto? stats = await _mediator.Send(
+                new GetSharedNodeStatsQuery(token, nodeId),
+                HttpContext.RequestAborted);
+            return stats is not null
+                ? Ok(stats)
+                : this.ApiPublicShareNotFound(_publicShareLookupFailures, token, "Shared folder not found.");
+        }
+
+        [AllowAnonymous]
         [HttpGet("shared/{token}/children")]
         public async Task<IActionResult> GetSharedNodeChildren(
             [FromRoute] string token,

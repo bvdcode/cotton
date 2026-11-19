@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { Guid } from "../../../shared/api/layoutsApi";
 import {
@@ -26,6 +27,16 @@ const createPendingContentState = (
 
 export const useSharedFolderContent = (token: string, nodeId: Guid | null) => {
   const { t } = useTranslation(["share", "common"]);
+  const queryClient = useQueryClient();
+  const statsKey = React.useMemo(
+    () => ["shared-folder-stats", token, nodeId],
+    [nodeId, token],
+  );
+  const statsQuery = useQuery({
+    queryKey: statsKey,
+    queryFn: ({ signal }) => sharedFoldersApi.getStats(token, nodeId, signal),
+    enabled: nodeId !== null,
+  });
   const [revision, setRevision] = React.useState(0);
   const refreshTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const activeFolder = React.useRef<{
@@ -41,9 +52,12 @@ export const useSharedFolderContent = (token: string, nodeId: Guid | null) => {
     }
     refreshTimers.current.forEach(clearTimeout);
     refreshTimers.current = POST_UPLOAD_REFRESH_DELAYS_MS.map((delay) =>
-      setTimeout(() => setRevision((value) => value + 1), delay),
+      setTimeout(() => {
+        setRevision((value) => value + 1);
+        void queryClient.invalidateQueries({ queryKey: statsKey, exact: true });
+      }, delay),
     );
-  }, [nodeId, token]);
+  }, [nodeId, queryClient, statsKey, token]);
   React.useEffect(() => {
     activeFolder.current = { token, nodeId };
     return () => {
@@ -104,5 +118,7 @@ export const useSharedFolderContent = (token: string, nodeId: Guid | null) => {
       ? contentState
       : createPendingContentState(nodeId)),
     reload,
+    stats: statsQuery.data,
+    isSizeCalculating: statsQuery.isFetching,
   };
 };

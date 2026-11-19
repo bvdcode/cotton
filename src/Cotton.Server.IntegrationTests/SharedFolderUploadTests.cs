@@ -37,6 +37,64 @@ namespace Cotton.Server.IntegrationTests
         public void DisposeGuest() => _guest?.Dispose();
 
         [Test]
+        public async Task PublicFolderStatisticsIncludeNestedFilesAndFollowNavigation()
+        {
+            NodeDto child = await CreateNodeAsync(_folder.Id, "child");
+            NodeDto nested = await CreateNodeAsync(child.Id, "nested");
+            foreach ((Guid nodeId, string text) in new[] { (_folder.Id, "root"), (child.Id, "child"), (nested.Id, "nested") })
+            {
+                (await UploadAsync(nodeId, text)).EnsureSuccessStatusCode();
+                (await CreateAsync(nodeId, [Hash(text)], Hash(text))).EnsureSuccessStatusCode();
+            }
+
+            FolderStatsDto root = (await _guest.GetFromJsonAsync<FolderStatsDto>($"/api/v1/layouts/shared/{_token}/stats"))!;
+            FolderStatsDto subfolder = (await _guest.GetFromJsonAsync<FolderStatsDto>($"/api/v1/layouts/shared/{_token}/stats?nodeId={child.Id}"))!;
+            Assert.Multiple(() =>
+            {
+                Assert.That(root.SizeBytes, Is.EqualTo(15));
+                Assert.That(root.Files, Is.EqualTo(3));
+                Assert.That(root.Folders, Is.EqualTo(2));
+                Assert.That(subfolder.SizeBytes, Is.EqualTo(11));
+                Assert.That(subfolder.Files, Is.EqualTo(2));
+                Assert.That(subfolder.Folders, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
+        public async Task EmptyReadOnlyShareHasZeroSizeAndCannotReadOutsideItsTree()
+        {
+            _token = await ShareAsync(_folder.Id, false);
+            FolderStatsDto stats = (await _guest.GetFromJsonAsync<FolderStatsDto>($"/api/v1/layouts/shared/{_token}/stats"))!;
+            Assert.That(stats.SizeBytes, Is.Zero);
+            Assert.That(stats.Files, Is.Zero);
+            foreach (Guid nodeId in new[] { _root.Id, Guid.NewGuid() })
+            {
+                using HttpResponseMessage denied = await _guest.GetAsync($"/api/v1/layouts/shared/{_token}/stats?nodeId={nodeId}");
+                Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+            }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public async Task ExpiredOrDeletedSharesDoNotExposeStatistics(bool expire)
+        {
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext db = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            NodeShareToken share = await db.NodeShareTokens.SingleAsync(x => x.Token == _token);
+            if (expire)
+            {
+                share.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            }
+            else
+            {
+                db.NodeShareTokens.Remove(share);
+            }
+            await db.SaveChangesAsync();
+            using HttpResponseMessage denied = await _guest.GetAsync($"/api/v1/layouts/shared/{_token}/stats");
+            Assert.That(denied.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        }
+
+        [Test]
         public async Task AnonymousUploadCreatesOwnedFileInSharedSubfolderAndDownloadsExactBytes()
         {
             NodeDto child = await CreateNodeAsync(_folder.Id, "child");
@@ -230,7 +288,7 @@ namespace Cotton.Server.IntegrationTests
             created.EnsureSuccessStatusCode();
             NodeFileManifestDto file = (await created.Content.ReadFromJsonAsync<NodeFileManifestDto>())!;
             string prefix = $"/api/v1/layouts/shared/{_token}";
-            foreach (string path in new[] { "/children", $"/children?nodeId={child.Id}", $"/ancestors/{child.Id}",
+            foreach (string path in new[] { "/stats", $"/stats?nodeId={child.Id}", "/children", $"/children?nodeId={child.Id}", $"/ancestors/{child.Id}",
                 $"/files/{file.Id}/content", $"/files/{file.Id}/content?preview=true" })
             {
                 using HttpResponseMessage denied = await _guest.GetAsync(prefix + path);
