@@ -161,7 +161,7 @@ namespace Cotton.Server.IntegrationTests
                 .Select(x => new { x.Id, x.LayoutId, x.OwnerId })
                 .SingleAsync(x => x.Id == sharedRoot.Id);
 
-            const int publicShareEntryLimit = 5_000;
+            const int publicShareEntryLimit = 100_000;
             List<Node> children = new(publicShareEntryLimit);
             for (int i = 0; i < publicShareEntryLimit; i++)
             {
@@ -193,7 +193,7 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(linkResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             string body = await linkResponse.Content.ReadAsStringAsync();
-            Assert.That(body, Does.Contain("limited to 5000 entries"));
+            Assert.That(body, Does.Contain("download the subfolders separately"));
         }
 
         [Test]
