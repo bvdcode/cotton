@@ -1,8 +1,6 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { useMemo } from "react";
 import {
   nodesApi,
-  type NodeContentDto,
   type NodeResponse,
 } from "../../../shared/api/nodesApi";
 import { queryKeys } from "../../../shared/api/queries/queryKeys";
@@ -83,15 +81,12 @@ export function useFolderListPage({
     : batch === 0 && defaultListing
       ? overview
       : listPage;
-  const content = useMemo(() => {
-    const loaded = activePage.data?.content;
-    if (!loaded || needsCalculatedSizes) {
-      return loaded;
-    }
-    return sliceListPage(loaded, (page * LIST_PAGE_SIZE) % FOLDER_PAGE_SIZE);
-  }, [activePage.data?.content, needsCalculatedSizes, page]);
   return {
-    content,
+    content: activePage.data?.content,
+    listing,
+    pageOffset: needsCalculatedSizes
+      ? undefined
+      : (page * LIST_PAGE_SIZE) % FOLDER_PAGE_SIZE,
     isError: activePage.isError,
     isPending: activePage.isPending,
     pagination: {
@@ -112,20 +107,5 @@ function getPagination(
     totalCount: activePage.data?.totalCount ?? overview.data?.totalCount ?? 0,
     loading: activePage.isFetching,
     onPaginationModelChange: (model) => controls.setPage(model.page),
-  };
-}
-
-function sliceListPage(
-  content: NodeContentDto,
-  offset: number,
-): NodeContentDto {
-  const end = offset + LIST_PAGE_SIZE;
-  return {
-    ...content,
-    nodes: content.nodes.slice(offset, end),
-    files: content.files.slice(
-      Math.max(0, offset - content.nodes.length),
-      Math.max(0, end - content.nodes.length),
-    ),
   };
 }

@@ -9,9 +9,9 @@ import {
 } from "@shared/api/queries/folderOverview";
 import { refreshNodeContent } from "../../../shared/store/nodesActions";
 import { translateError } from "../../../shared/i18n/translateError";
-import { useDecryptedFolderContent } from "../../../shared/crypto/useDecryptedFolderContent";
 import { useFolderListPage } from "./useFolderListPage";
 import { FOLDER_PAGE_SIZE } from "@shared/api/queries/folderPageSize";
+import { useFolderContentOrder } from "./useFolderContentOrder";
 
 export const useFolderListing = (
   nodeId: string | null,
@@ -53,7 +53,20 @@ export const useFolderListing = (
   );
 
   const activeListing = isList ? list : tiles;
-  const content = useDecryptedFolderContent(activeListing.content);
+  const loaded = activeListing.content;
+  const totalCount = isList
+    ? list.pagination.totalCount
+    : overview.data?.totalCount;
+  const content = useFolderContentOrder(loaded, {
+    naturalOrder:
+      overview.data !== undefined &&
+      overview.data.totalCount <= pageSize &&
+      loaded !== undefined &&
+      loaded.nodes.length + loaded.files.length === totalCount &&
+      (!isList || !list.listing.sortBy || list.listing.sortBy === "Name"),
+    descending: isList && list.listing.descending === true,
+    pageOffset: isList ? list.pageOffset : undefined,
+  });
   const error =
     overview.isError || activeListing.isError
       ? translateError("files", "errors.loadContentsFailed")

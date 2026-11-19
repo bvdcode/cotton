@@ -161,25 +161,30 @@ namespace Cotton.Server.IntegrationTests
                 .Select(x => new { x.Id, x.LayoutId, x.OwnerId })
                 .SingleAsync(x => x.Id == sharedRoot.Id);
 
-            const int publicShareEntryLimit = 5_000;
-            List<Node> children = new(publicShareEntryLimit);
-            for (int i = 0; i < publicShareEntryLimit; i++)
-            {
-                Node child = new()
-                {
-                    OwnerId = sharedRootEntity.OwnerId,
-                    LayoutId = sharedRootEntity.LayoutId,
-                    ParentId = sharedRoot.Id,
-                    Type = NodeType.Default,
-                };
-                child.SetName($"child-{i:D4}");
-                children.Add(child);
-            }
-
+            const int publicShareEntryLimit = 1_000_000;
+            const int seedBatchSize = 1_000;
             await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
             CottonDbContext dbContext = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
-            await dbContext.Nodes.AddRangeAsync(children);
-            await dbContext.SaveChangesAsync();
+            for (int start = 0; start < publicShareEntryLimit; start += seedBatchSize)
+            {
+                List<Node> children = new(seedBatchSize);
+                int end = Math.Min(start + seedBatchSize, publicShareEntryLimit);
+                for (int i = start; i < end; i++)
+                {
+                    Node child = new()
+                    {
+                        OwnerId = sharedRootEntity.OwnerId,
+                        LayoutId = sharedRootEntity.LayoutId,
+                        ParentId = sharedRoot.Id,
+                        Type = NodeType.Default,
+                    };
+                    child.SetName($"child-{i:D7}");
+                    children.Add(child);
+                }
+                await dbContext.Nodes.AddRangeAsync(children);
+                await dbContext.SaveChangesAsync();
+                dbContext.ChangeTracker.Clear();
+            }
 
             HttpResponseMessage shareLinkRes = await _client.GetAsync($"/api/v1/layouts/nodes/{sharedRoot.Id}/share-link");
             shareLinkRes.EnsureSuccessStatusCode();
@@ -193,7 +198,7 @@ namespace Cotton.Server.IntegrationTests
 
             Assert.That(linkResponse.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
             string body = await linkResponse.Content.ReadAsStringAsync();
-            Assert.That(body, Does.Contain("limited to 5000 entries"));
+            Assert.That(body, Does.Contain("download the subfolders separately"));
         }
 
         [Test]

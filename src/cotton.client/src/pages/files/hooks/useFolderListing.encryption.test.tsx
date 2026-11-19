@@ -75,3 +75,49 @@ it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
     expect(result.current.content?.files[0].name).toBe("opaque-id");
   },
 );
+
+it.each([InterfaceLayoutType.List, InterfaceLayoutType.Tiles])(
+  "naturally orders decrypted names from a complete batch in layout %s",
+  async (layout) => {
+    const key = await generateMasterKey();
+    useVault.getState().unlock(key, { persistToSession: false });
+    const files = await Promise.all(
+      ["10.txt", "2.txt", "1.txt"].map(async (name, index) =>
+        createFile({
+          id: `file-${index}`,
+          name: `opaque-${index}`,
+          metadata: {
+            en: await encryptDisplayMeta({ name, contentType: "text/plain" }),
+            isClientEncrypted: "true",
+          },
+        }),
+      ),
+    );
+    vi.spyOn(nodesApi, "getChildren").mockResolvedValue({
+      content: {
+        ...createFolder(),
+        node: createFolder(),
+        nodes: [],
+        files,
+        stats: { folders: 0, files: 3, sizeBytes: 3 },
+      },
+      totalCount: 3,
+    });
+    const { result } = renderHook(
+      () => useFolderListing("folder-1", "user-1", layout),
+      { wrapper },
+    );
+    await waitFor(() =>
+      expect(result.current.content?.files.map((file) => file.name)).toEqual([
+        "1.txt",
+        "2.txt",
+        "10.txt",
+      ]),
+    );
+    expect(files.map((file) => file.name)).toEqual([
+      "opaque-0",
+      "opaque-1",
+      "opaque-2",
+    ]);
+  },
+);

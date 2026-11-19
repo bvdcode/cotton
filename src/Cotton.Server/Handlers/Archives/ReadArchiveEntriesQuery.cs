@@ -155,8 +155,8 @@ namespace Cotton.Server.Handlers.Archives
                     && file.OwnerId == request.Ticket.UserId && file.Node.Type == NodeType.Default);
                 if (lastName is not null)
                 {
-                    query = query.Where(file => string.Compare(file.NameKey, lastName) > 0
-                        || (file.NameKey == lastName && file.Id.CompareTo(lastId) > 0));
+                    query = query.Where(file => EF.Functions.GreaterThan(
+                        ValueTuple.Create(file.NameKey, file.Id), ValueTuple.Create(lastName, lastId)));
                 }
                 var page = await query.OrderBy(file => file.NameKey).ThenBy(file => file.Id)
                     .Take(ArchiveDownloadLimits.BatchSize).Select(file => new { file.Id, file.NameKey }).ToListAsync(ct);
