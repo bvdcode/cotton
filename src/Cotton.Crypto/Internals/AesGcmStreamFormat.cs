@@ -83,7 +83,7 @@ namespace Cotton.Crypto.Internals
             byte[] headerPrefix = ArrayPool<byte>.Shared.Rent(8);
             try
             {
-                await ReadExactlyAsync(input, headerPrefix, 8, ct).ConfigureAwait(false);
+                await input.ReadExactlyAsync(headerPrefix.AsMemory(0, 8), ct).ConfigureAwait(false);
                 if (!headerPrefix.AsSpan(0, 4).SequenceEqual(FormatConstants.MagicBytes))
                 {
                     if (headerPrefix.AsSpan(0, 4).SequenceEqual("CTN1"u8))
@@ -104,7 +104,7 @@ namespace Cotton.Crypto.Internals
                 byte[] headerData = ArrayPool<byte>.Shared.Rent(remainingHeader);
                 try
                 {
-                    await ReadExactlyAsync(input, headerData, remainingHeader, ct).ConfigureAwait(false);
+                    await input.ReadExactlyAsync(headerData.AsMemory(0, remainingHeader), ct).ConfigureAwait(false);
                     // Stitch full header then parse via internal TryRead
                     byte[] full = ArrayPool<byte>.Shared.Rent(headerLength);
                     try
@@ -137,7 +137,7 @@ namespace Cotton.Crypto.Internals
             byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
             try
             {
-                await ReadExactlyAsync(input, header, headerLen, ct).ConfigureAwait(false);
+                await input.ReadExactlyAsync(header.AsMemory(0, headerLen), ct).ConfigureAwait(false);
                 if (!ChunkHeader.TryRead(header, tagSize, out ChunkHeader ch))
                 {
                     throw new InvalidDataException("Invalid or corrupted chunk header.");
@@ -156,7 +156,9 @@ namespace Cotton.Crypto.Internals
             byte[] header = ArrayPool<byte>.Shared.Rent(headerLen);
             try
             {
-                int bytesRead = await ReadExactlyOrEndAsync(input, header, headerLen, ct).ConfigureAwait(false);
+                int bytesRead = await input.ReadAtLeastAsync(
+                    header.AsMemory(0, headerLen), headerLen,
+                    throwOnEndOfStream: false, cancellationToken: ct).ConfigureAwait(false);
                 if (bytesRead == 0)
                 {
                     return null;
@@ -175,35 +177,6 @@ namespace Cotton.Crypto.Internals
             {
                 ArrayPool<byte>.Shared.Return(header, clearArray: false);
             }
-        }
-
-        public static async Task ReadExactlyAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
-        {
-            int offset = 0;
-            while (offset < count)
-            {
-                int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, count - offset), ct).ConfigureAwait(false);
-                if (bytesRead == 0)
-                {
-                    throw new EndOfStreamException("Unexpected end of stream.");
-                }
-                offset += bytesRead;
-            }
-        }
-
-        private static async Task<int> ReadExactlyOrEndAsync(Stream stream, byte[] buffer, int count, CancellationToken ct)
-        {
-            int offset = 0;
-            while (offset < count)
-            {
-                int bytesRead = await stream.ReadAsync(buffer.AsMemory(offset, count - offset), ct).ConfigureAwait(false);
-                if (bytesRead == 0)
-                {
-                    return offset;
-                }
-                offset += bytesRead;
-            }
-            return offset;
         }
     }
 }

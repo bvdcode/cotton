@@ -13,7 +13,7 @@ namespace Cotton.Crypto
             ArgumentNullException.ThrowIfNull(value);
 
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-            return Convert.ToHexString(hash).ToLowerInvariant();
+            return Convert.ToHexStringLower(hash);
         }
     }
 }

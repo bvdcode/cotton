@@ -268,8 +268,8 @@ namespace Cotton.Crypto.Internals.Pipelines
             byte[] cipher = scope.Rent(cipherLength);
             try
             {
-                await AesGcmStreamFormat
-                    .ReadExactlyAsync(input, cipher, cipherLength, ct)
+                await input
+                    .ReadExactlyAsync(cipher.AsMemory(0, cipherLength), ct)
                     .ConfigureAwait(false);
                 return cipher;
             }
