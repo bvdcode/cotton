@@ -2,7 +2,9 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.PixelFormats;
+using System.IO.Compression;
 using System.Text;
 
 namespace Cotton.Previews.Tests
@@ -86,6 +88,88 @@ namespace Cotton.Previews.Tests
             AssertWebpSignature(preview);
             string format = Encoding.ASCII.GetString(preview, 12, 4);
             Assert.That(format, Is.Not.EqualTo("VP8L"), "Preview must be lossy WebP, not lossless VP8L.");
+        }
+
+        [TestCase(2400, 1200, 200, 100)]
+        [TestCase(1200, 2400, 100, 200)]
+        [TestCase(80, 60, 80, 60)]
+        public async Task GeneratePreviewWebPAsync_Jpeg_KeepsAspectRatioWithoutUpscaling(
+            int width, int height, int expectedWidth, int expectedHeight)
+        {
+            using Image<Rgba32> source = new Image<Rgba32>(width, height);
+            using MemoryStream stream = new MemoryStream();
+            await source.SaveAsJpegAsync(stream);
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(image.Width, Is.EqualTo(expectedWidth));
+                Assert.That(image.Height, Is.EqualTo(expectedHeight));
+            });
+        }
+
+        [TestCase((ushort)6)]
+        [TestCase((ushort)8)]
+        public async Task GeneratePreviewWebPAsync_Jpeg_AppliesExifOrientation(ushort orientation)
+        {
+            using Image<Rgba32> source = new Image<Rgba32>(800, 400);
+            source.Metadata.ExifProfile = new ExifProfile();
+            source.Metadata.ExifProfile.SetValue(ExifTag.Orientation, orientation);
+            using MemoryStream stream = new MemoryStream();
+            await source.SaveAsJpegAsync(stream);
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(image.Width, Is.EqualTo(100));
+                Assert.That(image.Height, Is.EqualTo(200));
+            });
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_AnimatedGif_PreservesFrames()
+        {
+            using Image<Rgba32> source = new Image<Rgba32>(400, 200, new Rgba32(255, 0, 0));
+            using Image<Rgba32> secondFrame = new Image<Rgba32>(400, 200, new Rgba32(0, 0, 255));
+            source.Frames.AddFrame(secondFrame.Frames.RootFrame);
+            using MemoryStream stream = new MemoryStream();
+            await source.SaveAsGifAsync(stream);
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(image.Width, Is.EqualTo(200));
+                Assert.That(image.Height, Is.EqualTo(100));
+                Assert.That(image.Frames.Count, Is.EqualTo(2));
+            });
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_NonSeekableStream_StillDecodes()
+        {
+            byte[] source = CreateGradientPngBytes(width: 640, height: 320);
+            using MemoryStream compressed = new MemoryStream();
+            using (GZipStream compressor = new GZipStream(compressed, CompressionMode.Compress, leaveOpen: true))
+            {
+                await compressor.WriteAsync(source);
+            }
+            compressed.Position = 0;
+            using GZipStream stream = new GZipStream(compressed, CompressionMode.Decompress);
+
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
+            using Image<Rgba32> image = Image.Load<Rgba32>(preview);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(image.Width, Is.EqualTo(200));
+                Assert.That(image.Height, Is.EqualTo(100));
+            });
         }
 
         private static byte[] CreateGradientPngBytes(int width, int height)

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -20,13 +21,20 @@ namespace Cotton.Previews
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
+            DecoderOptions options = new DecoderOptions();
             if (stream.CanSeek)
             {
+                stream.Position = 0;
+                ImageInfo info = await Image.IdentifyAsync(stream).ConfigureAwait(false);
+                if (info.Width > size || info.Height > size)
+                {
+                    options = new DecoderOptions { TargetSize = new Size(size, size) };
+                }
                 stream.Position = 0;
             }
 
             using Image<Rgba32> image = await Image
-                .LoadAsync<Rgba32>(stream)
+                .LoadAsync<Rgba32>(options, stream)
                 .ConfigureAwait(false);
             image.Mutate(x => x.AutoOrient());
             return await EncodeMaxResizedWebpAsync(image, size);
