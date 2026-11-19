@@ -108,7 +108,7 @@ beforeEach(() => {
 });
 
 describe("copy and paste", () => {
-  it("keeps the original, updates the destination and retains the clipboard for repeated pastes", async () => {
+  it("keeps the original, updates the destination and clears the clipboard after pasting", async () => {
     const { result } = renderOperations();
     act(() => result.current.copyItems([item]));
     await act(() => result.current.pasteInto(target.id));
@@ -118,16 +118,36 @@ describe("copy and paste", () => {
     expect(mocks.moveFile).not.toHaveBeenCalled();
     expect(getFolderListing("source")?.files).toEqual([original]);
     expect(getFolderListing("target")?.files).toEqual([copied]);
-    expect(useMoveClipboardStore.getState().items).toEqual([item]);
-    expect(useMoveClipboardStore.getState().operation).toBe("copy");
+    expect(useMoveClipboardStore.getState().items).toEqual([]);
     await act(() => result.current.pasteInto("another-target"));
-    expect(mocks.copyFile).toHaveBeenLastCalledWith(original.id, {
-      parentId: "another-target",
-    });
+    expect(mocks.copyFile).toHaveBeenCalledOnce();
     expect(mocks.success).toHaveBeenCalledWith(
       "copy.toasts.copied",
       expect.objectContaining({ toastId: expect.any(String) }),
     );
+  });
+
+  it("keeps only failed items in copy mode so they can be retried", async () => {
+    const failedFile = { ...original, id: "failed", name: "failed.txt" };
+    const failedItem = { ...item, id: failedFile.id, file: failedFile };
+    mocks.copyFile
+      .mockResolvedValueOnce(copied)
+      .mockRejectedValueOnce(new Error("Unavailable"));
+    const { result } = renderOperations();
+    act(() => result.current.copyItems([item, failedItem]));
+
+    await act(() => result.current.pasteInto(target.id));
+
+    expect(useMoveClipboardStore.getState().items).toEqual([failedItem]);
+    expect(useMoveClipboardStore.getState().operation).toBe("copy");
+
+    await act(() => result.current.pasteInto(target.id));
+
+    expect(mocks.copyFile).toHaveBeenLastCalledWith(failedFile.id, {
+      parentId: target.id,
+    });
+    expect(mocks.moveFile).not.toHaveBeenCalled();
+    expect(useMoveClipboardStore.getState().items).toEqual([]);
   });
 
   it("encrypts the newly copied file rather than the original in an encrypted destination", async () => {

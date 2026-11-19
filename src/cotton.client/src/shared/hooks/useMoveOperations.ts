@@ -262,14 +262,11 @@ export const useMoveOperations = ({
         } else {
           task.complete();
         }
-        if (
-          operation === "move" &&
-          useMoveClipboardStore.getState().items === items
-        ) {
+        if (useMoveClipboardStore.getState().items === items) {
           if (outcome.notMoved.length === 0) {
             clear();
           } else {
-            useMoveClipboardStore.getState().setItems(outcome.notMoved);
+            useMoveClipboardStore.getState().setItems(outcome.notMoved, operation);
           }
         }
       } catch (error) {
