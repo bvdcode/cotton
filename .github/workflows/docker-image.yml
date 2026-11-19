@@ -5,6 +5,7 @@ on:
     paths:
       - "src/**"
       - "GitVersion.yml"
+      - "global.json"
       - ".github/workflows/**"
     branches:
       - main
@@ -82,7 +83,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Setup Node.js
         uses: actions/setup-node@v5

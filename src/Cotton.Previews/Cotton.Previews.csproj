@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net11.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
@@ -21,7 +21,6 @@
 		<PackageReference Include="EasyExtensions.Fonts" Version="3.0.92" />
 		<PackageReference Include="Heic.NET" Version="0.1.2" />
 		<PackageReference Include="MetadataExtractor" Version="2.9.3" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
 		<PackageReference Include="Render.NET.Mesh" Version="0.3.20" />
 		<PackageReference Include="Render.NET.Pdf" Version="0.3.20" />
 		<PackageReference Include="Render.NET.Svg" Version="0.3.20" />
