@@ -2,6 +2,7 @@ import { useFolderTiles } from "./useFolderTiles";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { InterfaceLayoutType } from "../../../shared/api/layoutsApi";
+import type { NodeContentDto } from "@shared/api/nodesApi";
 import {
   fetchFolderOverview,
   folderOverviewOptions,
@@ -53,20 +54,14 @@ export const useFolderListing = (
   );
 
   const activeListing = isList ? list : tiles;
-  const loaded = activeListing.content;
-  const totalCount = isList
-    ? list.pagination.totalCount
-    : overview.data?.totalCount;
-  const content = useFolderContentOrder(loaded, {
-    naturalOrder:
-      overview.data !== undefined &&
-      overview.data.totalCount <= pageSize &&
-      loaded !== undefined &&
-      loaded.nodes.length + loaded.files.length === totalCount &&
-      (!isList || !list.listing.sortBy || list.listing.sortBy === "Name"),
-    descending: isList && list.listing.descending === true,
-    pageOffset: isList ? list.pageOffset : undefined,
-  });
+  const content = useFolderContentOrder(
+    activeListing.content,
+    getContentOrderOptions(
+      activeListing.content,
+      overview.data?.totalCount,
+      isList ? list : undefined,
+    ),
+  );
   const error =
     overview.isError || activeListing.isError
       ? translateError("files", "errors.loadContentsFailed")
@@ -88,3 +83,21 @@ export const useFolderListing = (
     refresh,
   };
 };
+
+function getContentOrderOptions(
+  content: NodeContentDto | undefined,
+  overviewCount: number | undefined,
+  list: ReturnType<typeof useFolderListPage> | undefined,
+) {
+  const totalCount = list ? list.pagination.totalCount : overviewCount;
+  return {
+    naturalOrder:
+      overviewCount !== undefined &&
+      overviewCount <= FOLDER_PAGE_SIZE &&
+      content !== undefined &&
+      content.nodes.length + content.files.length === totalCount &&
+      (!list || !list.listing.sortBy || list.listing.sortBy === "Name"),
+    descending: list?.listing.descending === true,
+    pageOffset: list?.pageOffset,
+  };
+}
