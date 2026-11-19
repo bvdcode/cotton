@@ -15,7 +15,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions" Version="3.0.92" />
+		<PackageReference Include="EasyExtensions" Version="4.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="11.0.0" />
 		<ProjectReference Include="..\Cotton.Crypto\Cotton.Crypto.csproj" />
 		<ProjectReference Include="..\Cotton.Shared\Cotton.csproj" />

@@ -31,6 +31,11 @@ jobs:
           lfs: "true"
           fetch-depth: 0
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 11.0.x
+
       - name: Install GitVersion
         uses: GitTools/actions/gitversion/setup@v4.7.0
         with:
@@ -52,12 +57,6 @@ jobs:
           echo "Version=$artifact_version" >> "$GITHUB_OUTPUT"
           echo "Version: $artifact_version"
           echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
-
-      - name: Setup .NET
-        if: github.ref == 'refs/heads/main'
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 11.0.x
 
       - name: Restore SDK package projects
         if: github.ref == 'refs/heads/main'

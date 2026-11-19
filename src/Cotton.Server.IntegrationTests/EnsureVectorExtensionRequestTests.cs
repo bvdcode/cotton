@@ -54,8 +54,11 @@ namespace Cotton.Server.IntegrationTests
             await handler.Handle(new EnsureVectorExtensionRequest(), CancellationToken.None);
 
             Assert.That(executor.Commands, Has.Count.EqualTo(2));
-            Assert.That(executor.Commands.All(command =>
-                command.Trim() == "CREATE EXTENSION IF NOT EXISTS vector;"), Is.True);
+            Assert.That(executor.Commands.Select(command => command.Trim()), Is.EqualTo(new[]
+            {
+                "CREATE EXTENSION IF NOT EXISTS vector CASCADE;",
+                "CREATE EXTENSION IF NOT EXISTS vector CASCADE;",
+            }));
             Assert.That(context.ChangeTracker.Entries(), Is.Empty);
         }
 

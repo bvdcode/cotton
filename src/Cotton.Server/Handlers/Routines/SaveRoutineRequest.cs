@@ -29,8 +29,10 @@ namespace Cotton.Server.Handlers.Routines
         public async Task<RoutineDto> Handle(SaveRoutineRequest request, CancellationToken ct)
         {
             RoutineDraftDto draft = request.Draft;
-            Validator.ValidateObject(draft, new ValidationContext(draft), true);
-            Validator.ValidateObject(draft.Settings, new ValidationContext(draft.Settings), true);
+            await Validator.ValidateObjectAsync(draft, new ValidationContext(draft),
+                validateAllProperties: true, cancellationToken: ct);
+            await Validator.ValidateObjectAsync(draft.Settings, new ValidationContext(draft.Settings),
+                validateAllProperties: true, cancellationToken: ct);
             string name = draft.Name.Trim();
             if (name.Length == 0 || draft.Type != RoutineType.DeleteFiles)
             {
@@ -42,7 +44,7 @@ namespace Cotton.Server.Handlers.Routines
                 throw new EntityNotFoundException<Node>("Working folder not found.");
             }
             TimeZoneInfo timezone = settings.GetServerSettings().GetTimezoneInfo();
-            DateTime? startAt = ValidateSchedule(draft, timezone);
+            DateTime? startAt = await ValidateScheduleAsync(draft, timezone, ct);
             Routine routine = await GetRoutineAsync(request, ct);
             routine.Name = name;
             routine.Type = draft.Type;
@@ -83,7 +85,7 @@ namespace Cotton.Server.Handlers.Routines
             return created;
         }
 
-        private static DateTime? ValidateSchedule(RoutineDraftDto draft, TimeZoneInfo timezone)
+        private static async Task<DateTime?> ValidateScheduleAsync(RoutineDraftDto draft, TimeZoneInfo timezone, CancellationToken ct)
         {
             if (draft.ScheduleKind == RoutineScheduleKind.Calendar)
             {
@@ -91,7 +93,8 @@ namespace Cotton.Server.Handlers.Routines
                 {
                     throw new BadRequestException<Routine>("Calendar settings are required.");
                 }
-                Validator.ValidateObject(draft.Calendar, new ValidationContext(draft.Calendar), true);
+                await Validator.ValidateObjectAsync(draft.Calendar, new ValidationContext(draft.Calendar),
+                    validateAllProperties: true, cancellationToken: ct);
                 if (!RoutineSchedule.NextCalendar(DateTime.UtcNow, draft.Calendar, timezone).HasValue)
                 {
                     throw new BadRequestException<Routine>("The calendar schedule has no valid dates.");
