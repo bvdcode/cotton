@@ -44,12 +44,13 @@ export const TaskQueueWidget = () => {
     active: stats.activeTasks.filter((task) => task.status !== "queued"),
   });
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerInside = useRef(false);
   const resetInactivity = useCallback(() => {
     if (inactivityTimer.current !== null) {
       clearTimeout(inactivityTimer.current);
       inactivityTimer.current = null;
     }
-    if (visible && !isCollapsed) {
+    if (visible && !isCollapsed && !pointerInside.current) {
       inactivityTimer.current = setTimeout(
         () => setIsCollapsed(true),
         AUTO_COLLAPSE_DELAY_MS,
@@ -57,13 +58,16 @@ export const TaskQueueWidget = () => {
     }
   }, [isCollapsed, visible]);
   useEffect(() => {
+    if (!visible) {
+      pointerInside.current = false;
+    }
     resetInactivity();
     return () => {
       if (inactivityTimer.current !== null) {
         clearTimeout(inactivityTimer.current);
       }
     };
-  }, [activity, resetInactivity]);
+  }, [activity, resetInactivity, visible]);
 
   const totalProgress = Math.max(
     0,
@@ -90,6 +94,14 @@ export const TaskQueueWidget = () => {
 
   return (
     <Box
+      onPointerEnter={() => {
+        pointerInside.current = true;
+        resetInactivity();
+      }}
+      onPointerLeave={() => {
+        pointerInside.current = false;
+        resetInactivity();
+      }}
       onPointerMove={resetInactivity}
       onPointerDown={resetInactivity}
       onKeyDownCapture={resetInactivity}

@@ -147,6 +147,62 @@ it("stays open during scrolling and waits after the last scroll", () => {
     screen.getByRole("button", { name: "actions.expand" }),
   ).toBeInTheDocument();
 });
+it("stays open while the pointer is over the task list, including progress updates", () => {
+  render(<TaskQueueWidget />);
+  fireEvent.pointerOver(screen.getByRole("list"));
+  act(() => vi.advanceTimersByTime(6000));
+  act(() => publish(50));
+  act(() => vi.advanceTimersByTime(6000));
+  expect(
+    screen.getByRole("button", { name: "actions.collapse" }),
+  ).toBeInTheDocument();
+});
+it("waits five seconds after the pointer leaves the panel", () => {
+  render(<TaskQueueWidget />);
+  const list = screen.getByRole("list");
+  fireEvent.pointerOver(list);
+  act(() => vi.advanceTimersByTime(4000));
+  fireEvent.pointerOut(list, { relatedTarget: document.body });
+  act(() => vi.advanceTimersByTime(4999));
+  expect(
+    screen.getByRole("button", { name: "actions.collapse" }),
+  ).toBeInTheDocument();
+  act(() => vi.advanceTimersByTime(1));
+  expect(
+    screen.getByRole("button", { name: "actions.expand" }),
+  ).toBeInTheDocument();
+});
+it("keeps manual expansion open while the pointer remains inside", () => {
+  render(<TaskQueueWidget />);
+  act(() => vi.advanceTimersByTime(5000));
+  const expand = screen.getByRole("button", { name: "actions.expand" });
+  fireEvent.pointerOver(expand);
+  fireEvent.click(expand);
+  act(() => vi.advanceTimersByTime(6000));
+  expect(
+    screen.getByRole("button", { name: "actions.collapse" }),
+  ).toBeInTheDocument();
+});
+it("clears pointer presence when the panel disappears", () => {
+  render(<TaskQueueWidget />);
+  fireEvent.pointerOver(screen.getByRole("list"));
+  act(() => {
+    store.snapshot = { ...store.snapshot!, open: false };
+    for (const listener of store.listeners) {
+      listener();
+    }
+  });
+  act(() => {
+    store.snapshot = { ...store.snapshot!, open: true };
+    for (const listener of store.listeners) {
+      listener();
+    }
+  });
+  act(() => vi.advanceTimersByTime(5000));
+  expect(
+    screen.getByRole("button", { name: "actions.expand" }),
+  ).toBeInTheDocument();
+});
 it("keeps the compact mode on new progress and rearms only after manual expansion", () => {
   render(<TaskQueueWidget />);
   act(() => vi.advanceTimersByTime(5000));
