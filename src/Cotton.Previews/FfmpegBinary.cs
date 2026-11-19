@@ -61,6 +61,20 @@ namespace Cotton.Previews
             return string.IsNullOrWhiteSpace(raw) ? null : FfprobeJsonParser.ParseMediaProbe(raw);
         }
 
+        internal static async Task<MediaPreviewProbeInfo?> TryGetMediaPreviewProbeAsync(Uri url)
+        {
+            IReadOnlyCollection<string> arguments = CreateProbeArguments(
+                "json",
+                "stream=index,codec_type,duration:stream_disposition=attached_pic",
+                url);
+            string? raw = await RunFfprobeAsync(
+                arguments,
+                FfprobeOutputLimits.Default,
+                TimeSpan.FromSeconds(15),
+                CancellationToken.None).ConfigureAwait(false);
+            return string.IsNullOrWhiteSpace(raw) ? null : MediaPreviewProbeParser.Parse(raw);
+        }
+
         public static async Task<MediaMetadataInfo?> TryGetMediaMetadataAsync(
             Uri url,
             TimeSpan? timeout = null,

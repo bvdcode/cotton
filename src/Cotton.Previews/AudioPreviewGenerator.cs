@@ -2,11 +2,9 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Previews.Http;
+using Mediana.Drawing;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using ImagePixel = SixLabors.ImageSharp.PixelFormats.Rgba32;
 
 namespace Cotton.Previews
 {
@@ -18,7 +16,7 @@ namespace Cotton.Previews
         private const int WaveformExtractionTimeoutSeconds = 120;
         private const int WaveformSampleRateHz = 400;
 
-        public int Version => 4;
+        public int Version => 5;
 
         public int Priority => 0;
 
@@ -53,31 +51,34 @@ namespace Cotton.Previews
 
             stream.Seek(0, SeekOrigin.Begin);
 
+            await using RangeStreamServer server = new RangeStreamServer(stream);
+            return await GeneratePreviewWebPAsync(server.Url, size).ConfigureAwait(false);
+        }
+
+        internal async Task<byte[]> GeneratePreviewWebPAsync(Uri url, int size)
+        {
             byte[]? imageBytes = null;
             Exception? coverArtException = null;
-            await using (RangeStreamServer server = new RangeStreamServer(stream))
+            try
+            {
+                imageBytes = await ExtractCoverArtAsync(url).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                coverArtException = ex;
+            }
+
+            if (imageBytes is null)
             {
                 try
                 {
-                    imageBytes = await ExtractCoverArtAsync(server.Url).ConfigureAwait(false);
+                    return await GenerateWaveformPreviewWebPAsync(url, size).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception waveformException)
                 {
-                    coverArtException = ex;
-                }
-
-                if (imageBytes is null)
-                {
-                    try
-                    {
-                        return await GenerateWaveformPreviewWebPAsync(server.Url, size).ConfigureAwait(false);
-                    }
-                    catch (Exception waveformException)
-                    {
-                        throw new InvalidOperationException(
-                            "Failed to generate audio preview from both cover art and waveform.",
-                            new AggregateException(coverArtException!, waveformException));
-                    }
+                    throw new InvalidOperationException(
+                        "Failed to generate audio preview from both cover art and waveform.",
+                        new AggregateException(coverArtException!, waveformException));
                 }
             }
 
@@ -92,50 +93,10 @@ namespace Cotton.Previews
             int bars = Math.Clamp(size / 10, 8, 20);
             float[] amplitudes = BuildAmplitudes(samples, bars);
 
-            using Image<Rgba32> image = new Image<Rgba32>(size, size, new Rgba32(0, 0, 0, 0));
-            image.Mutate(ctx =>
-            {
-                float barGap = Math.Max(5f, size / 48f);
-                float sidePadding = Math.Max(10f, barGap * 1.5f);
-                float availableWidth = size - (sidePadding * 2f) - ((bars - 1) * barGap);
-                float barWidth = Math.Max(1f, availableWidth / bars);
-                float totalBarsWidth = (bars * barWidth) + ((bars - 1) * barGap);
-                float left = (size - totalBarsWidth) / 2f;
-                float centerY = size / 2f;
-                float minBarHeight = Math.Max(4f, size * 0.06f);
-                float maxBarHeight = size * 0.82f;
-                SolidBrush barBrush = Brushes.Solid(Color.FromPixel(new Rgba32(
-                    PreviewColorPalette.AccentGreenRed,
-                    PreviewColorPalette.AccentGreenGreen,
-                    PreviewColorPalette.AccentGreenBlue)));
-
-                ctx.Paint(canvas =>
-                {
-                    for (int i = 0; i < bars; i++)
-                    {
-                        float amplitude = amplitudes[i];
-                        float barHeight = Math.Max(minBarHeight, amplitude * maxBarHeight);
-                        float x = left + (i * (barWidth + barGap));
-                        float y = centerY - (barHeight / 2f);
-                        float radius = barWidth / 2f;
-
-                        if (barHeight <= barWidth)
-                        {
-                            canvas.Fill(barBrush, new EllipsePolygon(x + radius, centerY, radius));
-                            continue;
-                        }
-
-                        float bodyHeight = Math.Max(0, barHeight - barWidth);
-                        if (bodyHeight > 0)
-                        {
-                            canvas.Fill(barBrush, new RectanglePolygon(x, y + radius, barWidth, bodyHeight));
-                        }
-
-                        canvas.Fill(barBrush, new EllipsePolygon(x + radius, y + radius, radius));
-                        canvas.Fill(barBrush, new EllipsePolygon(x + radius, y + barHeight - radius, radius));
-                    }
-                });
-            });
+            using PixelBuffer pixels = new(size, size);
+            pixels.Clear(new Rgba32(0, 0, 0, 0));
+            WaveformPreviewRenderer.Draw(pixels, amplitudes);
+            using Image<ImagePixel> image = Image.WrapMemory<ImagePixel>(pixels.Pixels, size, size);
 
             await using MemoryStream output = new MemoryStream();
             await image.SaveAsWebpAsync(output, PreviewImageEncoder.Create(size)).ConfigureAwait(false);

@@ -1,13 +1,10 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Text;
-using EasyExtensions.Fonts.Resources;
-using SixLabors.Fonts;
+using Mediana.Drawing;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using ImagePixel = SixLabors.ImageSharp.PixelFormats.Rgba32;
 
 namespace Cotton.Previews
 {
@@ -15,7 +12,7 @@ namespace Cotton.Previews
     {
         public string Id => "text";
 
-        public int Version => 0;
+        public int Version => 2;
 
         public int Priority => 100;
 
@@ -41,8 +38,6 @@ namespace Cotton.Previews
         private const int MaxLineChars = 512;
         private const float PaddingRatio = 0.06f;
         private const float FontSizeRatio = 0.045f;
-
-        private static readonly FontFamily _fontFamily = LoadFontFamily();
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
@@ -83,33 +78,20 @@ namespace Cotton.Previews
             }
 
             int renderSize = Math.Max(size * 4, 512);
-            using Image<Rgba32> canvas = new Image<Rgba32>(renderSize, renderSize);
             float padding = renderSize * PaddingRatio;
             float paddingTop = padding * 1.3f;
             float fontSize = Math.Max(10f, renderSize * FontSizeRatio);
-            Font font = _fontFamily.CreateFont(fontSize, FontStyle.Regular);
+            PreviewTextRenderer font = new(fontSize);
             float wrapWidth = renderSize - (padding * 2);
             float maxHeight = renderSize - paddingTop - padding;
             float lineAdvance = fontSize * 1.25f;
             text = PrepareAndLayout(rawText, font, wrapWidth, maxHeight, lineAdvance);
 
-            canvas.Mutate(ctx =>
-            {
-                ctx.BackgroundColor(Color.White);
-                ctx.Paint(canvas => canvas.DrawText(
-                    new RichTextOptions(font) { Origin = new PointF(padding, paddingTop) },
-                    text,
-                    Brushes.Solid(Color.Black),
-                    null));
-            });
-
-            using Image<Rgba32> output = canvas.Clone(x => x.Resize(new ResizeOptions
-            {
-                Size = new Size(size, size),
-                Mode = ResizeMode.Crop,
-                Position = AnchorPositionMode.TopLeft,
-                Sampler = KnownResamplers.Lanczos3
-            }));
+            using PixelBuffer pixels = new(size, size);
+            pixels.Clear(new Rgba32(255, 255, 255, 255));
+            font.Draw(new RasterCanvas(pixels), text, padding, paddingTop,
+                new Rgba32(0, 0, 0, 255), size / (float)renderSize);
+            using Image<ImagePixel> output = Image.WrapMemory<ImagePixel>(pixels.Pixels, size, size);
 
             using MemoryStream ms = new MemoryStream();
             await output.SaveAsWebpAsync(ms, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
@@ -118,7 +100,7 @@ namespace Cotton.Previews
 
         private static string PrepareAndLayout(
             string rawText,
-            Font font,
+            PreviewTextRenderer font,
             float wrapWidth,
             float maxHeight,
             float lineAdvance)
@@ -136,15 +118,7 @@ namespace Cotton.Previews
 
             normalized = LimitLogicalLines(normalized, MaxLinesToRender);
             normalized = LimitLineWidth(normalized, MaxLineChars);
-            return LayoutTextMonospace(normalized, font, wrapWidth, maxHeight, lineAdvance);
-        }
-
-        private static FontFamily LoadFontFamily()
-        {
-            byte[] bytes = StaticFonts.GetFontBytes(StaticFontName.Y224);
-            FontCollection collection = new FontCollection();
-            using MemoryStream fontStream = new MemoryStream(bytes, writable: false);
-            return collection.Add(fontStream);
+            return LayoutText(normalized, font, wrapWidth, maxHeight, lineAdvance);
         }
 
         private static bool LooksBinary(string raw, string normalized)
@@ -158,9 +132,9 @@ namespace Cotton.Previews
             return dropped > (raw.Length / 4);
         }
 
-        private static string LayoutTextMonospace(
+        private static string LayoutText(
             string text,
-            Font font,
+            PreviewTextRenderer font,
             float wrapWidth,
             float maxHeight,
             float lineAdvance)
@@ -170,8 +144,7 @@ namespace Cotton.Previews
                 return string.Empty;
             }
 
-            FontRectangle measure = TextMeasurer.MeasureAdvance("M", new TextOptions(font));
-            float charWidth = Math.Max(1f, measure.Width);
+            float charWidth = Math.Max(1f, font.MeasureAdvance('M'));
 
             int cols = Math.Max(1, (int)Math.Floor(wrapWidth / charWidth));
             int rows = Math.Max(1, (int)Math.Floor(maxHeight / Math.Max(1f, lineAdvance)));
@@ -191,6 +164,10 @@ namespace Cotton.Previews
                 while (pos < line.Length && producedRows < rows)
                 {
                     int take = Math.Min(cols, line.Length - pos);
+                    while (take > 1 && font.MeasureWidth(line.Substring(pos, take)) > wrapWidth)
+                    {
+                        take--;
+                    }
                     sb.Append(line.AsSpan(pos, take));
                     pos += take;
                     producedRows++;

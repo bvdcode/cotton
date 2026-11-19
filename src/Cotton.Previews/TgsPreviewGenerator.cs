@@ -2,12 +2,11 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.ContentTypes;
-using Render.NET.Svg;
-using Render.NET.Tgs;
+using Mediana.Drawing;
+using Mediana.Images.Tgs;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using Rgba32 = SixLabors.ImageSharp.PixelFormats.Rgba32;
 using System.IO.Compression;
-using PixelBuffer = Render.NET.PixelBuffer;
 
 namespace Cotton.Previews
 {
@@ -19,7 +18,7 @@ namespace Cotton.Previews
 
         public string Id => "tgs";
 
-        public int Version => 3;
+        public int Version => 6;
 
         public int Priority => 0;
 
@@ -39,11 +38,13 @@ namespace Cotton.Previews
             using GZipStream gzip = new(stream, CompressionMode.Decompress, leaveOpen: true);
             TgsDocument document = await TgsReader.ReadAsync(gzip, new TgsReaderOptions
             {
+                IgnoreExpressions = true,
+                IgnorePuppetEffects = true,
                 MaximumInputBytes = MaxJsonBytes,
                 MaximumJsonBytes = MaxJsonBytes,
             }, timeout.Token).ConfigureAwait(false);
             double frame = document.InPoint + ((document.OutPoint - document.InPoint) * 0.5);
-            PixelBuffer pixels = TgsRenderer.RenderFrame(document, frame, new SvgRenderOptions
+            using PixelBuffer pixels = TgsRenderer.RenderFrame(document, frame, new DrawingRenderOptions
             {
                 Width = size,
                 Height = size,

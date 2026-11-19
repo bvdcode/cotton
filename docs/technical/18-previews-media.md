@@ -11,22 +11,31 @@ Image, document, vector, sticker, and 3D preview generators use managed .NET lib
 | Source | Processing path |
 | --- | --- |
 | Raster images | ImageSharp decoding, resizing, and WebP encoding. |
-| HEIC/HEIF | Heic.NET decoding, then ImageSharp. |
+| HEIC/HEIF | Mediana.Images.Heif decoding, then ImageSharp. |
 | Camera RAW | MetadataExtractor locates an embedded JPEG, then ImageSharp decodes it. |
-| PDF | Render.NET.Pdf renders the first page, then ImageSharp encodes it. |
-| Word (`.docx`) and PowerPoint (`.pptx`) | OoxPDF converts to PDF, then the PDF generator renders the first page or slide. |
-| Excel (`.xls`, `.xlsx`) | ExcelDataReader reads cells; ImageSharp draws a worksheet grid. |
-| SVG/SVGZ | Render.NET.Svg renders to pixels, then ImageSharp encodes them. |
-| Telegram TGS | Render.NET.Tgs renders a static poster, then ImageSharp encodes it. |
-| STL, OBJ, 3MF | Render.NET.Mesh renders geometry on the CPU; 3MF can use an embedded thumbnail. |
-| Plain text | ImageSharp draws text with bundled fonts. |
-| Audio and video | FFmpeg/ffprobe extracts artwork, frames, and media information. |
+| PDF | Mediana.Documents.Pdf renders the first page, then ImageSharp encodes it. |
+| Word (`.docx`) | Mediana.Documents.Word lays out the document and renders the first page directly, then ImageSharp encodes it. |
+| PowerPoint (`.pptx`) | Mediana.Documents.Presentation renders the first slide directly, then ImageSharp encodes it. |
+| Excel (`.xls`, `.xlsx`) | Mediana.Documents.Xls/Xlsx reads cells; Mediana.Drawing draws a worksheet grid; ImageSharp resizes and encodes it. |
+| SVG/SVGZ | Mediana.Images.Svg renders to pixels, then ImageSharp encodes them. |
+| Telegram TGS | Mediana.Images.Tgs renders a static poster, then ImageSharp encodes it. |
+| STL, OBJ, 3MF | Mediana.Models.Mesh renders geometry on the CPU; 3MF can use an embedded thumbnail. |
+| Plain text | Mediana.Drawing draws text with its bundled fonts; ImageSharp encodes it. |
+| Audio and video | FFmpeg/ffprobe extracts artwork, frames, and media information; Mediana.Drawing draws audio waveforms when no artwork is available. |
 
-PDF previews render the first page with managed Render.NET.Pdf and encode it through ImageSharp. Word and PowerPoint previews use the same renderer after conversion to PDF. Unsupported page features fail preview generation rather than producing a partial page. PDF and Office generator versions are `1`. PDF text extraction uses PdfPig; neither path requires PDFium or Docnet.
+PDF previews render the first page with managed Mediana.Documents.Pdf and encode it through ImageSharp. PowerPoint previews render the selected first slide directly through Mediana.Documents.Presentation; other slides are not rendered, and no intermediate PDF is produced. Word previews render directly through Mediana.Documents.Word. Invalid input and features explicitly rejected by the readers fail preview generation. PDF and Word use generator version `3`; PowerPoint uses version `4`. PDF text extraction uses PdfPig; neither path requires PDFium or Docnet.
 
-Office thumbnails are derived summaries, not a full Office layout engine. Word and PowerPoint conversion uses the bundled Tuffy font. The current OoxPDF converter can omit text in standard PowerPoint placeholders. Spreadsheet thumbnails show up to six columns and fourteen rows from the first worksheet; they do not reproduce workbook formatting, charts, or pagination.
+Office thumbnails are derived summaries, not a full Office layout engine. Word and PowerPoint use Mediana font substitution and embedded font resources; Cotton supplies no custom font resolvers. Word documents without a page size use A4; section page sizes and fractional measurements are preserved. PowerPoint reads the selected slide and its referenced layout, master, theme and images. Word table theme styling is incomplete: named table styles can render without their shading or borders. PowerPoint rendering rejects required characters that its font resources cannot resolve. Spreadsheet thumbnails show up to six columns and fourteen rows from the first worksheet, preserving missing row and column coordinates; they do not reproduce workbook formatting, charts, or pagination.
 
-SVG and SVGZ previews use managed Render.NET.Svg. TGS posters use Render.NET.Tgs. Both encode WebP through ImageSharp, keep a transparent background and reject unsupported features instead of rendering partial content. Their generator versions are `2`. SVG input and expanded SVGZ are limited to 16 MiB; both renderers have a 20-second cancellation timeout. Neither path requires SkiaSharp, Skottie or HarfBuzzSharp.
+The PowerPoint reader currently requires the complete compressed presentation in memory even when only the first slide is rendered. Source size therefore contributes directly to preview memory requirements.
+
+For JPEG images embedded in PowerPoint slides, JFIF chroma positioning takes precedence when JFIF and EXIF disagree. Other image validation remains enabled.
+
+Text, worksheet grids and audio waveforms use Mediana.Drawing antialiasing. Text renders directly at the requested size; worksheet grids use a 640 × 480 canvas and are only reduced for smaller previews. Text and worksheet glyphs are resolved by Mediana using its bundled fonts, without scanning installed fonts. Text and spreadsheet generators use version `2`; audio uses version `5`. ImageSharp.Drawing, SixLabors.Fonts, EasyExtensions.Drawing and EasyExtensions.Fonts are no longer required.
+
+Word previews render supported emoji with the embedded Microsoft Fluent Flat artwork through Mediana.Drawing.Emoji.Fluent. Rendering uses no installed emoji font or network access. Font substitution and missing-character rendering follow Mediana’s built-in policy.
+
+SVG and SVGZ previews use managed Mediana.Images.Svg. TGS posters use Mediana.Images.Tgs, omit Puppet deformation effects and use stored property values without evaluating expressions. Both encode WebP through ImageSharp, keep a transparent background and reject other unsupported features instead of rendering partial content. SVG uses generator version `5`; TGS and HEIC use version `6`, and the three mesh formats use version `12`. SVG input and expanded SVGZ are limited to 16 MiB; both vector renderers have a 20-second cancellation timeout. Neither path requires SkiaSharp, Skottie or HarfBuzzSharp.
 
 Camera RAW previews find embedded JPEG images in CR2, CR3, NEF, NRW, ARW, DNG, RAF, ORF, RW2, PEF, and SRW files. The small preview uses the smallest embedded image with enough pixels; the large preview uses the largest. The source file's orientation is applied before encoding both results as WebP. The RAW sensor data is not developed; files without a usable embedded JPEG cannot produce a preview. Source size, JPEG candidates, and decoded pixel count are bounded.
 
@@ -34,7 +43,7 @@ Files named as HEIC or HEIF are checked for JPEG, PNG, GIF, BMP, WebP and TIFF s
 
 Video previews use embedded cover art when available. Otherwise, clips up to one second use the first frame; longer clips use a frame from the middle.
 
-Telegram `.tgs` stickers are gzip-compressed Lottie animations. The preview generator renders a frame from the middle of the animation as a static WebP poster. It limits the expanded JSON to 8 MiB. A public file-share page displays the poster when it exists; animated playback is not provided.
+Telegram `.tgs` stickers are gzip-compressed Lottie animations. The preview generator renders a frame from the middle of the animation as a static WebP poster. Expressions are never executed; properties use their stored values and keyframes. It limits the expanded JSON to 8 MiB. A public file-share page displays the poster when it exists; animated playback is not provided.
 
 Preview metadata is written only after the derived object exists. Each new successful result records the stable identifier and version of the generator that produced it. Only changes to that generator's version make the result eligible for automatic regeneration. Existing cached previews without a recorded generator remain available and are excluded from version-based regeneration; their generator is not inferred from current filenames.
 

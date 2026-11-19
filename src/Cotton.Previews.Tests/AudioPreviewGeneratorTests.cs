@@ -13,11 +13,11 @@ namespace Cotton.Previews.Tests
         private const int LargeAudioPreviewThresholdBytes = 50 * 1024 * 1024;
 
         [Test]
-        public void Version_ForcesReprocessingAfterWaveformTimeoutIncrease()
+        public void Version_ForcesReprocessingAfterWaveformRendererChange()
         {
             AudioPreviewGenerator generator = new AudioPreviewGenerator();
 
-            Assert.That(generator.Version, Is.EqualTo(4));
+            Assert.That(generator.Version, Is.EqualTo(5));
         }
 
         [Test]

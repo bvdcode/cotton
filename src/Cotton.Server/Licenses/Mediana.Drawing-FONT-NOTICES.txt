@@ -1,4 +1,4 @@
-Bundled font provenance for Render.NET.Svg 0.3.19
+Bundled font provenance for Mediana.Drawing
 
 {
   "author": "Sora Sagano (dot colon)",
@@ -58,5 +58,14 @@ Bundled font provenance for Render.NET.Svg 0.3.19
         "bytes": 251888
       }
     ]
+  },
+  "symbolFallback": {
+    "family": "Noto Sans Symbols 2",
+    "copyright": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols)",
+    "license": "SIL Open Font License 1.1",
+    "licenseText": "NotoSansSymbols2-OFL.txt",
+    "source": "https://github.com/bvdcode/Mediana/blob/9e8cf8810e4107d0489246a2a47a4ed3a1905232/src/Mediana.Drawing/Fonts/Bundled/NotoSansSymbols2-Regular.woff",
+    "sha256": "7900deacae55f15b4c851f4b2b9eea2fc6a6cd8ba2feb61691b28ae21e231b9b",
+    "bytes": 534676
   }
 }

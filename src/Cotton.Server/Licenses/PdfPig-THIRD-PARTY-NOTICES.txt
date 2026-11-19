@@ -1,28 +1,3 @@
-Third-party notices for Render.NET.Pdf
-
-Render.NET's original code is licensed under MIT. The following third-party
-components retain their own licenses. They are referenced as separate NuGet
-packages, not relicensed under Render.NET's MIT license.
-
-Runtime dependencies for net10.0:
-- PdfPig 0.1.16: Apache-2.0 plus the external component terms below.
-- StbImageSharp 2.30.16: Unlicense OR MIT.
-
-CoreJ2K is not a dependency from Render.NET.Pdf 0.3.6 onward.
-Render.NET.Pdf 0.3.7 restores JPEG 2000 through the original MIT-licensed
-Render.NET.Jpeg2000 project in this repository, without third-party codec code.
-Render.NET.Pdf 0.3.9 replaces PdfPig.Filters.Jbig2.PdfboxJbig2 with the original
-MIT-licensed Render.NET.Jbig2 project, without third-party codec code.
-
-Bundled fonts:
-- Aileron by Sora Sagano: public domain / CC0-1.0.
-  https://dotcolon.net/fonts/aileron/
-- Canada 1500 by Raymond Larabie: CC0-1.0.
-  https://typodermicfonts.com/canada1500/
-Their source URLs, file sizes and SHA-256 checksums are in fonts/provenance.json
-in this package. Original font files are embedded without modification.
-
-==============================================================================
 PdfPig 0.1.16
 Source commit: a7bb35662bbbf405efddad50aedc9bcdcf515afc
 https://github.com/UglyToad/PdfPig/tree/a7bb35662bbbf405efddad50aedc9bcdcf515afc
@@ -299,48 +274,3 @@ Copyright 1997, 1998, 2002, 2007, 2010 Adobe Systems Incorporated.
 
 Includes the Zapf Dingbats Glyph List
 Copyright 2002, 2010 Adobe Systems Incorporated.
-
-==============================================================================
-StbImageSharp 2.30.16
-Source commit: 125af70cb557033f2c46aec8e82eaaf72ac49817
-https://github.com/StbSharp/StbImageSharp/tree/125af70cb557033f2c46aec8e82eaaf72ac49817
-NuGet license expression: Unlicense OR MIT.
-The upstream port README states: Public Domain or MIT.
-The upstream stb_image.h license is reproduced below:
-
-ALTERNATIVE A - MIT License
-Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-------------------------------------------------------------------------------
-ALTERNATIVE B - Public Domain (www.unlicense.org)
-This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
-software, either in source code form or as a compiled binary, for any purpose,
-commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this
-software dedicate any and all copyright interest in the software to the public
-domain. We make this dedication for the benefit of the public at large and to
-the detriment of our heirs and successors. We intend this dedication to be an
-overt act of relinquishment in perpetuity of all present and future rights to
-this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-------------------------------------------------------------------------------

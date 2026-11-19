@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Heic.Net;
+using Mediana.Images.Heif;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Bmp;
@@ -28,7 +28,7 @@ namespace Cotton.Previews
             new TiffImageFormatDetector(),
         ];
 
-        public int Version => 4;
+        public int Version => 6;
 
         public int Priority => 0;
 
@@ -61,14 +61,14 @@ namespace Cotton.Previews
                 }
             }
 
-            using Image<Rgba32> image = DecodeToImage(buffer.GetBuffer().AsMemory(0, checked((int)buffer.Length)));
+            using Image<Rgba32> image = await DecodeToImageAsync(buffer.GetBuffer().AsMemory(0, checked((int)buffer.Length))).ConfigureAwait(false);
             return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size);
         }
 
-        private static Image<Rgba32> DecodeToImage(ReadOnlyMemory<byte> bytes)
+        private static async Task<Image<Rgba32>> DecodeToImageAsync(ReadOnlyMemory<byte> bytes)
         {
             HeicDocument document = HeicDocument.Load(bytes);
-            RgbaImage decoded = document.DecodePrimary();
+            RgbaImage decoded = await document.DecodePrimaryAsync().ConfigureAwait(false);
             return Image.LoadPixelData<Rgba32>(decoded.Pixels.Span, decoded.Width, decoded.Height);
         }
     }

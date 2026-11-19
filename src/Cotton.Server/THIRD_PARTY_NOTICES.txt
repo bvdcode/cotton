@@ -1,22 +1,30 @@
 Third-party notices
 
-Managed PDF previews and text extraction
-Render.NET.Pdf, Render.NET.Jbig2, Render.NET.Jpeg2000 and Render.NET 0.3.20
-Source: https://github.com/bvdcode/Render.NET
-License text: Licenses/Render.NET-LICENSE.txt
-Dependency and font notices: Licenses/Render.NET.Pdf-THIRD-PARTY-NOTICES.txt
-These notices cover PdfPig 0.1.16, StbImageSharp 2.30.16,
-and the bundled PDF substitution fonts.
+PDF text extraction
+PdfPig 0.1.16
+Source: https://github.com/UglyToad/PdfPig
+License and component notices: Licenses/PdfPig-THIRD-PARTY-NOTICES.txt
 
-Managed SVG and Telegram sticker previews
-Render.NET.Svg and Render.NET.Tgs 0.3.20
-Source: https://github.com/bvdcode/Render.NET
-License text: Licenses/Render.NET-LICENSE.txt
-Bundled font provenance: Licenses/Render.NET.Svg-FONT-NOTICES.txt
+Managed drawing, PDF, Office, HEIC, SVG, Telegram sticker and 3D previews
+Mediana.Documents.Pdf, Mediana.Documents.Word, Mediana.Documents.Presentation,
+Mediana.Documents.Xls, Mediana.Documents.Xlsx, Mediana.Images.Heif,
+Mediana.Drawing, Mediana.Images.Svg, Mediana.Images.Tgs, Mediana.Models.Mesh
+and their Mediana dependencies 0.1.30
+Source: https://github.com/bvdcode/Mediana
+License text: Licenses/Mediana-LICENSE.txt
+Bundled font provenance: Licenses/Mediana.Drawing-FONT-NOTICES.txt
 Aileron by Sora Sagano and Canada 1500 by Raymond Larabie are CC0-1.0 fonts.
-The SVG renderer embeds these fonts for Latin and Cyrillic text.
-Dependency notices: Licenses/Render.NET.Tgs-THIRD-PARTY-NOTICES.txt
-These notices cover Jint 4.17.0 and Acornima 1.7.0.
+Noto Sans Symbols 2, Copyright 2022 The Noto Project Authors, is licensed
+under the SIL Open Font License 1.1: Licenses/NotoSansSymbols2-OFL.txt.
+The document, vector and worksheet renderers use these embedded fonts.
+
+Word emoji artwork
+Mediana.Drawing.Emoji.Fluent 0.1.30
+Microsoft Fluent Emoji Flat artwork, Copyright (c) Microsoft Corporation
+Source: https://github.com/microsoft/fluentui-emoji
+License: MIT
+License text: Licenses/FluentEmoji-LICENSE.txt
+Resource provenance: Licenses/FluentEmoji-PROVENANCE.txt
 
 Camera RAW preview metadata
 

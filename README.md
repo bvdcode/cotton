@@ -99,12 +99,13 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 | Capability | Implementation |
 | --- | --- |
 | Raster images, resizing, and WebP encoding | SixLabors.ImageSharp |
-| HEIC/HEIF decoding | Heic.NET |
-| PDF thumbnails and searchable text | Render.NET.Pdf and PdfPig |
-| Word and PowerPoint thumbnails | OoxPDF → Render.NET.Pdf → ImageSharp |
-| Excel thumbnails | ExcelDataReader and an ImageSharp worksheet grid |
-| SVG/SVGZ and Telegram TGS posters | Render.NET.Svg and Render.NET.Tgs |
-| STL, OBJ, and 3MF thumbnails | Render.NET.Mesh, rendered on the CPU |
+| HEIC/HEIF decoding | Mediana.Images.Heif |
+| PDF thumbnails and searchable text | Mediana.Documents.Pdf and PdfPig |
+| Word thumbnails | Mediana.Documents.Word → ImageSharp |
+| PowerPoint thumbnails | Mediana.Documents.Presentation → ImageSharp |
+| Excel thumbnails | Mediana.Documents.Xls/Xlsx and Mediana.Drawing → ImageSharp |
+| SVG/SVGZ and Telegram TGS posters | Mediana.Images.Svg and Mediana.Images.Tgs |
+| STL, OBJ, and 3MF thumbnails | Mediana.Models.Mesh, rendered on the CPU |
 | Passkeys/WebAuthn | EasyExtensions.Passkeys |
 
 These rendering paths run without a separate renderer service, display server, or GPU. Supported document features and preview limits are described in [Previews and Media Processing](docs/technical/18-previews-media.md).

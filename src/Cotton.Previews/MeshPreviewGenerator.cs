@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Render.NET.Mesh;
+using Mediana.Drawing;
+using Mediana.Models.Mesh;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using System.Numerics;
-using PixelBuffer = Render.NET.PixelBuffer;
+using Rgba32 = SixLabors.ImageSharp.PixelFormats.Rgba32;
 
 namespace Cotton.Previews
 {
@@ -19,7 +19,7 @@ namespace Cotton.Previews
 
         public string Id { get; }
 
-        public int Version => 11;
+        public int Version => 12;
 
         public int Priority => 0;
 
@@ -65,14 +65,14 @@ namespace Cotton.Previews
                 }
 
                 source.Position = 0;
-                mesh = await MeshReader.ReadAsync(source, _modelExtension, timeout.Token).ConfigureAwait(false);
+                mesh = await MeshReader.ReadAsync(source, timeout.Token).ConfigureAwait(false);
             }
             else
             {
-                mesh = await MeshReader.ReadAsync(stream, _modelExtension, timeout.Token).ConfigureAwait(false);
+                mesh = await MeshReader.ReadAsync(stream, timeout.Token).ConfigureAwait(false);
             }
 
-            PixelBuffer pixels = MeshRenderer.Render(mesh, new MeshRenderOptions
+            using PixelBuffer pixels = MeshRenderer.Render(mesh, new MeshRenderOptions
             {
                 Width = size,
                 Height = size,

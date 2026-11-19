@@ -2,15 +2,13 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Globalization;
-using System.Text;
-using EasyExtensions.Drawing.Helpers;
-using ExcelDataReader;
-using SixLabors.Fonts;
+using System.Numerics;
+using Mediana.Documents.Spreadsheets;
+using Mediana.Documents.Xls;
+using Mediana.Documents.Xlsx;
+using Mediana.Drawing;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
-using SixLabors.ImageSharp.Drawing.Processing;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using ImagePixel = SixLabors.ImageSharp.PixelFormats.Rgba32;
 
 namespace Cotton.Previews
 {
@@ -26,15 +24,9 @@ namespace Cotton.Previews
         private const int ColumnWidth = 96;
         private const int LeftMargin = 48;
         private const int TopMargin = 60;
-        private static readonly FontFamily FontFamily = FontHelpers.GetAnyFont().Family;
-
-        static SpreadsheetPreviewGenerator()
-        {
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        }
 
         public string Id => "spreadsheet";
-        public int Version => 0;
+        public int Version => 2;
         public int Priority => 0;
         public IEnumerable<string> SupportedContentTypes =>
         [
@@ -48,74 +40,111 @@ namespace Cotton.Previews
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(size);
             using MemoryStream input = new();
             await PreviewStream.CopyBoundedAsync(stream, input, MaximumSourceBytes).ConfigureAwait(false);
-            using IExcelDataReader reader = ExcelReaderFactory.CreateReader(input, new ExcelReaderConfiguration
-            {
-                LeaveOpen = true,
-                SinglePassMode = true,
-            });
+            using SpreadsheetWorkbook workbook = OpenWorkbook(input.GetBuffer().AsMemory(0, (int)input.Length));
+            SpreadsheetSheet sheet = workbook.Sheets.FirstOrDefault(sheet => sheet.Kind == SpreadsheetSheetKind.Worksheet)
+                ?? throw new InvalidDataException("The workbook has no worksheet.");
             List<string[]> rows = [];
-            int scanned = 0;
             int firstRow = 1;
-            while (rows.Count < MaximumRows && scanned++ < MaximumScanRows && reader.Read())
+            foreach (SpreadsheetRow row in workbook.ReadRows(sheet.Index))
             {
-                string[] values = Enumerable.Range(0, Math.Min(MaximumColumns, reader.FieldCount))
-                    .Select(column => Convert.ToString(reader.GetValue(column), CultureInfo.InvariantCulture) ?? string.Empty)
-                    .ToArray();
-                if (rows.Count > 0 || values.Any(value => !string.IsNullOrWhiteSpace(value)))
+                if (row.RowIndex >= MaximumScanRows)
                 {
-                    if (rows.Count == 0)
+                    break;
+                }
+                string[] values = new string[MaximumColumns];
+                Array.Fill(values, string.Empty);
+                foreach (SpreadsheetCell cell in row.Cells)
+                {
+                    if (cell.ColumnIndex < MaximumColumns)
                     {
-                        firstRow = scanned;
+                        values[cell.ColumnIndex] = cell.Value.ToString();
                     }
-                    rows.Add(values);
                 }
-            }
-
-            using Image<Rgba32> image = new(Width, Height, Color.White.ToPixel<Rgba32>());
-            Font font = FontFamily.CreateFont(15);
-            image.Mutate(context => context.Paint(canvas =>
-            {
-                canvas.Fill(Brushes.Solid(Color.WhiteSmoke), new RectanglePolygon(0, 0, Width, TopMargin));
-                canvas.DrawText(new RichTextOptions(font) { Origin = new PointF(LeftMargin, 10) },
-                    reader.Name, Brushes.Solid(Color.Black), null);
-                for (int column = 0; column < MaximumColumns; column++)
+                if (rows.Count == 0)
                 {
-                    canvas.DrawText(new RichTextOptions(font)
-                    { Origin = new PointF(LeftMargin + (column * ColumnWidth) + 4, TopMargin - RowHeight) },
-                        ((char)('A' + column)).ToString(), Brushes.Solid(Color.DimGray), null);
-                    canvas.Fill(Brushes.Solid(Color.LightGray),
-                        new RectanglePolygon(LeftMargin + (column * ColumnWidth), TopMargin - RowHeight, 1, Height));
-                }
-                for (int row = 0; row < MaximumRows; row++)
-                {
-                    int top = TopMargin + (row * RowHeight);
-                    canvas.Fill(Brushes.Solid(Color.LightGray), new RectanglePolygon(8, top, Width - 16, 1));
-                    canvas.DrawText(new RichTextOptions(font) { Origin = new PointF(12, top + 5) },
-                        (firstRow + row).ToString(CultureInfo.InvariantCulture), Brushes.Solid(Color.DimGray), null);
-                    if (row >= rows.Count)
+                    if (values.All(string.IsNullOrWhiteSpace))
                     {
                         continue;
                     }
-                    for (int column = 0; column < rows[row].Length; column++)
-                    {
-                        canvas.DrawText(new RichTextOptions(font)
-                        { Origin = new PointF(LeftMargin + (column * ColumnWidth) + 4, top + 5) },
-                            FitText(rows[row][column], font), Brushes.Solid(Color.Black), null);
-                    }
+                    firstRow = row.RowIndex + 1;
                 }
-            }));
+                int displayRow = row.RowIndex - firstRow + 1;
+                while (rows.Count < displayRow && rows.Count < MaximumRows)
+                {
+                    rows.Add([]);
+                }
+                if (rows.Count >= MaximumRows)
+                {
+                    break;
+                }
+                rows.Add(values);
+                if (rows.Count == MaximumRows)
+                {
+                    break;
+                }
+            }
+
+            using PixelBuffer pixels = new(Width, Height);
+            pixels.Clear(new Rgba32(255, 255, 255, 255));
+            RasterCanvas canvas = new(pixels);
+            PreviewTextRenderer font = new(15);
+            Rgba32 black = new(0, 0, 0, 255);
+            Rgba32 gray = new(105, 105, 105, 255);
+            Rgba32 lightGray = new(211, 211, 211, 255);
+            Fill(canvas, 0, 0, Width, TopMargin, new Rgba32(245, 245, 245, 255));
+            font.Draw(canvas, sheet.Name, LeftMargin, 10, black);
+            for (int column = 0; column < MaximumColumns; column++)
+            {
+                font.Draw(canvas, ((char)('A' + column)).ToString(),
+                    LeftMargin + (column * ColumnWidth) + 4, TopMargin - RowHeight, gray);
+                Fill(canvas, LeftMargin + (column * ColumnWidth), TopMargin - RowHeight, 1, Height, lightGray);
+            }
+            for (int row = 0; row < MaximumRows; row++)
+            {
+                int top = TopMargin + (row * RowHeight);
+                Fill(canvas, 8, top, Width - 16, 1, lightGray);
+                font.Draw(canvas, (firstRow + row).ToString(CultureInfo.InvariantCulture), 12, top + 5, gray);
+                if (row >= rows.Count)
+                {
+                    continue;
+                }
+                for (int column = 0; column < rows[row].Length; column++)
+                {
+                    font.Draw(canvas, FitText(rows[row][column], font),
+                        LeftMargin + (column * ColumnWidth) + 4, top + 5, black);
+                }
+            }
+            using Image<ImagePixel> image = Image.LoadPixelData<ImagePixel>(pixels.Pixels.Span, Width, Height);
             return await ImagePreviewGenerator.EncodeMaxResizedWebpAsync(image, size).ConfigureAwait(false);
         }
 
-        private static string FitText(string value, Font font)
+        private static void Fill(RasterCanvas canvas, float x, float y, float width, float height, Rgba32 color)
+        {
+            canvas.FillPathAntialiased(new VectorPath().Rectangle(x, y, width, height), color, Matrix3x2.Identity);
+        }
+
+        private static SpreadsheetWorkbook OpenWorkbook(ReadOnlyMemory<byte> input)
+        {
+            ReadOnlySpan<byte> compoundFileSignature = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+            if (input.Span.StartsWith(compoundFileSignature))
+            {
+                return XlsReader.Open(input);
+            }
+            if (input.Span.StartsWith("PK\x03\x04"u8))
+            {
+                return XlsxReader.Open(input);
+            }
+            throw new InvalidDataException("The source is not an XLS or XLSX workbook.");
+        }
+
+        private static string FitText(string value, PreviewTextRenderer font)
         {
             string text = value.ReplaceLineEndings(" ");
             if (text.Length > 64)
             {
                 text = text[..64];
             }
-            TextOptions options = new(font);
-            while (text.Length > 0 && TextMeasurer.MeasureBounds(text, options).Width > ColumnWidth - 8)
+            while (text.Length > 0 && font.MeasureWidth(text) > ColumnWidth - 8)
             {
                 text = text[..^1];
             }

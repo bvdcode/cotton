@@ -85,6 +85,28 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
+        public async Task GeneratePreviewWebPAsync_WideCharacters_PreserveRightMargin()
+        {
+            const int size = 512;
+            string text = new('Щ', 128);
+            using MemoryStream stream = new(Encoding.UTF8.GetBytes(text));
+
+            byte[] webpData = await _generator.GeneratePreviewWebPAsync(stream, size);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(webpData);
+            Assert.That(HasNonWhitePixels(image), Is.True);
+            for (int y = 0; y < image.Height; y++)
+            {
+                for (int x = size - size / 32; x < image.Width; x++)
+                {
+                    Rgba32 pixel = image[x, y];
+                    Assert.That(pixel.R, Is.GreaterThan(240),
+                        $"Text extends into the right margin at ({x}, {y})");
+                }
+            }
+        }
+
+        [Test]
         public async Task GeneratePreviewWebPAsync_CodeSnippet_RendersCorrectly()
         {
             // Arrange

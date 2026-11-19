@@ -15,9 +15,9 @@ namespace Cotton.Previews.Tests
         {
             using (Assert.EnterMultipleScope())
             {
-                Assert.That(new MeshPreviewGenerator().Version, Is.EqualTo(11));
-                Assert.That(MeshPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(11));
-                Assert.That(MeshPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(11));
+                Assert.That(new MeshPreviewGenerator().Version, Is.EqualTo(12));
+                Assert.That(MeshPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(12));
+                Assert.That(MeshPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(12));
             }
         }
 
@@ -27,7 +27,7 @@ namespace Cotton.Previews.Tests
             MeshPreviewGenerator generator = new();
             using MemoryStream stream = new MemoryStream(Array.Empty<byte>());
 
-            await Assert.ThrowsAsync<InvalidDataException>(() => generator.GeneratePreviewWebPAsync(stream, size: 128));
+            await Assert.ThrowsAsync<NotSupportedException>(() => generator.GeneratePreviewWebPAsync(stream, size: 128));
         }
 
         [Test]
@@ -156,7 +156,7 @@ namespace Cotton.Previews.Tests
         {
             using MemoryStream source = new(Encoding.ASCII.GetBytes("not an OBJ model"));
 
-            await Assert.ThrowsAsync<InvalidDataException>(() =>
+            await Assert.ThrowsAsync<NotSupportedException>(() =>
                 MeshPreviewGenerator.CreateObjGenerator().GeneratePreviewWebPAsync(source, 128));
         }
 

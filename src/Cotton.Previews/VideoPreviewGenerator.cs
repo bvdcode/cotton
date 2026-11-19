@@ -10,7 +10,7 @@ namespace Cotton.Previews
     {
         public string Id => "video";
 
-        public int Version => 3;
+        public int Version => 4;
 
         private const double MinimumDurationForSeekingSeconds = 1;
 
@@ -49,6 +49,17 @@ namespace Cotton.Previews
             byte[] imageBytes;
             await using (RangeStreamServer server = new RangeStreamServer(stream))
             {
+                MediaPreviewProbeInfo probe = await FfmpegBinary.TryGetMediaPreviewProbeAsync(server.Url).ConfigureAwait(false)
+                    ?? throw new InvalidOperationException("Unable to probe media streams for preview generation.");
+                if (probe.VideoStreamIndex is not int videoStreamIndex)
+                {
+                    if (probe.HasAudio)
+                    {
+                        return await new AudioPreviewGenerator().GeneratePreviewWebPAsync(server.Url, size).ConfigureAwait(false);
+                    }
+                    throw new InvalidOperationException("Media contains no video or audio streams for preview generation.");
+                }
+
                 byte[]? coverArt = await TryExtractCoverArtAsync(server.Url).ConfigureAwait(false);
                 if (coverArt is not null)
                 {
@@ -56,12 +67,8 @@ namespace Cotton.Previews
                 }
                 else
                 {
-                    double? durationSeconds = await FfmpegBinary.TryGetDurationSecondsAsync(
-                            server.Url,
-                            timeout: TimeSpan.FromSeconds(15))
-                        .ConfigureAwait(false);
-                    double seekSeconds = ComputeSeekSeconds(durationSeconds);
-                    imageBytes = await RunFfmpegHttpPngAsync(server.Url, seekSeconds).ConfigureAwait(false);
+                    double seekSeconds = ComputeSeekSeconds(probe.VideoDurationSeconds);
+                    imageBytes = await RunFfmpegHttpPngAsync(server.Url, videoStreamIndex, seekSeconds).ConfigureAwait(false);
                 }
             }
 
@@ -137,7 +144,7 @@ namespace Cotton.Previews
             }
         }
 
-        private static async Task<byte[]> RunFfmpegHttpPngAsync(Uri url, double seekSeconds)
+        private static async Task<byte[]> RunFfmpegHttpPngAsync(Uri url, int videoStreamIndex, double seekSeconds)
         {
             string ss = seekSeconds > 0 ? $"-ss {seekSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)} " : string.Empty;
 
@@ -145,6 +152,7 @@ namespace Cotton.Previews
                 "-hide_banner -loglevel error " +
                 ss +
                 $"-i \"{url}\" " +
+                $"-map 0:{videoStreamIndex.ToString(System.Globalization.CultureInfo.InvariantCulture)} " +
                 "-frames:v 1 " +
                 "-an -sn -dn " +
                 "-f image2pipe -vcodec png pipe:1";

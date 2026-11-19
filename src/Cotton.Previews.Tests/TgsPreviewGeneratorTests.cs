@@ -25,16 +25,29 @@ namespace Cotton.Previews.Tests
             }
             """;
 
-        [TestCase(200, false)]
-        [TestCase(2560, false)]
-        [TestCase(200, true)]
-        [TestCase(2560, true)]
-        public async Task GeneratePreviewWebPAsync_NonSquareAnimation_RendersCenteredMiddleFrame(int size, bool withExpression)
+        [TestCase(200, false, false)]
+        [TestCase(2560, false, false)]
+        [TestCase(200, true, false)]
+        [TestCase(2560, true, false)]
+        [TestCase(200, false, true)]
+        [TestCase(2560, false, true)]
+        [TestCase(200, true, true)]
+        [TestCase(2560, true, true)]
+        public async Task GeneratePreviewWebPAsync_NonSquareAnimation_RendersCenteredMiddleFrame(int size, bool withExpression, bool withPuppet)
         {
             string animation = Animation;
             if (withExpression)
             {
                 animation = animation.Replace("\"k\":[0,0]", "\"k\":[0,0],\"x\":\"throw new Error('Must not execute')\"", StringComparison.Ordinal);
+            }
+            if (withPuppet)
+            {
+                const string effect = """
+                    "ef":[{"ty":34,"mn":"ADBE FreePin3","en":1,"ef":[
+                      {"ty":3,"v":{"a":1,"k":[{"t":0,"s":[1,2]},{"t":null,"s":[3,4]}]}}
+                    ]}],
+                    """;
+                animation = animation.Replace("\"ks\":", effect + "\"ks\":", StringComparison.Ordinal);
             }
             using MemoryStream source = new(await CompressAsync(Encoding.UTF8.GetBytes(animation)));
 
@@ -99,6 +112,26 @@ namespace Cotton.Previews.Tests
             using MemoryStream source = new(await CompressAsync(Encoding.UTF8.GetBytes(unsupported)));
 
             await Assert.ThrowsAsync<NotSupportedException>(() => new TgsPreviewGenerator().GeneratePreviewWebPAsync(source, 200));
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_UnsupportedNonPuppetEffect_IsRejected()
+        {
+            const string effect = "\"ef\":[{\"ty\":34,\"mn\":\"Another effect\",\"ef\":[]}],";
+            string unsupported = Animation.Replace("\"ks\":", effect + "\"ks\":", StringComparison.Ordinal);
+            using MemoryStream source = new(await CompressAsync(Encoding.UTF8.GetBytes(unsupported)));
+
+            await Assert.ThrowsAsync<NotSupportedException>(() => new TgsPreviewGenerator().GeneratePreviewWebPAsync(source, 200));
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_InvalidKeyframeOutsidePuppet_IsRejected()
+        {
+            const string invalidPosition = "\"a\":1,\"k\":[{\"t\":0,\"s\":[0,0]},{\"s\":[1,2]}]";
+            string invalid = Animation.Replace("\"k\":[0,0]", invalidPosition, StringComparison.Ordinal);
+            using MemoryStream source = new(await CompressAsync(Encoding.UTF8.GetBytes(invalid)));
+
+            await Assert.ThrowsAsync<InvalidDataException>(() => new TgsPreviewGenerator().GeneratePreviewWebPAsync(source, 200));
         }
 
         [TestCase(0)]

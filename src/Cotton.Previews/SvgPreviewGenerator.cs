@@ -1,11 +1,11 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Render.NET.Svg;
+using Mediana.Drawing;
+using Mediana.Images.Svg;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using Rgba32 = SixLabors.ImageSharp.PixelFormats.Rgba32;
 using System.IO.Compression;
-using PixelBuffer = Render.NET.PixelBuffer;
 
 namespace Cotton.Previews
 {
@@ -16,7 +16,7 @@ namespace Cotton.Previews
 
         public string Id => "svg";
 
-        public int Version => 3;
+        public int Version => 5;
 
         public int Priority => 0;
 
@@ -34,7 +34,7 @@ namespace Cotton.Previews
             using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(RenderTimeoutSeconds));
             SvgDocument document = await ReadDocumentAsync(stream, timeout.Token).ConfigureAwait(false);
             double scale = size / Math.Max(document.Width, document.Height);
-            PixelBuffer pixels = SvgRenderer.Render(document, new SvgRenderOptions
+            using PixelBuffer pixels = SvgRenderer.Render(document, new DrawingRenderOptions
             {
                 Width = Math.Max(1, (int)Math.Round(document.Width * scale)),
                 Height = Math.Max(1, (int)Math.Round(document.Height * scale)),

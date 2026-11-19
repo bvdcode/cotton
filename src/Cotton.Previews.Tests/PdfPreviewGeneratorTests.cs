@@ -51,6 +51,20 @@ namespace Cotton.Previews.Tests
             Assert.That(image[0, 0], Is.EqualTo(new Rgba32(255, 255, 255, 255)));
         }
 
+        [TestCase("Helvetica-Bold")]
+        [TestCase("Helvetica-Oblique")]
+        [TestCase("Helvetica-BoldOblique")]
+        public async Task GeneratePreviewWebPAsync_UnembeddedFontStyle_IsPreserved(string fontName)
+        {
+            using MemoryStream regular = new(CreateSinglePagePdfBytes("Styled preview"));
+            using MemoryStream styled = new(CreateSinglePagePdfBytes("Styled preview", fontName));
+
+            byte[] regularPreview = await _generator.GeneratePreviewWebPAsync(regular, 200);
+            byte[] styledPreview = await _generator.GeneratePreviewWebPAsync(styled, 200);
+
+            Assert.That(styledPreview, Is.Not.EqualTo(regularPreview));
+        }
+
         [TestCase(true)]
         [TestCase(false)]
         public async Task GeneratePreviewWebPAsync_OptionalContent_RespectsDefaultVisibility(bool visible)
@@ -138,10 +152,28 @@ namespace Cotton.Previews.Tests
         }
 
         [Test]
-        public async Task GeneratePreviewWebPAsync_UnsupportedFeatures_ThrowsWithoutPartialPreview()
+        public async Task GeneratePreviewWebPAsync_InvalidOptionalContent_ThrowsWithoutPartialPreview()
         {
             string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "Pdf", "unsupported.pdf");
             await using FileStream source = File.OpenRead(path);
+
+            await Assert.ThrowsAsync<InvalidDataException>(() => _generator.GeneratePreviewWebPAsync(source, 200));
+
+            Assert.That(source.CanRead, Is.True);
+        }
+
+        [Test]
+        public async Task GeneratePreviewWebPAsync_UnsupportedPainting_ThrowsWithoutPartialPreview()
+        {
+            const string content = "/RelativeColorimetric ri 1 0 0 rg 0 0 100 100 re f";
+            string[] objects =
+            [
+                "<< /Type /Catalog /Pages 2 0 R >>",
+                "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+                "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Contents 4 0 R >>",
+                $"<< /Length {Encoding.ASCII.GetByteCount(content)} >>\nstream\n{content}\nendstream",
+            ];
+            using MemoryStream source = new(CreatePdfBytes(objects));
 
             await Assert.ThrowsAsync<NotSupportedException>(() => _generator.GeneratePreviewWebPAsync(source, 200));
 
@@ -167,7 +199,7 @@ namespace Cotton.Previews.Tests
             Assert.That(async () => await _generator.GeneratePreviewWebPAsync(stream, size: 200), Throws.Exception);
         }
 
-        private static byte[] CreateSinglePagePdfBytes(string text)
+        private static byte[] CreateSinglePagePdfBytes(string text, string fontName = "Helvetica")
         {
             string escaped = text
                 .Replace("\\", "\\\\", StringComparison.Ordinal)
@@ -183,7 +215,7 @@ namespace Cotton.Previews.Tests
                 "<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
                 "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 300] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
                 $"<< /Length {contentBytes.Length} >>\nstream\n{content}\nendstream",
-                "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+                $"<< /Type /Font /Subtype /Type1 /BaseFont /{fontName} >>"
             ];
 
             return CreatePdfBytes(objects);
