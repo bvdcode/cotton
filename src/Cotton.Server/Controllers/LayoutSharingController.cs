@@ -10,7 +10,6 @@ using Cotton.Server.Handlers.Layouts;
 using Cotton.Server.Models;
 using Cotton.Server.Models.Dto;
 using Cotton.Server.Models.Requests;
-using Cotton.Server.Providers;
 using Cotton.Server.Services;
 using Cotton.Storage.Abstractions;
 using Cotton.Storage.Extensions;
@@ -29,7 +28,6 @@ namespace Cotton.Server.Controllers
     public class LayoutSharingController(
         IMediator _mediator,
         IStoragePipeline _storage,
-        SettingsProvider settings,
         PublicShareLookupFailureLimiter _publicShareLookupFailures) : ControllerBase
     {
         [Authorize]
@@ -75,8 +73,10 @@ namespace Cotton.Server.Controllers
                 return blocked;
             }
 
-            SharedNodeAccess? nodeShareToken = await ResolveActiveNodeShareTokenAsync(token);
-            if (nodeShareToken is null)
+            SharedNodeInfoDto? info = await _mediator.Send(
+                new GetSharedNodeInfoQuery(token, HttpContext),
+                HttpContext.RequestAborted);
+            if (info is null)
             {
                 return this.ApiPublicShareNotFound(
                     _publicShareLookupFailures,
@@ -84,17 +84,7 @@ namespace Cotton.Server.Controllers
                     "Shared folder not found.");
             }
 
-            return Ok(new SharedNodeInfoDto
-            {
-                Token = nodeShareToken.Token,
-                NodeId = nodeShareToken.NodeId,
-                Name = nodeShareToken.HideFolderContent ? string.Empty : nodeShareToken.Name,
-                ExpiresAt = nodeShareToken.ExpiresAt,
-                AllowUpload = nodeShareToken.AllowUpload,
-                HideFolderContent = nodeShareToken.HideFolderContent,
-                MaxChunkSizeBytes = settings.GetServerSettings().MaxChunkSizeBytes,
-                SupportedHashAlgorithm = Hasher.SupportedHashAlgorithmName.Name!,
-            });
+            return Ok(info);
         }
 
         [AllowAnonymous]
@@ -290,10 +280,5 @@ namespace Cotton.Server.Controllers
             Stream previewStream = _storage.GetBlobStream([previewHashHex]);
             return File(previewStream, "image/webp");
         }
-
-        private Task<SharedNodeAccess?> ResolveActiveNodeShareTokenAsync(string token) =>
-            _mediator.Send(
-                new ResolveSharedNodeAccessQuery(token),
-                HttpContext.RequestAborted);
     }
 }

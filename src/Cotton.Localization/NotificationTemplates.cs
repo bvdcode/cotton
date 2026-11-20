@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 namespace Cotton.Localization
@@ -205,25 +205,16 @@ namespace Cotton.Localization
             return string.IsNullOrWhiteSpace(email) ? "no email address" : email.Trim();
         }
 
-        public static string SharedFileDownloadedTitle => "Shared file downloaded";
+        public static string SharedLinkOpenedTitle => "Shared link opened";
 
-        public static string SharedFileDownloadedContentNoDevice(
-            string fileName,
-            string? ipAddress,
-            string location)
+        public static string SharedLinkOpenedContentNoDevice(string name, string location)
         {
-            return $"Your shared file '{fileName}' was downloaded " +
-                   $"from {FormatLocation(location, ipAddress)}.";
+            return $"Your shared link to '{name}' was opened from {location}.";
         }
 
-        public static string SharedFileDownloadedContent(
-            string fileName,
-            string? ipAddress,
-            string device,
-            string location)
+        public static string SharedLinkOpenedContent(string name, string device, string location)
         {
-            return $"Your shared file '{fileName}' was downloaded from {device} " +
-                   $"in {FormatLocation(location, ipAddress)}.";
+            return $"Your shared link to '{name}' was opened from {device} in {location}.";
         }
 
         public static string UploadHashMismatchTitle => "Upload verification failed";

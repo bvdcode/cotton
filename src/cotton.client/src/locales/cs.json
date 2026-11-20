@@ -1426,6 +1426,13 @@
           "withoutDevice": "Váš přístupový token WebDAV byl resetován z {{location}} ({{ip}}). Aktualizujte token ve svém WebDAV klientovi."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Sdílený odkaz otevřen",
+        "content": {
+          "withDevice": "Odkaz na „{{name}}“ byl otevřen ze zařízení {{device}} v {{location}} ({{ip}}).",
+          "withoutDevice": "Odkaz na „{{name}}“ byl otevřen z {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Sdílený soubor byl stažen",
         "content": {

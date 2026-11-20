@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 namespace Cotton.Server.Services
@@ -33,9 +33,9 @@ namespace Cotton.Server.Services
         public const string WebDavTokenResetWithDeviceContent = "notifications:server.webDavTokenReset.content.withDevice";
         public const string WebDavTokenResetWithoutDeviceContent = "notifications:server.webDavTokenReset.content.withoutDevice";
 
-        public const string SharedFileDownloadedTitle = "notifications:server.sharedFileDownloaded.title";
-        public const string SharedFileDownloadedWithDeviceContent = "notifications:server.sharedFileDownloaded.content.withDevice";
-        public const string SharedFileDownloadedWithoutDeviceContent = "notifications:server.sharedFileDownloaded.content.withoutDevice";
+        public const string SharedLinkOpenedTitle = "notifications:server.sharedLinkOpened.title";
+        public const string SharedLinkOpenedWithDeviceContent = "notifications:server.sharedLinkOpened.content.withDevice";
+        public const string SharedLinkOpenedWithoutDeviceContent = "notifications:server.sharedLinkOpened.content.withoutDevice";
 
         public const string UploadHashMismatchTitle = "notifications:server.uploadHashMismatch.title";
         public const string UploadHashMismatchContent = "notifications:server.uploadHashMismatch.content";

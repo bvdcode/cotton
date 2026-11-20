@@ -1426,6 +1426,13 @@
           "withoutDevice": "Je WebDAV-toegangstoken is opnieuw ingesteld vanuit {{location}} ({{ip}}). Werk de token bij in je WebDAV-client."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Gedeelde link geopend",
+        "content": {
+          "withDevice": "Uw gedeelde link naar '{{name}}' is geopend vanaf {{device}} in {{location}} ({{ip}}).",
+          "withoutDevice": "Uw gedeelde link naar '{{name}}' is geopend vanuit {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Gedeeld bestand gedownload",
         "content": {

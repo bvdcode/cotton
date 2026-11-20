@@ -51,6 +51,36 @@ describe("renderNotificationText", () => {
     },
   );
 
+  it.each(supportedLanguages)(
+    "renders shared-link openings in %s",
+    async (language) => {
+      await i18n.changeLanguage(language);
+
+      for (const variant of ["withDevice", "withoutDevice"]) {
+        const titleKey = "server.sharedLinkOpened.title";
+        const contentKey = `server.sharedLinkOpened.content.${variant}`;
+        const result = renderNotificationText(
+          createNotification({
+            "i18n.titleKey": `notifications:${titleKey}`,
+            "i18n.contentKey": `notifications:${contentKey}`,
+            name: "Project documents",
+            device: "Windows PC",
+            location: "local network",
+            ip: "10.0.0.101",
+          }),
+          i18n.t,
+        );
+
+        expect(i18n.getResource(language, "notifications", titleKey)).toBeTruthy();
+        expect(i18n.getResource(language, "notifications", contentKey)).toBeTruthy();
+        expect(result.title).not.toBe("Fallback title");
+        expect(result.content).toContain("Project documents");
+        expect(result.content).toContain("10.0.0.101");
+        expect(result.title + result.content).not.toContain("{{");
+      }
+    },
+  );
+
   it("uses fallback title and content when metadata has no known template", () => {
     const result = renderNotificationText(createNotification(), i18n.t);
 

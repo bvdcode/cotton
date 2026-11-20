@@ -1427,6 +1427,13 @@
           "withoutDevice": "Il tuo token di accesso WebDAV è stato reimpostato da {{location}} ({{ip}}). Aggiorna il token nel client WebDAV."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Link condiviso aperto",
+        "content": {
+          "withDevice": "Il tuo link condiviso a '{{name}}' è stato aperto da {{device}} in {{location}} ({{ip}}).",
+          "withoutDevice": "Il tuo link condiviso a '{{name}}' è stato aperto da {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "File condiviso scaricato",
         "content": {

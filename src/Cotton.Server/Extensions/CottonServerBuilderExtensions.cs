@@ -163,7 +163,7 @@ namespace Cotton.Server.Extensions
                 .AddSingleton<DatabaseBackupKeyProvider>()
                 .AddScoped<IS3Provider, S3Provider>()
                 .AddScoped<INotificationsProvider, CottonNotifications>()
-                .AddScoped<ISharedFileDownloadNotifier, SharedFileDownloadNotifier>()
+                .AddScoped<ISharedLinkAccessNotifier, SharedLinkAccessNotifier>()
                 .AddScoped<NodeSubtreeService>()
                 .AddScoped<TrashRestoreCoordinator>()
                 .AddScoped<IEncryptionChunkSizeProvider, SettingsEncryptionChunkSizeProvider>()

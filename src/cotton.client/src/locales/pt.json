@@ -1428,6 +1428,13 @@
           "withoutDevice": "O seu token de acesso WebDAV foi reposto a partir de {{location}} ({{ip}}). Atualize o token no seu cliente WebDAV."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Link compartilhado aberto",
+        "content": {
+          "withDevice": "Seu link compartilhado para '{{name}}' foi aberto de {{device}} em {{location}} ({{ip}}).",
+          "withoutDevice": "Seu link compartilhado para '{{name}}' foi aberto de {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Ficheiro partilhado transferido",
         "content": {

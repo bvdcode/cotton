@@ -9,6 +9,8 @@ namespace Cotton.Server.IntegrationTests.Common
 {
     internal class RecordingNotificationsProvider : INotificationsProvider
     {
+        public bool ThrowOnNotification { get; set; }
+
         public bool ThrowOnEmail { get; set; }
 
         public List<(Guid UserId, NotificationPriority Priority, Dictionary<string, string>? Metadata)> Notifications { get; } = [];
@@ -53,6 +55,11 @@ namespace Cotton.Server.IntegrationTests.Common
             NotificationPriority priority = NotificationPriority.None,
             Dictionary<string, string>? metadata = null)
         {
+            if (ThrowOnNotification)
+            {
+                throw new InvalidOperationException("Notification delivery failed.");
+            }
+
             Notifications.Add((userId, priority, metadata));
             return Task.CompletedTask;
         }

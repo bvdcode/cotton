@@ -1432,6 +1432,13 @@
           "withoutDevice": "Ваш токен доступу WebDAV було скинуто з {{location}} ({{ip}}). Оновіть токен у клієнті WebDAV."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Відкрито спільне посилання",
+        "content": {
+          "withDevice": "Посилання на «{{name}}» відкрили з {{device}} у {{location}} ({{ip}}).",
+          "withoutDevice": "Посилання на «{{name}}» відкрили з {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Спільний файл завантажено",
         "content": {

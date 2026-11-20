@@ -3899,6 +3899,13 @@
           "withoutDevice": "Ваш токен доступа WebDAV был сброшен из {{location}} ({{ip}}). Обновите токен в WebDAV-клиенте."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Открыта общая ссылка",
+        "content": {
+          "withDevice": "Ссылку на «{{name}}» открыли с {{device}} из {{location}} ({{ip}}).",
+          "withoutDevice": "Ссылку на «{{name}}» открыли из {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Файл по ссылке скачан",
         "content": {

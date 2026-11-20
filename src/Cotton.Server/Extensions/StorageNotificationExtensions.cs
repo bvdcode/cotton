@@ -13,11 +13,11 @@ namespace Cotton.Server.Extensions
 {
     public static class StorageNotificationExtensions
     {
-        public static async Task SendSharedFileDownloadedNotificationAsync(
+        public static async Task SendSharedLinkOpenedNotificationAsync(
             this INotificationsProvider notifications,
             IGeoLookupService geoLookup,
             Guid userId,
-            string fileName,
+            string name,
             IPAddress ipAddress,
             StringValues userAgent)
         {
@@ -28,20 +28,20 @@ namespace Cotton.Server.Extensions
                 ipAddress,
                 userAgent);
             Dictionary<string, string> metadata = NotificationClientContextFactory.CreateMetadata(context);
-            metadata["fileName"] = fileName;
+            metadata["name"] = name;
             string contentKey = context.HasDevice
-                ? NotificationTemplateKeys.SharedFileDownloadedWithDeviceContent
-                : NotificationTemplateKeys.SharedFileDownloadedWithoutDeviceContent;
+                ? NotificationTemplateKeys.SharedLinkOpenedWithDeviceContent
+                : NotificationTemplateKeys.SharedLinkOpenedWithoutDeviceContent;
 
             await notifications.SendNotificationAsync(
                 userId,
-                NotificationTemplates.SharedFileDownloadedTitle,
+                NotificationTemplates.SharedLinkOpenedTitle,
                 context.HasDevice
-                    ? NotificationTemplates.SharedFileDownloadedContent(fileName, null, context.DeviceName, context.Location)
-                    : NotificationTemplates.SharedFileDownloadedContentNoDevice(fileName, null, context.Location),
+                    ? NotificationTemplates.SharedLinkOpenedContent(name, context.DeviceName, context.Location)
+                    : NotificationTemplates.SharedLinkOpenedContentNoDevice(name, context.Location),
                 NotificationPriority.None,
                 NotificationTemplateMetadata.Create(
-                    NotificationTemplateKeys.SharedFileDownloadedTitle,
+                    NotificationTemplateKeys.SharedLinkOpenedTitle,
                     contentKey,
                     metadata));
         }

@@ -1222,6 +1222,13 @@
           "withoutDevice": "Your WebDAV access token has been reset from {{location}} ({{ip}}). You will need to update your WebDAV client with the new token."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Shared link opened",
+        "content": {
+          "withDevice": "Your shared link to '{{name}}' was opened from {{device}} in {{location}} ({{ip}}).",
+          "withoutDevice": "Your shared link to '{{name}}' was opened from {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Shared file downloaded",
         "content": {

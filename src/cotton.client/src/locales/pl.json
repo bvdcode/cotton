@@ -1429,6 +1429,13 @@
           "withoutDevice": "Twój token dostępu WebDAV został zresetowany z {{location}} ({{ip}}). Zaktualizuj token w kliencie WebDAV."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Otwarto udostępniony link",
+        "content": {
+          "withDevice": "Link do „{{name}}” otwarto z {{device}} w {{location}} ({{ip}}).",
+          "withoutDevice": "Link do „{{name}}” otwarto z {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Pobrano udostępniony plik",
         "content": {

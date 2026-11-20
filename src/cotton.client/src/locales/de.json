@@ -1421,6 +1421,13 @@
           "withoutDevice": "Dein WebDAV-Zugriffstoken wurde aus {{location}} ({{ip}}) zurückgesetzt. Aktualisiere den Token in deinem WebDAV-Client."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Freigabelink geöffnet",
+        "content": {
+          "withDevice": "Ihr Freigabelink zu '{{name}}' wurde mit {{device}} in {{location}} geöffnet ({{ip}}).",
+          "withoutDevice": "Ihr Freigabelink zu '{{name}}' wurde in {{location}} geöffnet ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Freigegebene Datei heruntergeladen",
         "content": {

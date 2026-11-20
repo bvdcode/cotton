@@ -1424,6 +1424,13 @@
           "withoutDevice": "Tu token de acceso WebDAV se restableció desde {{location}} ({{ip}}). Actualiza el token en tu cliente WebDAV."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Enlace compartido abierto",
+        "content": {
+          "withDevice": "Tu enlace compartido a '{{name}}' se abrió desde {{device}} en {{location}} ({{ip}}).",
+          "withoutDevice": "Tu enlace compartido a '{{name}}' se abrió desde {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Archivo compartido descargado",
         "content": {

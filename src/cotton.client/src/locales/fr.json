@@ -1425,6 +1425,13 @@
           "withoutDevice": "Votre jeton d’accès WebDAV a été réinitialisé depuis {{location}} ({{ip}}). Mettez à jour le jeton dans votre client WebDAV."
         }
       },
+      "sharedLinkOpened": {
+        "title": "Lien de partage ouvert",
+        "content": {
+          "withDevice": "Votre lien de partage vers « {{name}} » a été ouvert depuis {{device}} à {{location}} ({{ip}}).",
+          "withoutDevice": "Votre lien de partage vers « {{name}} » a été ouvert depuis {{location}} ({{ip}})."
+        }
+      },
       "sharedFileDownloaded": {
         "title": "Fichier partagé téléchargé",
         "content": {

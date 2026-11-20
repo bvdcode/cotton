@@ -43,7 +43,7 @@ namespace Cotton.Server.Handlers.Files
 
     public class ShareFileQueryHandler(
         CottonDbContext _dbContext,
-        ISharedFileDownloadNotifier _sharedFileDownloadNotifier,
+        ISharedLinkAccessNotifier _sharedLinkAccessNotifier,
         IHttpContextAccessor _httpContextAccessor,
         IStoragePipeline _storage,
         SettingsProvider _settings,
@@ -322,6 +322,11 @@ namespace Cotton.Server.Handlers.Files
             }
 
             string previewHashHex = Hasher.ToHexStringHash(previewHash);
+            if (format == SharedFilePreviewFormat.Webp)
+            {
+                await NotifyAccessAsync(downloadToken, ct);
+            }
+
             Stream previewStream;
             string contentType;
             string etag;
@@ -353,6 +358,15 @@ namespace Cotton.Server.Handlers.Files
                 entityTag: new EntityTagHeaderValue(etag)));
         }
 
+        private Task NotifyAccessAsync(DownloadToken token, CancellationToken ct)
+        {
+            HttpContext? context = _httpContextAccessor.HttpContext;
+            return context is null
+                ? Task.CompletedTask
+                : _sharedLinkAccessNotifier.NotifyOnceAsync(
+                    token.NodeFile.OwnerId, token.Id, token.FileName, context, ct);
+        }
+
         private async Task<ShareFileResult> CreateStreamResultAsync(
             DownloadToken downloadToken,
             FileManifest file,
@@ -370,18 +384,12 @@ namespace Cotton.Server.Handlers.Files
                 ChunkLengths = file.FileManifestChunks.GetChunkLengths()
             };
 
-            Stream stream = _storage.GetBlobStream(uids, context);
-
-            if (notifyDownload && _httpContextAccessor.HttpContext is not null)
+            if (notifyDownload)
             {
-                await _sharedFileDownloadNotifier.NotifyOnceAsync(
-                    downloadToken.NodeFile.OwnerId,
-                    downloadToken.Id,
-                    downloadToken.FileName,
-                    _httpContextAccessor.HttpContext,
-                    ct);
+                await NotifyAccessAsync(downloadToken, ct);
             }
 
+            Stream stream = _storage.GetBlobStream(uids, context);
             return new ShareFileResult(new SharedFileStreamResult(
                 stream: stream,
                 contentType: downloadToken.NodeFile.ContentType,

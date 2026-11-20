@@ -16,6 +16,11 @@ namespace Cotton.Server.IntegrationTests
             (NodeFileManifestDto file, byte[] original) = await CreatePhotoShareAsync();
             FileManifestPreviewState manifest = await Pipeline.GetFileManifestByNodeFileIdAsync(file.Id);
             byte[] expected = await Pipeline.ReadPreviewBlobAsync(manifest.LargeFilePreviewHash!);
+            using HttpRequestMessage headRequest = new(HttpMethod.Head, $"/s/{ShareToken}?view=inline&preview=true");
+            using HttpResponseMessage head = await _client!.SendAsync(headRequest);
+            head.EnsureSuccessStatusCode();
+            Assert.That(await CountAccessNotificationsAsync(), Is.Zero);
+
             using HttpResponseMessage preview = await _client!.GetAsync($"/s/{ShareToken}?view=inline&preview=true");
             preview.EnsureSuccessStatusCode();
             Assert.Multiple(() =>
@@ -26,10 +31,13 @@ namespace Cotton.Server.IntegrationTests
             Assert.That(await preview.Content.ReadAsByteArrayAsync(), Is.EqualTo(expected));
             Assert.That(await DbContext.DownloadTokens.AnyAsync(x => x.Token == ShareToken), Is.True);
 
+            Assert.That(await CountAccessNotificationsAsync(), Is.EqualTo(1));
+
             using HttpResponseMessage download = await _client.GetAsync($"/s/{ShareToken}?view=download");
             download.EnsureSuccessStatusCode();
             Assert.That(download.Content.Headers.ContentType?.MediaType, Is.EqualTo("image/x-canon-cr3"));
             Assert.That(await download.Content.ReadAsByteArrayAsync(), Is.EqualTo(original));
+            Assert.That(await CountAccessNotificationsAsync(), Is.EqualTo(1));
         }
 
         [Test]
@@ -68,6 +76,7 @@ namespace Cotton.Server.IntegrationTests
             conditional.Headers.IfNoneMatch.Add(jpeg.Headers.ETag!);
             using HttpResponseMessage unchanged = await _client.SendAsync(conditional);
             Assert.That(unchanged.StatusCode, Is.EqualTo(HttpStatusCode.NotModified));
+            Assert.That(await CountAccessNotificationsAsync(), Is.Zero);
         }
 
         [Test]
@@ -99,6 +108,13 @@ namespace Cotton.Server.IntegrationTests
             jpeg.EnsureSuccessStatusCode();
             ImageInfo info = Image.Identify(await jpeg.Content.ReadAsByteArrayAsync());
             Assert.That(Math.Max(info.Width, info.Height), Is.EqualTo(PreviewGeneratorProvider.DefaultSmallPreviewSize));
+        }
+
+        private async Task<int> CountAccessNotificationsAsync()
+        {
+            await using AsyncServiceScope scope = _factory!.Services.CreateAsyncScope();
+            CottonDbContext context = scope.ServiceProvider.GetRequiredService<CottonDbContext>();
+            return await context.Notifications.CountAsync(notification => notification.Title == "Shared link opened");
         }
 
         private async Task<(NodeFileManifestDto File, byte[] Original)> CreatePhotoShareAsync()

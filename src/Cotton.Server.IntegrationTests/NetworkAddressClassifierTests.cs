@@ -78,12 +78,12 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task SharedFileDownloadedNotification_UsesLocalNetworkLocationForPrivateIp()
+        public async Task SharedLinkOpenedNotification_UsesLocalNetworkLocationForPrivateIp()
         {
             RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
             RecordingGeoLookupService geoLookup = new RecordingGeoLookupService();
 
-            await notifications.SendSharedFileDownloadedNotificationAsync(
+            await notifications.SendSharedLinkOpenedNotificationAsync(
                 geoLookup,
                 Guid.NewGuid(),
                 "Booklet R006262212.pdf",
@@ -103,13 +103,13 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task SharedFileDownloadedNotification_KeepsIpInDetailedMetadataOnly()
+        public async Task SharedLinkOpenedNotification_KeepsIpInDetailedMetadataOnly()
         {
             const string ipAddress = "2600:1700:6cf8:909f:146b:819e:793c:6937";
             RecordingNotificationsProvider notifications = new RecordingNotificationsProvider();
             RecordingGeoLookupService geoLookup = new RecordingGeoLookupService();
 
-            await notifications.SendSharedFileDownloadedNotificationAsync(
+            await notifications.SendSharedLinkOpenedNotificationAsync(
                 geoLookup,
                 Guid.NewGuid(),
                 "report.pdf",

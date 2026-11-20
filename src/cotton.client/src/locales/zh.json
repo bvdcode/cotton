@@ -1434,6 +1434,13 @@
           "withoutDevice": "你的 WebDAV 访问令牌已从 {{city}}、{{region}}、{{country}}（{{ip}}）重置。请在 WebDAV 客户端中更新令牌。"
         }
       },
+      "sharedLinkOpened": {
+        "title": "共享链接已打开",
+        "content": {
+          "withDevice": "指向“{{name}}”的共享链接已通过 {{device}} 在 {{location}} 打开（{{ip}}）。",
+          "withoutDevice": "指向“{{name}}”的共享链接已在 {{location}} 打开（{{ip}}）。"
+        }
+      },
       "sharedFileDownloaded": {
         "title": "共享文件已下载",
         "content": {
