@@ -179,6 +179,8 @@ jobs:
     steps:
       - name: Check repository
         uses: actions/checkout@v5
+        with:
+          lfs: "true"
 
       - name: Verify package inputs
         env:
@@ -218,4 +220,4 @@ jobs:
       - name: Publish NuGet packages
         env:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
-        run: dotnet nuget push "nupkg/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
