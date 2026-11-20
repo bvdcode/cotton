@@ -24,6 +24,16 @@ namespace Cotton.Sdk.Realtime
         event EventHandler<CottonRealtimeEvent>? NotificationReceived;
 
         /// <summary>
+        /// Occurs after an interrupted connection is restored.
+        /// </summary>
+        event EventHandler? Reconnected;
+
+        /// <summary>
+        /// Occurs when the connection stops, including exhausted automatic reconnect attempts.
+        /// </summary>
+        event EventHandler<Exception?>? Closed;
+
+        /// <summary>
         /// Starts the realtime connection.
         /// </summary>
         Task StartAsync(CancellationToken cancellationToken = default);

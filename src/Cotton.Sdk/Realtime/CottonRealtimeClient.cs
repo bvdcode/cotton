@@ -37,6 +37,8 @@ namespace Cotton.Sdk.Realtime
                 .Build();
 
             RegisterHandlers();
+            _connection.Reconnected += OnReconnected;
+            _connection.Closed += OnClosed;
         }
 
         /// <inheritdoc />
@@ -47,6 +49,12 @@ namespace Cotton.Sdk.Realtime
 
         /// <inheritdoc />
         public event EventHandler<CottonRealtimeEvent>? NotificationReceived;
+
+        /// <inheritdoc />
+        public event EventHandler? Reconnected;
+
+        /// <inheritdoc />
+        public event EventHandler<Exception?>? Closed;
 
         /// <inheritdoc />
         public Task StartAsync(CancellationToken cancellationToken = default)
@@ -64,6 +72,18 @@ namespace Cotton.Sdk.Realtime
         public ValueTask DisposeAsync()
         {
             return _connection.DisposeAsync();
+        }
+
+        private Task OnReconnected(string? connectionId)
+        {
+            Reconnected?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        }
+
+        private Task OnClosed(Exception? exception)
+        {
+            Closed?.Invoke(this, exception);
+            return Task.CompletedTask;
         }
 
         private void RegisterHandlers()
