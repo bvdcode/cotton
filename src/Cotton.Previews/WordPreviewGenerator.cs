@@ -22,7 +22,7 @@ namespace Cotton.Previews
         };
 
         public string Id => "office-docx";
-        public int Version => 3;
+        public int Version => 4;
         public int Priority => 0;
         public IEnumerable<string> SupportedContentTypes => ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
 

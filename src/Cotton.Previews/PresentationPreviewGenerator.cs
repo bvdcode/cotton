@@ -45,7 +45,7 @@ namespace Cotton.Previews
         ]);
 
         public string Id => "office-pptx";
-        public int Version => 4;
+        public int Version => 5;
         public int Priority => 0;
         public IEnumerable<string> SupportedContentTypes => ["application/vnd.openxmlformats-officedocument.presentationml.presentation"];
 
@@ -58,9 +58,7 @@ namespace Cotton.Previews
             try
             {
                 using CancellationTokenSource cancellation = new(RenderTimeout);
-                using MemoryStream input = new();
-                await PreviewStream.CopyBoundedAsync(stream, input, MaximumSourceBytes, cancellation.Token).ConfigureAwait(false);
-                using PresentationDocument document = PresentationReader.Open(input.GetBuffer().AsMemory(0, (int)input.Length), new()
+                using PresentationDocument document = PresentationReader.Open(stream, new()
                 {
                     Package = new()
                     {
@@ -68,7 +66,7 @@ namespace Cotton.Previews
                         MaximumPartBytes = MaximumPartBytes,
                         MaximumUncompressedBytes = MaximumUncompressedBytes,
                     },
-                }, cancellation.Token);
+                }, leaveOpen: true, cancellationToken: cancellation.Token);
                 using FluentEmojiProvider emoji = new();
                 using PixelBuffer pixels = await PresentationRenderer.RenderAsync(document, 0, new()
                 {

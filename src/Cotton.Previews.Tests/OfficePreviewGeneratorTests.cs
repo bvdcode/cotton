@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Previews;
+using Cotton.Previews.Tests.TestInfrastructure;
 using NUnit.Framework;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -85,6 +86,36 @@ namespace Cotton.Previews.Tests
             using Image<Rgba32> image = Image.Load<Rgba32>(result);
             Assert.That(Math.Max(image.Width, image.Height), Is.EqualTo(200));
             Assert.That(source.CanRead, Is.True);
+        }
+
+        [Test]
+        public async Task GeneratePreview_ReadsOnlyRequiredPackageParts()
+        {
+            const int unusedPartBytes = 8 * 1024 * 1024;
+            string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "Office", "report.pptx");
+            using MemoryStream packageStream = new();
+            await using (FileStream file = File.OpenRead(path))
+            {
+                await file.CopyToAsync(packageStream);
+            }
+            using (ZipArchive package = new(packageStream, ZipArchiveMode.Update, leaveOpen: true))
+            {
+                ZipArchiveEntry unused = package.CreateEntry("ppt/media/unused.png", CompressionLevel.NoCompression);
+                await using Stream output = unused.Open();
+                await output.WriteAsync(new byte[unusedPartBytes]);
+            }
+            packageStream.Position = 0;
+            using ReadTrackingStream source = new(packageStream);
+
+            byte[] result = await new PresentationPreviewGenerator().GeneratePreviewWebPAsync(source, 200);
+
+            using Image<Rgba32> image = Image.Load<Rgba32>(result);
+            Assert.Multiple(() =>
+            {
+                Assert.That(CountGreenPixels(image), Is.GreaterThan(100));
+                Assert.That(source.BytesRead, Is.LessThan(unusedPartBytes / 4));
+                Assert.That(source.CanRead, Is.True);
+            });
         }
 
         [Test]
