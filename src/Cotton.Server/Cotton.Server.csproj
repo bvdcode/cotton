@@ -13,7 +13,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EasyExtensions.Analyzers" Version="3.0.92">
+		<PackageReference Include="EasyExtensions.Analyzers" Version="4.0.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -26,9 +26,9 @@
 	<ItemGroup>
 		<PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
 		<Folder Include="wwwroot\" />
-		<PackageReference Include="EasyExtensions.Clients" Version="3.0.92" />
-		<PackageReference Include="EasyExtensions.Mediator" Version="3.0.92" />
-		<PackageReference Include="EasyExtensions.Passkeys" Version="3.0.93" />
+		<PackageReference Include="EasyExtensions.Clients" Version="4.0.1" />
+		<PackageReference Include="EasyExtensions.Mediator" Version="4.0.1" />
+		<PackageReference Include="EasyExtensions.Passkeys" Version="4.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy">
 			<Version>11.0.0</Version>
 		</PackageReference>
@@ -36,11 +36,11 @@
 		<ProjectReference Include="..\cotton.client\cotton.client.esproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="11.0.0-rc.3.26522.148">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="11.0.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0-rc.3.26522.148">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -56,11 +56,11 @@
 		<ProjectReference Include="..\Cotton.Database\Cotton.Database.csproj" />
 		<ProjectReference Include="..\Cotton.Autoconfig\Cotton.Autoconfig.csproj" />
 		<ProjectReference Include="..\Cotton.Validators\Cotton.Validators.csproj" />
-		<PackageReference Include="EasyExtensions" Version="4.0.0" />
-		<PackageReference Include="EasyExtensions.Quartz" Version="3.0.92" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="4.0.0" />
-		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="3.0.92" />
-		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="4.0.0" />
+		<PackageReference Include="EasyExtensions" Version="4.0.1" />
+		<PackageReference Include="EasyExtensions.Quartz" Version="4.0.1" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore" Version="4.0.1" />
+		<PackageReference Include="EasyExtensions.AspNetCore.Authorization" Version="4.0.1" />
+		<PackageReference Include="EasyExtensions.EntityFrameworkCore.Npgsql" Version="4.0.1" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
 	</ItemGroup>
 
