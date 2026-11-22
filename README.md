@@ -90,7 +90,7 @@ A file should not become an opaque blob you are afraid to touch once it enters t
 | --- | --- |
 | Raster images, resizing, and WebP encoding | SixLabors.ImageSharp |
 | HEIC/HEIF decoding | Mediana.Images.Heif |
-| PDF thumbnails and searchable text | Mediana.Documents.Pdf and PdfPig |
+| PDF thumbnails and searchable text | Mediana.Documents.Pdf |
 | Word thumbnails | Mediana.Documents.Word → ImageSharp |
 | PowerPoint thumbnails | Mediana.Documents.Presentation → ImageSharp |
 | Excel thumbnails | Mediana.Documents.Xls/Xlsx and Mediana.Drawing → ImageSharp |
@@ -321,7 +321,7 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - `src/Cotton.Crypto` — in-repo streaming AES-GCM cipher (`AesGcmStreamCipher`) and HKDF key derivation (`KeyDerivation`).
 - `src/Cotton.Topology` — layout/tree manipulation services.
 - `src/Cotton.Previews` — image/SVG/HEIC/RAW, TGS, PDF, Office, text, audio, video, and 3D-model preview generators.
-- `src/Cotton.TextExtraction` — document text extraction for search, including PDF through PdfPig.
+- `src/Cotton.TextExtraction` — document text extraction for search, including PDF, DOCX and XLSX through Mediana.
 - `src/Cotton.Autoconfig` — master-key derivation, environment scrubbing, unlock/bootstrap configuration.
 - `src/Cotton.Validators` — name/username validation (`NameValidator`, `NameKey` generation).
 - `src/Cotton.Localization` — server-side notification templates.

@@ -14,7 +14,7 @@ The official container listens on port `8080` and includes PostgreSQL 18 client 
 
 ## Managed libraries and system dependencies
 
-The published server's third-party NuGet dependency graph contains no native runtime binaries. ImageSharp handles raster processing and WebP encoding; Mediana handles HEIC/HEIF, PDF, Word, PowerPoint, SVG, TGS, and 3D rendering, plus XLS/XLSX worksheet reading and drawing; PdfPig extracts PDF text; EasyExtensions.Passkeys verifies WebAuthn responses. These paths require no renderer service, display server, GPU, LibreOffice, PDFium, Skia, or libsodium installation.
+The published server's third-party NuGet dependency graph contains no native runtime binaries. ImageSharp handles raster processing and WebP encoding; Mediana handles HEIC/HEIF, PDF, Word, PowerPoint, SVG, TGS, and 3D rendering, plus XLS/XLSX worksheet reading and drawing; Mediana extracts PDF, DOCX and XLSX text; DocumentFormat.OpenXml extracts PPTX text; EasyExtensions.Passkeys verifies WebAuthn responses. These paths require no renderer service, display server, GPU, LibreOffice, PDFium, Skia, or libsodium installation.
 
 The remaining operating-system integrations have distinct roles:
 

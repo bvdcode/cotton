@@ -11,6 +11,36 @@ namespace Cotton.Server.IntegrationTests
     public class FileTextIndexBatchingTests : FileTextIndexingTestBase
     {
         [Test]
+        public async Task Batch_WordWithMissingHeader_DoesNotBlockFollowingPdf()
+        {
+            FileManifest word = await AddFileAsync("broken.docx", WordDocumentTextExtractor.ContentType,
+                WordTestDocument.Create(missingHeader: true));
+            FileManifest pdf = await AddFileAsync("valid.pdf", PdfTextExtractor.ContentType,
+                PdfTestDocument.Create("Following document"));
+            Guid[] ids = [word.Id, pdf.Id];
+            _db.ChangeTracker.Clear();
+
+            await _services.GetRequiredService<IMediator>().Send(new IndexFileTextRequest(ids), CancellationToken.None);
+            _db.ChangeTracker.Clear();
+
+            FileManifest indexedWord = await _db.FileManifests.SingleAsync(file => file.Id == word.Id);
+            FileManifest indexedPdf = await _db.FileManifests.SingleAsync(file => file.Id == pdf.Id);
+            Assert.Multiple(() =>
+            {
+                Assert.That(indexedWord.TextIndexVersion, Is.EqualTo(VectorIndexDefinition.Version));
+                Assert.That(indexedWord.TextIndexError, Is.Not.Empty);
+                Assert.That(indexedPdf.TextIndexVersion, Is.EqualTo(VectorIndexDefinition.Version));
+                Assert.That(indexedPdf.TextIndexError, Is.Null);
+            });
+            Assert.That(await _db.FileEmbeddings.AnyAsync(vector => vector.FileManifestId == pdf.Id), Is.True);
+            Assert.That(await _db.FileEmbeddings.AnyAsync(vector => vector.FileManifestId == word.Id), Is.False);
+
+            int calls = _worker.EmbedCalls;
+            await _services.GetRequiredService<IMediator>().Send(new IndexFileTextRequest(ids), CancellationToken.None);
+            Assert.That(_worker.EmbedCalls, Is.EqualTo(calls));
+        }
+
+        [Test]
         public async Task Batch_WorkbookWithChartSheet_DoesNotBlockFollowingPdf()
         {
             FileManifest workbook = await AddFileAsync("chart.xlsx", SpreadsheetTextExtractor.ContentType,

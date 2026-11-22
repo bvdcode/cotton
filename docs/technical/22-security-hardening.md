@@ -30,7 +30,7 @@ Internal expensive work such as preview reads, probes, and transcodes uses semap
 
 ## Managed file processing
 
-HEIC decoding, PDF and Office thumbnails, SVG/TGS rendering, 3D thumbnails, and passkey verification run inside Cotton through managed .NET libraries. Mediana, ImageSharp, PdfPig, and EasyExtensions.Passkeys replace the former native decoding, graphics, and WebAuthn stack.
+HEIC decoding, PDF and Office thumbnails, SVG/TGS rendering, 3D thumbnails, and passkey verification run inside Cotton through managed .NET libraries. Mediana, ImageSharp, and EasyExtensions.Passkeys replace the former native decoding, graphics, and WebAuthn stack.
 
 These paths do not load separately shipped libheif, PDFium, Skia, or libsodium binaries, or launch an external model renderer. Removing that stack removes its native parser and interop attack surface and its binary-loading and replacement paths. Operators have no separate renderer binaries, display server, or graphics-driver stack to install or patch for these previews.
 

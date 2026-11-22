@@ -1,15 +1,10 @@
 Third-party notices
 
-PDF text extraction
-PdfPig 0.1.16
-Source: https://github.com/UglyToad/PdfPig
-License and component notices: Licenses/PdfPig-THIRD-PARTY-NOTICES.txt
-
-Managed drawing, PDF, Office, HEIC, SVG, Telegram sticker and 3D previews
+Managed drawing, document text extraction, PDF, Office, HEIC, SVG, Telegram sticker and 3D previews
 Mediana.Documents.Pdf, Mediana.Documents.Word, Mediana.Documents.Presentation,
 Mediana.Documents.Xls, Mediana.Documents.Xlsx, Mediana.Images.Heif,
 Mediana.Drawing, Mediana.Images.Svg, Mediana.Images.Tgs, Mediana.Models.Mesh
-and their Mediana dependencies 0.1.30
+and their Mediana dependencies 0.1.34
 Source: https://github.com/bvdcode/Mediana
 License text: Licenses/Mediana-LICENSE.txt
 Bundled font provenance: Licenses/Mediana.Drawing-FONT-NOTICES.txt
@@ -19,7 +14,7 @@ under the SIL Open Font License 1.1: Licenses/NotoSansSymbols2-OFL.txt.
 The document, vector and worksheet renderers use these embedded fonts.
 
 Word emoji artwork
-Mediana.Drawing.Emoji.Fluent 0.1.30
+Mediana.Drawing.Emoji.Fluent 0.1.34
 Microsoft Fluent Emoji Flat artwork, Copyright (c) Microsoft Corporation
 Source: https://github.com/microsoft/fluentui-emoji
 License: MIT

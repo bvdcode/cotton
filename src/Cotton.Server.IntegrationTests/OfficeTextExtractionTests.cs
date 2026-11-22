@@ -146,7 +146,7 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public async Task SpreadsheetExtractor_RejectsOversizedSharedStringTable()
+        public async Task SpreadsheetExtractor_RejectsReferencedOversizedSharedStringTable()
         {
             using MemoryStream source = new();
             using (SpreadsheetDocument document = SpreadsheetDocument.Create(
@@ -166,7 +166,11 @@ namespace Cotton.Server.IntegrationTests
                     writer.WriteEndElement();
                 }
                 WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-                worksheetPart.Worksheet = new Worksheet(new SheetData());
+                worksheetPart.Worksheet = new Worksheet(new SheetData(new Row(new Cell
+                {
+                    DataType = CellValues.SharedString,
+                    CellValue = new CellValue("0"),
+                })));
                 workbookPart.Workbook = new Workbook(new Sheets(new Sheet
                 {
                     Id = workbookPart.GetIdOfPart(worksheetPart),
