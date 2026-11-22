@@ -12,6 +12,15 @@ on:
         required: true
         type: string
   workflow_call:
+    secrets:
+      SIXLABORS_LICENSE:
+        required: true
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+      DEPLOY_GITHUB_TOKEN:
+        required: false
     outputs:
       Version:
         description: Package and image version
@@ -42,6 +51,11 @@ jobs:
           lfs: "true"
           fetch-depth: 0
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 11.0.x
+
       - name: Install GitVersion
         uses: GitTools/actions/gitversion/setup@v4.7.0
         with:
@@ -63,12 +77,6 @@ jobs:
           echo "Version=$artifact_version" >> "$GITHUB_OUTPUT"
           echo "Version: $artifact_version"
           echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.CommitsSinceVersionSource }}"
-
-      - name: Setup .NET
-        if: github.ref == 'refs/heads/main'
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 10.0.x
 
       - name: Restore SDK package projects
         if: github.ref == 'refs/heads/main'
@@ -149,11 +157,11 @@ jobs:
 
       - name: Add GitHub Packages source
         if: github.ref == 'refs/heads/main' && steps.gitversion.outputs.CommitsSinceVersionSource > 0
-        run: dotnet nuget add source --username ${{ github.actor }} --password ${{ env.NUGET_GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+        run: dotnet nuget add source --username "$GITHUB_ACTOR" --password "$NUGET_GITHUB_TOKEN" --store-password-in-clear-text --name github "https://nuget.pkg.github.com/$GITHUB_REPOSITORY_OWNER/index.json"
 
       - name: Push package to GitHub Packages
         if: github.ref == 'refs/heads/main' && steps.gitversion.outputs.CommitsSinceVersionSource > 0
-        run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key ${{ env.NUGET_GITHUB_TOKEN }} --source "github"
+        run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key "$NUGET_GITHUB_TOKEN" --source "github"
 
       - name: Log in to NuGet.org
         if: github.ref == 'refs/heads/main' && steps.gitversion.outputs.CommitsSinceVersionSource > 0
@@ -193,7 +201,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Test SDK
         run: dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release -p:UseSharedCompilation=false

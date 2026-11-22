@@ -16,6 +16,8 @@ flowchart LR
 
 Processors have explicit ordering. Writes apply compression before encryption; reads apply the inverse order. A processor may wrap a stream but must preserve asynchronous cancellation, ownership, and disposal semantics.
 
+Zstandard compression uses the .NET 11 `ZstandardStream` with the configured compression level. Existing ZstdSharp frames remain readable. AES-GCM and HKDF use framework cryptography; encrypted objects retain the CTN2 format.
+
 The pipeline exposes operations for existence, reads, writes, deletion, size lookup, enumeration, and write reservation. Callers should use the pipeline rather than addressing a concrete backend directly.
 
 ## Backend selection

@@ -24,7 +24,7 @@ Dependencies flow toward lower-level contracts. Storage may use cryptography; to
 
 ## Build contracts
 
-Backend and SDK projects target the repository's configured .NET SDK.
+All backend, SDK, shared-contract, benchmark, and test projects target .NET 11. `global.json` requires stable SDK 11.0.100 or a later .NET 11 feature band. Consumers of the Cotton and Cotton.Sdk packages also need .NET 11 or later.
 
 Typical verification:
 

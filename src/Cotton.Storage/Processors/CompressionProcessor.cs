@@ -6,8 +6,8 @@ using Cotton.Crypto.Streams;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.Models.Enums;
 using System.Buffers;
+using System.IO.Compression;
 using System.IO.Pipelines;
-using ZstdSharp;
 
 namespace Cotton.Storage.Processors
 {
@@ -16,9 +16,9 @@ namespace Cotton.Storage.Processors
     {
         public const int DefaultCompressionLevel = 1;
 
-        public static readonly int MinCompressionLevel = Compressor.MinCompressionLevel;
+        public static readonly int MinCompressionLevel = ZstandardCompressionOptions.MinQuality;
 
-        public static readonly int MaxCompressionLevel = Compressor.MaxCompressionLevel;
+        public static readonly int MaxCompressionLevel = ZstandardCompressionOptions.MaxQuality;
 
         public const CompressionAlgorithm Algorithm = CompressionAlgorithm.Zstd;
 
@@ -43,7 +43,7 @@ namespace Cotton.Storage.Processors
 
         public Task<Stream> ReadAsync(string uid, Stream stream, PipelineContext? context = null, CancellationToken cancellationToken = default)
         {
-            DecompressionStream decompressor = new DecompressionStream(stream);
+            ZstandardStream decompressor = new(stream, CompressionMode.Decompress);
             return Task.FromResult<Stream>(decompressor);
         }
 
@@ -60,7 +60,8 @@ namespace Cotton.Storage.Processors
             int level = _compressionLevelProvider.Level;
             Stream result = new TransformReadStream(stream, async (source, destination, token) =>
             {
-                await using CompressionStream compressor = new(destination, level: level, leaveOpen: true);
+                await using ZstandardStream compressor = new(
+                    destination, new ZstandardCompressionOptions { Quality = level }, leaveOpen: true);
                 await source.CopyToAsync(compressor, CompressBufferSize, token).ConfigureAwait(false);
                 await compressor.FlushAsync(token).ConfigureAwait(false);
             }, options, cancellationToken: cancellationToken);

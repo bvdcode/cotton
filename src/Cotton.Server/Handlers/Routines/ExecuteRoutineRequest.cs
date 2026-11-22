@@ -15,6 +15,7 @@ using Cotton.Server.Services.DatabaseIntegrity;
 using EasyExtensions.Mediator;
 using EasyExtensions.Mediator.Contracts;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace Cotton.Server.Handlers.Routines
@@ -96,8 +97,8 @@ namespace Cotton.Server.Handlers.Routines
         {
             DeleteFilesRoutineSettings policy = JsonSerializer.Deserialize<DeleteFilesRoutineSettings>(routine.Settings)
                 ?? throw new InvalidOperationException("Routine settings are required.");
-            System.ComponentModel.DataAnnotations.Validator.ValidateObject(policy,
-                new System.ComponentModel.DataAnnotations.ValidationContext(policy), true);
+            await Validator.ValidateObjectAsync(policy,
+                new ValidationContext(policy), validateAllProperties: true, cancellationToken: ct);
             Guid[] nodeIds = policy.IncludeSubfolders
                 ? (await subtree.CollectSubtreeIdsAsync(routine.OwnerId, routine.TargetNodeId, ct)).ToArray()
                 : [routine.TargetNodeId];

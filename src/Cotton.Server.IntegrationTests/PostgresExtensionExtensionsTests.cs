@@ -29,8 +29,8 @@ namespace Cotton.Server.IntegrationTests
                 (RecordingMigrationCommandExecutor)context.GetService<IMigrationCommandExecutor>();
             Assert.That(executor.Commands.Select(command => command.Trim()), Is.EqualTo(new[]
             {
-                "CREATE EXTENSION IF NOT EXISTS citext;",
-                "CREATE EXTENSION IF NOT EXISTS hstore;"
+                "CREATE EXTENSION IF NOT EXISTS citext CASCADE;",
+                "CREATE EXTENSION IF NOT EXISTS hstore CASCADE;"
             }));
             Assert.That(context.ChangeTracker.Entries(), Is.Empty);
         }
