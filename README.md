@@ -2,37 +2,27 @@
 [![CI](https://github.com/bvdcode/cotton/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bvdcode/cotton/actions)
 [![CodeFactor](https://www.codefactor.io/repository/github/bvdcode/cotton/badge)](https://www.codefactor.io/repository/github/bvdcode/cotton)
 [![Release](https://badgen.net/github/release/bvdcode/cotton?label=version)](https://github.com/bvdcode/cotton/releases)
-[![Docker Pulls](https://badgen.net/docker/pulls/bvdcode/cotton?icon=docker&label=docker%20pulls)](https://hub.docker.com/r/bvdcode/cotton)
+[![Docker](https://badgen.net/docker/pulls/bvdcode/cotton?icon=docker&label=docker)](https://hub.docker.com/r/bvdcode/cotton)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-2ea44f?logo=googlechrome&logoColor=white)](https://app.cottoncloud.dev/login?demo=true)
+[![Support on Ko-fi](https://img.shields.io/badge/Support_on_Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/bvdcode)
 
 <div align="center">
 
-# Cotton Cloud
+# Cotton Cloud. Self-hosted file cloud. 100% .NET.
 
-### Self-hosted file cloud. 100% .NET.
+Content-addressed storage, streaming AES-GCM encryption, deduplication, and rich previews - with desktop and mobile clients. HEIC, PDF, Office, SVG, TGS, 3D, and passkeys — built in. No native renderer DLLs. No extra preview services. Encryption, storage, document rendering, image decoding, and passkey verification run together in .NET.
 
-Content-addressed storage, streaming AES-GCM encryption, deduplication, and rich previews — with desktop and mobile clients.
+</div>
 
-**HEIC, PDF, Office, SVG, TGS, 3D, and passkeys — built in.**
+<img width="1692" height="929" alt="image" src="https://github.com/user-attachments/assets/5b19843d-1e8f-4a67-ac36-60c6053bf367" />
 
-**No native renderer DLLs. No extra preview services.** Encryption, storage, document rendering, image decoding, and passkey verification run together in .NET.
-
-<p>
+<p align="center">
   <a href="#quick-start"><img alt="Docker" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Docker&color=2496ED&logo=docker&logoColor=white"></a>
   <a href="https://play.google.com/apps/testing/dev.cottoncloud.app"><img alt="Google Play" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Google%20Play&color=01875F&logo=googleplay&logoColor=white"></a>
   <a href="https://github.com/bvdcode/cotton-mobile/releases/latest/download/CottonCloud-Android.apk"><img alt="APK" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=APK&color=2E7D32&logo=android&logoColor=white"></a>
   <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Windows-Setup.exe"><img alt="Windows" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Windows&color=0078D4&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTMsMTJWNi43NUw5LDUuNDNWMTEuOTFMMywxMk0yMCwzVjExLjc1TDEwLDExLjlWNS4yMUwyMCwzTTMsMTNMOSwxMy4wOVYxOS45TDMsMTguNzVWMTNNMjAsMTMuMjVWMjJMMTAsMjAuMDlWMTMuMUwyMCwxMy4yNVoiLz48L3N2Zz4%3D"></a>
   <a href="https://github.com/bvdcode/cotton-sync-client/releases/latest/download/CottonSync-Linux.deb"><img alt="Linux" src="https://img.shields.io/static/v1?style=for-the-badge&label=&message=Linux&color=A81D33&logo=debian&logoColor=white"></a>
 </p>
-
-<p>
-  <a href="https://app.cottoncloud.dev/login?demo=true"><strong>Live demo</strong></a>
-  &nbsp;&middot;&nbsp;
-  <a href="https://github.com/bvdcode/cotton/discussions/3">Using Cotton? Say hi</a>
-</p>
-
-</div>
-
-<img width="1692" height="929" alt="image" src="https://github.com/user-attachments/assets/5b19843d-1e8f-4a67-ac36-60c6053bf367" />
 
 ---
 

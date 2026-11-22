@@ -1,6 +1,16 @@
 name: Publish artifacts
 
 on:
+  workflow_dispatch:
+    inputs:
+      sdk_version:
+        description: NuGet package version
+        required: true
+        type: string
+      expected_commit:
+        description: Exact main commit to publish
+        required: true
+        type: string
   workflow_call:
     secrets:
       SIXLABORS_LICENSE:
@@ -26,6 +36,7 @@ env:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_dispatch'
     name: Build and Publish Artifacts
     runs-on: ubuntu-latest
     outputs:
@@ -165,3 +176,56 @@ jobs:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
 
+
+  publish-sdk:
+    name: Test and Publish SDK
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check repository
+        uses: actions/checkout@v5
+        with:
+          lfs: "true"
+
+      - name: Verify package inputs
+        env:
+          PACKAGE_VERSION: ${{ inputs.sdk_version }}
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          [[ "$PACKAGE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 11.0.x
+
+      - name: Test SDK
+        run: dotnet test src/Cotton.Sdk.Tests/Cotton.Sdk.Tests.csproj --configuration Release -p:UseSharedCompilation=false
+
+      - name: Pack SDK
+        env:
+          PACKAGE_VERSION: ${{ inputs.sdk_version }}
+        run: |
+          dotnet pack src/Cotton.Shared/Cotton.csproj --configuration Release --no-build --output nupkg -p:Version="$PACKAGE_VERSION"
+          dotnet pack src/Cotton.Sdk/Cotton.Sdk.csproj --configuration Release --no-build --output nupkg -p:Version="$PACKAGE_VERSION"
+
+      - name: Upload NuGet packages
+        uses: actions/upload-artifact@v5
+        with:
+          name: sdk-nupkg
+          path: nupkg
+
+      - name: Log in to NuGet.org
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: bvd
+
+      - name: Publish NuGet packages
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "nupkg/*.nupkg" --skip-duplicate --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
