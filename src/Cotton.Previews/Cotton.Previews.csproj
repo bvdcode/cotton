@@ -15,17 +15,17 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Cotton.ContentTypes\Cotton.ContentTypes.csproj" />
-		<PackageReference Include="Mediana.Documents.Pdf" Version="0.1.34" />
-		<PackageReference Include="Mediana.Documents.Presentation" Version="0.1.34" />
-		<PackageReference Include="Mediana.Documents.Word" Version="0.1.34" />
-		<PackageReference Include="Mediana.Documents.Xls" Version="0.1.34" />
-		<PackageReference Include="Mediana.Documents.Xlsx" Version="0.1.34" />
-		<PackageReference Include="Mediana.Drawing" Version="0.1.34" />
-		<PackageReference Include="Mediana.Drawing.Emoji.Fluent" Version="0.1.34" />
-		<PackageReference Include="Mediana.Images.Heif" Version="0.1.34" />
-		<PackageReference Include="Mediana.Images.Svg" Version="0.1.34" />
-		<PackageReference Include="Mediana.Images.Tgs" Version="0.1.34" />
-		<PackageReference Include="Mediana.Models.Mesh" Version="0.1.34" />
+		<PackageReference Include="Mediana.Documents.Pdf" Version="0.1.36" />
+		<PackageReference Include="Mediana.Documents.Presentation" Version="0.1.36" />
+		<PackageReference Include="Mediana.Documents.Word" Version="0.1.36" />
+		<PackageReference Include="Mediana.Documents.Xls" Version="0.1.36" />
+		<PackageReference Include="Mediana.Documents.Xlsx" Version="0.1.36" />
+		<PackageReference Include="Mediana.Drawing" Version="0.1.36" />
+		<PackageReference Include="Mediana.Drawing.Emoji.Fluent" Version="0.1.36" />
+		<PackageReference Include="Mediana.Images.Heif" Version="0.1.36" />
+		<PackageReference Include="Mediana.Images.Svg" Version="0.1.36" />
+		<PackageReference Include="Mediana.Images.Tgs" Version="0.1.36" />
+		<PackageReference Include="Mediana.Models.Mesh" Version="0.1.36" />
 		<PackageReference Include="MetadataExtractor" Version="2.9.3" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="4.1.3" />
 	</ItemGroup>

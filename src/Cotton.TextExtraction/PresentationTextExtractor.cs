@@ -1,79 +1,34 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Presentation;
+using Mediana.Documents.Presentation;
 using Microsoft.Extensions.Logging;
-using System.IO.Packaging;
-using DrawingText = DocumentFormat.OpenXml.Drawing.Text;
 
 namespace Cotton.TextExtraction
 {
-    public class PresentationTextExtractor(ILogger<PresentationTextExtractor> logger) : FileTextExtractor
+    public class PresentationTextExtractor(ILogger<PresentationTextExtractor> logger) : DocumentTextExtractor(logger)
     {
         public const string ContentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        private const int MaximumSourceBytes = int.MaxValue;
+        private const int MaximumPartBytes = 1024 * 1024 * 1024;
+        private const long MaximumUncompressedBytes = 4L * 1024 * 1024 * 1024;
 
         public override IEnumerable<string> SupportedContentTypes => [ContentType];
 
-        protected override async Task ExtractAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
+        protected override async Task ReadTextAsync(Stream source, TextExtractionBuffer text, CancellationToken cancellationToken)
         {
-            try
+            await using SeekableReadStream seekable = await SeekableReadStream.OpenAsync(source, cancellationToken);
+            using PresentationDocument document = PresentationReader.Open(seekable.Stream, new()
             {
-                await using SeekableReadStream seekable = await SeekableReadStream.OpenAsync(source, cancellationToken);
-                using PresentationDocument document = PresentationDocument.Open(seekable.Stream, false);
-                PresentationPart presentationPart = document.PresentationPart
-                    ?? throw new FileFormatException("The presentation has no main part.");
-                Presentation presentation = presentationPart.Presentation
-                    ?? throw new FileFormatException("The presentation root is missing.");
-                SlideIdList slideIds = presentation.SlideIdList
-                    ?? throw new FileFormatException("The presentation has no slide list.");
-                foreach (SlideId slideId in slideIds.Elements<SlideId>())
+                Package = new()
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    string relationshipId = slideId.RelationshipId?.Value
-                        ?? throw new FileFormatException("A slide has no relationship id.");
-                    SlidePart slidePart = (SlidePart)presentationPart.GetPartById(relationshipId);
-                    Slide slide = slidePart.Slide
-                        ?? throw new FileFormatException("A slide is empty.");
-                    AppendParagraphs(slide, text, cancellationToken);
-                    if (text.IsTruncated)
-                    {
-                        return;
-                    }
-                    if (slidePart.NotesSlidePart?.NotesSlide is not null)
-                    {
-                        AppendParagraphs(slidePart.NotesSlidePart.NotesSlide, text, cancellationToken);
-                        if (text.IsTruncated)
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is OpenXmlPackageException or FileFormatException or InvalidDataException)
-            {
-                logger.LogWarning(ex, "Unable to extract presentation text.");
-                throw new FileTextExtractionException("Unable to read presentation text.", ex);
-            }
-        }
-
-        private static void AppendParagraphs(DocumentFormat.OpenXml.OpenXmlElement root,
-            TextExtractionBuffer text, CancellationToken cancellationToken)
-        {
-            foreach (DocumentFormat.OpenXml.Drawing.Paragraph paragraph in
-                root.Descendants<DocumentFormat.OpenXml.Drawing.Paragraph>())
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                foreach (DrawingText run in paragraph.Descendants<DrawingText>())
-                {
-                    text.AppendNormalized(run.Text);
-                    if (text.IsTruncated)
-                    {
-                        return;
-                    }
-                }
-                text.AppendLineBreak();
-            }
+                    MaximumInputBytes = MaximumSourceBytes,
+                    MaximumPartBytes = MaximumPartBytes,
+                    MaximumUncompressedBytes = MaximumUncompressedBytes,
+                },
+            }, leaveOpen: true, cancellationToken: cancellationToken);
+            text.AppendLines(document.ReadText(new() { IncludeSpeakerNotes = true }, cancellationToken)
+                .Select(block => block.Text), cancellationToken);
         }
     }
 }

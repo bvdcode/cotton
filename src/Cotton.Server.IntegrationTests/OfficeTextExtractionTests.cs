@@ -13,7 +13,7 @@ using Drawing = DocumentFormat.OpenXml.Drawing;
 
 namespace Cotton.Server.IntegrationTests
 {
-    public class OfficeTextExtractionTests
+    public partial class OfficeTextExtractionTests
     {
         [Test]
         public async Task Extractors_LimitTextAcrossOfficeFormats()
