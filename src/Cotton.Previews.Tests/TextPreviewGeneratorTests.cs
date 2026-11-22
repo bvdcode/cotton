@@ -97,7 +97,7 @@ namespace Cotton.Previews.Tests
             Assert.That(HasNonWhitePixels(image), Is.True);
             for (int y = 0; y < image.Height; y++)
             {
-                for (int x = size - size / 32; x < image.Width; x++)
+                for (int x = size - (size / 32); x < image.Width; x++)
                 {
                     Rgba32 pixel = image[x, y];
                     Assert.That(pixel.R, Is.GreaterThan(240),

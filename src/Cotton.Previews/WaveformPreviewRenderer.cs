@@ -14,8 +14,8 @@ namespace Cotton.Previews
             int bars = amplitudes.Length;
             float gap = Math.Max(5f, size / 48f);
             float padding = Math.Max(10f, gap * 1.5f);
-            float width = Math.Max(1f, (size - 2f * padding - (bars - 1) * gap) / bars);
-            float left = (size - (bars * width + (bars - 1) * gap)) / 2f;
+            float width = Math.Max(1f, (size - (2f * padding) - ((bars - 1) * gap)) / bars);
+            float left = (size - ((bars * width) + ((bars - 1) * gap))) / 2f;
             float centerY = size / 2f;
             float minHeight = Math.Max(4f, size * 0.06f);
             float maxHeight = size * 0.82f;
@@ -25,8 +25,8 @@ namespace Cotton.Previews
             for (int i = 0; i < bars; i++)
             {
                 float height = Math.Max(minHeight, amplitudes[i] * maxHeight);
-                float x = left + i * (width + gap);
-                float y = centerY - height / 2f;
+                float x = left + (i * (width + gap));
+                float y = centerY - (height / 2f);
                 float radius = width / 2f;
                 if (height <= width)
                 {

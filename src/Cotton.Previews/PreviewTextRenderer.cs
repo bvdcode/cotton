@@ -28,7 +28,7 @@ namespace Cotton.Previews
         public float MeasureAdvance(int codepoint)
         {
             (TrueTypeFont font, int glyph) = _renderer.ResolveGlyph(Font, codepoint);
-            return font.Advance(glyph) * _size / font.Units;
+            return (font.Advance(glyph) * _size) / font.Units;
         }
 
         public float MeasureWidth(string text)
@@ -53,8 +53,8 @@ namespace Cotton.Previews
                 }
                 if (bounds.Width > 0)
                 {
-                    left = Math.Min(left, x + bounds.X * scale);
-                    right = Math.Max(right, x + (bounds.X + bounds.Width) * scale);
+                    left = Math.Min(left, x + (bounds.X * scale));
+                    right = Math.Max(right, x + ((bounds.X + bounds.Width) * scale));
                 }
                 x += font.Advance(glyph) * scale;
                 previous = glyph;
@@ -66,7 +66,7 @@ namespace Cotton.Previews
         public void Draw(RasterCanvas canvas, string text, float originX, float originY, Rgba32 color, float outputScale = 1)
         {
             float x = originX;
-            float baseline = originY + _font.Ascent * _scale;
+            float baseline = originY + (_font.Ascent * _scale);
             int previous = 0;
             TrueTypeFont? previousFont = null;
             foreach (Rune rune in text.EnumerateRunes())
