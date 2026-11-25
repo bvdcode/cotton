@@ -3,9 +3,6 @@
 
 using Cotton.Database;
 using Cotton.Database.Models;
-using Cotton.Models.Enums;
-using Cotton.Previews;
-using Cotton.Previews.Http;
 using Cotton.Server.Auth;
 using Cotton.Server.Extensions;
 using Cotton.Server.Handlers.Files;
@@ -17,8 +14,8 @@ using Cotton.Storage.Extensions;
 using Cotton.Storage.Pipelines;
 using EasyExtensions.AspNetCore.Extensions;
 using EasyExtensions.Mediator;
+using Mediana.Core.Memory;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Cotton.Server.Controllers
 {
@@ -29,13 +26,10 @@ namespace Cotton.Server.Controllers
         VideoTranscoder _videoTranscoder,
         HlsTranscodeCoordinator _hlsTranscodes,
         HlsSegmentCache _segmentCache,
-        IMemoryCache _cache,
         IMediator _mediator,
         PublicShareLookupFailureLimiter _publicShareLookupFailures,
         ILogger<FileHlsController> _logger) : ControllerBase
     {
-        private static readonly TimeSpan MediaProbeCacheLifetime = TimeSpan.FromHours(1);
-
         [HttpGet(Routes.V1.Files + "/{nodeFileId:guid}/hls/master.m3u8")]
         public async Task<IActionResult> HlsMasterPlaylistByToken(
             [FromRoute] Guid nodeFileId,
@@ -51,37 +45,12 @@ namespace Cotton.Server.Controllers
             string PlaylistUrl(string qualityName) =>
                 Routes.V1.Files + $"/{nodeFileId}/hls/playlist.m3u8?{credentialQuery}&quality={qualityName}";
 
-            const string variantCodecs = "avc1.640029,mp4a.40.2";
             HlsManifestBuilder.HlsVariant[] variants =
             [
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "Source",
-                    BandwidthBitsPerSecond: 8_000_000,
-                    Width: 1920,
-                    Height: 1080,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("source")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "1080p",
-                    BandwidthBitsPerSecond: 3_000_000,
-                    Width: 1920,
-                    Height: 1080,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("high")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "720p",
-                    BandwidthBitsPerSecond: 1_500_000,
-                    Width: 1280,
-                    Height: 720,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("medium")),
-                new HlsManifestBuilder.HlsVariant(
-                    Name: "480p",
-                    BandwidthBitsPerSecond: 700_000,
-                    Width: 854,
-                    Height: 480,
-                    Codecs: variantCodecs,
-                    PlaylistUrl: PlaylistUrl("low")),
+                new("Source", 12_000_000, PlaylistUrl("source")),
+                new("1080p", 7_000_000, PlaylistUrl("high")),
+                new("720p", 3_000_000, PlaylistUrl("medium")),
+                new("480p", 1_400_000, PlaylistUrl("low")),
             ];
 
             Response.Headers.CacheControl = "private, no-store, no-transform";
@@ -104,12 +73,17 @@ namespace Cotton.Server.Controllers
                 return lookup.Failure;
             }
 
-            MediaProbeInfo? probe = await ProbeMediaAsync(lookup.NodeFile!);
+            HlsVideoPlan? plan = await GetVideoPlanAsync(lookup.NodeFile!);
+            if (plan is null)
+            {
+                return UnsupportedVideo();
+            }
+
             HlsRendition rendition = HlsRenditionProfile.Parse(quality);
             string credentialQuery = credentials.ToQueryString();
             string qualityName = rendition.ToString().ToLowerInvariant();
             string manifest = HlsManifestBuilder.Build(
-                probe?.DurationSeconds ?? 0,
+                plan.Segments,
                 segmentIndex => Routes.V1.Files
                     + $"/{nodeFileId}/hls/seg-{segmentIndex}.ts?{credentialQuery}&quality={qualityName}");
 
@@ -151,14 +125,13 @@ namespace Cotton.Server.Controllers
                 return ServeCachedHlsSegment(cachedBytes);
             }
 
-            MediaProbeInfo? probe = await ProbeMediaAsync(nodeFile);
-            if (probe?.DurationSeconds is null or <= 0)
+            HlsVideoPlan? plan = await GetVideoPlanAsync(nodeFile);
+            if (plan is null)
             {
-                return CottonResult.BadRequest("Could not determine source duration for HLS segmentation.");
+                return UnsupportedVideo();
             }
 
-            HlsManifestBuilder.HlsManifestPlan manifestPlan = HlsManifestBuilder.Plan(probe.DurationSeconds.Value);
-            if (segmentIndex >= manifestPlan.SegmentCount)
+            if (segmentIndex >= plan.Segments.Count)
             {
                 return CottonResult.NotFound("Segment index out of range.");
             }
@@ -170,9 +143,8 @@ namespace Cotton.Server.Controllers
                 nodeFileId,
                 segmentIndex,
                 cacheKey,
-                manifestPlan,
-                rendition,
-                probe);
+                plan,
+                rendition);
         }
 
         private async Task<IActionResult> TranscodeHlsSegmentAsync(
@@ -180,9 +152,8 @@ namespace Cotton.Server.Controllers
             Guid nodeFileId,
             int segmentIndex,
             string cacheKey,
-            HlsManifestBuilder.HlsManifestPlan manifestPlan,
-            HlsRendition rendition,
-            MediaProbeInfo probe)
+            HlsVideoPlan plan,
+            HlsRendition rendition)
         {
             await using IAsyncDisposable segmentLease = await _hlsTranscodes.EnterSegmentAsync(
                 cacheKey,
@@ -194,55 +165,20 @@ namespace Cotton.Server.Controllers
 
             await using IAsyncDisposable transcodeLease = await _hlsTranscodes.EnterTranscodeAsync(
                 HttpContext.RequestAborted);
-            double startSeconds = HlsManifestBuilder.StartTimeOf(segmentIndex);
-            double segmentDuration = manifestPlan.DurationOf(segmentIndex);
-            HlsRenditionProfile.EncoderPlan encoderPlan = HlsRenditionProfile.Plan(
-                rendition,
-                probe.VideoCodec,
-                probe.AudioCodec);
-
-            Response.ContentType = VideoTranscoder.SegmentContentType;
-            Response.Headers.CacheControl = "private, max-age=300";
-            Response.Headers.ContentEncoding = "identity";
-
-            using MemoryStream captureStream = new();
-            TeeStream tee = new(Response.Body, captureStream);
-            bool transcodeSucceeded = false;
-
-            await using Stream sourceStream = OpenSourceStream(nodeFile);
+            await using HlsByteSource source = OpenSource(nodeFile);
             try
             {
-                await _videoTranscoder.TranscodeSegmentAsync(
-                    sourceStream,
-                    tee,
-                    startSeconds,
-                    segmentDuration,
-                    encoderPlan,
-                    HttpContext.RequestAborted);
-                transcodeSucceeded = true;
+                byte[] bytes = await _videoTranscoder.TranscodeSegmentAsync(
+                    source, plan, segmentIndex, rendition, HttpContext.RequestAborted);
+                _segmentCache.Set(cacheKey, bytes);
+                return ServeCachedHlsSegment(bytes);
             }
-            catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
+            catch (Exception ex) when (IsUnsupportedMedia(ex))
             {
+                _logger.LogWarning(ex, "HLS segment {SegmentIndex} is unsupported for node file {NodeFileId}",
+                    segmentIndex, nodeFileId);
+                return UnsupportedVideo();
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "HLS segment {SegmentIndex} failed for node file {NodeFileId}",
-                    segmentIndex,
-                    nodeFileId);
-                if (!Response.HasStarted)
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError);
-                }
-            }
-
-            if (transcodeSucceeded && captureStream.Length > 0)
-            {
-                _segmentCache.Set(cacheKey, captureStream.ToArray());
-            }
-
-            return new EmptyResult();
         }
 
         private IActionResult ServeCachedHlsSegment(byte[] cachedBytes)
@@ -306,7 +242,7 @@ namespace Cotton.Server.Controllers
             }
         }
 
-        private Stream OpenSourceStream(NodeFile nodeFile)
+        private HlsByteSource OpenSource(NodeFile nodeFile)
         {
             FileManifest manifest = nodeFile.FileManifest;
             string[] uids = manifest.FileManifestChunks.GetChunkHashes();
@@ -316,44 +252,43 @@ namespace Cotton.Server.Controllers
                 ChunkLengths = manifest.FileManifestChunks.GetChunkLengths(),
             };
 
-            return _storage.GetBlobStream(uids, context);
+            return new HlsByteSource(_storage.GetBlobStream(uids, context));
         }
 
-        private async Task<MediaProbeInfo?> ProbeMediaAsync(NodeFile nodeFile)
+        private async Task<HlsVideoPlan?> GetVideoPlanAsync(NodeFile nodeFile)
         {
             Guid manifestId = nodeFile.FileManifest.Id;
-            string cacheKey = $"hls-media-probe:{manifestId}";
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out MediaProbeInfo? cached))
+            if (_segmentCache.TryGetPlan(manifestId, out HlsVideoPlan? cached))
             {
                 return cached;
             }
 
-            await using IAsyncDisposable manifestLease = await _hlsTranscodes.EnterProbeManifestAsync(
-                manifestId,
-                HttpContext.RequestAborted);
-            if (_cache.TryGetValue<MediaProbeInfo>(cacheKey, out cached))
+            CancellationToken ct = HttpContext.RequestAborted;
+            await using IAsyncDisposable manifestLease = await _hlsTranscodes.EnterProbeManifestAsync(manifestId, ct);
+            if (_segmentCache.TryGetPlan(manifestId, out cached))
             {
                 return cached;
             }
 
-            await using IAsyncDisposable probeLease = await _hlsTranscodes.EnterProbeAsync(
-                HttpContext.RequestAborted);
-            MediaProbeInfo? probe;
-            await using (Stream probeStream = OpenSourceStream(nodeFile))
-            await using (RangeStreamServer probeServer = new(probeStream, _logger))
+            await using IAsyncDisposable probeLease = await _hlsTranscodes.EnterProbeAsync(ct);
+            await using HlsByteSource source = OpenSource(nodeFile);
+            try
             {
-                probe = await FfmpegBinary.TryGetMediaProbeAsync(
-                    probeServer.Url,
-                    cancellationToken: HttpContext.RequestAborted)
-                    .ConfigureAwait(false);
+                HlsVideoPlan plan = await _videoTranscoder.PlanAsync(source, ct);
+                _segmentCache.SetPlan(manifestId, plan);
+                return plan;
             }
-
-            if (probe is not null)
+            catch (Exception ex) when (IsUnsupportedMedia(ex))
             {
-                _cache.Set(cacheKey, probe, MediaProbeCacheLifetime);
+                _logger.LogWarning(ex, "Could not plan HLS segments for node file {NodeFileId}", nodeFile.Id);
+                return null;
             }
-
-            return probe;
         }
+
+        private static bool IsUnsupportedMedia(Exception exception) =>
+            exception is InvalidDataException or NotSupportedException or MediaMemoryLimitException;
+
+        private static IActionResult UnsupportedVideo() =>
+            CottonResult.BadRequest("This video cannot be streamed. Download the original file to play it.");
     }
 }

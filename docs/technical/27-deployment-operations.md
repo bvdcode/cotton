@@ -20,7 +20,7 @@ The remaining operating-system integrations have distinct roles:
 
 | Dependency | Role |
 | --- | --- |
-| `ffmpeg` / `ffprobe` | Audio/video probing, cover and frame extraction, waveform generation, and HLS transcoding. |
+| `ffmpeg` / `ffprobe` | Audio/video probing, cover and frame extraction, and audio decoding for waveforms. |
 | `pg_dump` / `pg_restore` | Database backup and restore. |
 | `gosu` | Container entrypoint switches to the configured runtime user. |
 | Linux `libc` | Process hardening requests non-dumpable state. |

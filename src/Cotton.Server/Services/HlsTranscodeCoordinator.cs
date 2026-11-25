@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 namespace Cotton.Server.Services
 {
     /// <summary>
-    /// Coordinates HLS work ownership and process-wide ffmpeg/ffprobe concurrency.
+    /// Coordinates HLS work ownership and process-wide media processing concurrency.
     /// </summary>
     public class HlsTranscodeCoordinator
     {

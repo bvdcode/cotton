@@ -101,9 +101,9 @@ Files natively supported by the browser are streamed directly. Eligible non-nati
 
 1. Resolve the download token and source file using the same public-share protection as direct download.
 2. Verify token, file graph, node state, and media eligibility.
-3. Probe duration and codecs under the probe concurrency gate.
+3. Plan frame-aligned segments with Mediana under the probe concurrency gate.
 4. Build a VOD playlist for a supported rendition.
-5. Transcode requested segments under the transcode concurrency gate.
+5. Encode requested MPEG-TS segments with Mediana under the transcode concurrency gate. The Source rendition keeps the original resolution.
 6. Cache completed segments in a size-bounded memory cache.
 
 HLS does not require a longer or separate secret. It uses the same download-token authority as the file it represents. Compact-token lookup protection applies before resolution on playlist, probe, and segment routes.

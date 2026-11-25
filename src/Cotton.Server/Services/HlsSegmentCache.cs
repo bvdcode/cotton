@@ -2,6 +2,8 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using Mediana.Core.Timing;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
@@ -9,6 +11,7 @@ namespace Cotton.Server.Services
 {
     public class HlsSegmentCache : IDisposable
     {
+        private static readonly TimeSpan VideoPlanLifetime = TimeSpan.FromHours(1);
         private readonly MemoryCache _cache;
         private readonly long _sizeLimit;
 
@@ -53,6 +56,18 @@ namespace Cotton.Server.Services
             _cache.Set(key, bytes, new MemoryCacheEntryOptions
             {
                 Size = bytes.Length,
+            });
+        }
+
+        internal bool TryGetPlan(Guid manifestId, [NotNullWhen(true)] out HlsVideoPlan? plan) =>
+            _cache.TryGetValue(manifestId, out plan) && plan is not null;
+
+        internal void SetPlan(Guid manifestId, HlsVideoPlan plan)
+        {
+            _cache.Set(manifestId, plan, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = VideoPlanLifetime,
+                Size = 256L + (long)plan.Segments.Count * Unsafe.SizeOf<MediaTimeRange>(),
             });
         }
 

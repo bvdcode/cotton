@@ -1,150 +1,145 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Previews;
-using Cotton.Previews.Http;
-using System.Diagnostics;
-using System.Globalization;
+using Mediana;
+using Mediana.Codecs;
+using Mediana.Codecs.Aac;
+using Mediana.Codecs.Ac3;
+using Mediana.Codecs.Av1;
+using Mediana.Codecs.Dts;
+using Mediana.Codecs.Flac;
+using Mediana.Codecs.H264;
+using Mediana.Codecs.Hevc;
+using Mediana.Codecs.Jpeg;
+using Mediana.Codecs.Mp3;
+using Mediana.Codecs.Mpeg4Visual;
+using Mediana.Codecs.Opus;
+using Mediana.Codecs.Pcm;
+using Mediana.Codecs.ProRes;
+using Mediana.Codecs.Vorbis;
+using Mediana.Codecs.Vp8;
+using Mediana.Codecs.Vp9;
+using Mediana.Containers.Avi;
+using Mediana.Containers.Matroska;
+using Mediana.Containers.Mp4;
+using Mediana.Containers.MpegTs;
+using Mediana.Core;
+using Mediana.Core.Memory;
+using Mediana.Core.Timing;
+using Mediana.Core.Video;
+using Mediana.Execution;
+using Mediana.IO;
+using Mediana.Processing;
 
 namespace Cotton.Server.Services
 {
-    public class VideoTranscoder(ILogger<VideoTranscoder> logger)
+    public class VideoTranscoder
     {
         public const string SegmentContentType = "video/mp2t";
 
-        private const int PipeBufferSize = 64 * 1024;
+        private const int BufferBudgetBytes = 256 * 1024 * 1024;
+        private static readonly MediaDuration TargetDuration = new(HlsManifestBuilder.SegmentDurationSeconds, new TimeBase(1, 1));
 
-        public async Task TranscodeSegmentAsync(
-            Stream source,
-            Stream destination,
-            double startSeconds,
-            double durationSeconds,
-            HlsRenditionProfile.EncoderPlan encoder,
-            CancellationToken cancellationToken)
+        private static readonly IVideoDecoderFactory[] VideoDecoders =
+        [
+            new H264DecoderFactory(), new HevcDecoderFactory(), new Mpeg4DecoderFactory(),
+            new MjpegDecoderFactory(), new Vp8DecoderFactory(), new Vp9DecoderFactory(),
+            new Av1DecoderFactory(), new ProResDecoderFactory(),
+        ];
+
+        private static readonly IAudioDecoderFactory[] AudioDecoders =
+        [
+            new AacDecoderFactory(), new PcmDecoderFactory(), new Mp3DecoderFactory(),
+            new OpusDecoderFactory(), new VorbisDecoderFactory(), new FlacDecoderFactory(),
+            new Ac3DecoderFactory(), new Eac3DecoderFactory(), new DtsDecoderFactory(),
+        ];
+
+        private static readonly MediaEngine Engine = BuildEngine();
+
+        internal async Task<HlsVideoPlan> PlanAsync(IRandomAccessByteSource input, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(source);
-            ArgumentNullException.ThrowIfNull(destination);
-            ArgumentNullException.ThrowIfNull(encoder);
-            ArgumentOutOfRangeException.ThrowIfNegative(startSeconds);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(durationSeconds);
+            MediaBufferAllocator allocator = new(BufferBudgetBytes);
+            await using ContainerSession container = await Engine.OpenContainerAsync(
+                input, allocator, new MediaOpenOptions(), cancellationToken);
 
-            if (!source.CanSeek)
+            EncodedStreamInfo video = container.Streams.FirstOrDefault(stream => stream.Kind == MediaKind.Video)
+                ?? throw new NotSupportedException("The container has no video track.");
+            RequireDecoder(video, VideoDecoders);
+            EncodedStreamInfo? audio = container.Streams.FirstOrDefault(stream => stream.Kind == MediaKind.Audio);
+            if (audio is not null)
             {
-                throw new InvalidOperationException("Video transcoding requires a seekable source stream.");
+                RequireDecoder(audio, AudioDecoders);
             }
 
-            await FfmpegBinary.EnsureAvailableAsync(cancellationToken).ConfigureAwait(false);
-
-            try
-            {
-                source.Seek(0, SeekOrigin.Begin);
-            }
-            catch
-            {
-                // The source already reported CanSeek; ffmpeg range reads will fail if this is untrue.
-            }
-
-            await using RangeStreamServer rangeServer = new RangeStreamServer(source, logger);
-            string arguments = BuildSegmentArguments(rangeServer.Url, startSeconds, durationSeconds, encoder);
-            await RunFfmpegAsync(arguments, destination, cancellationToken).ConfigureAwait(false);
+            using VideoSegmentPlan segments = container.PlanVideoSegments(video.StreamIndex, TargetDuration, allocator, cancellationToken);
+            return new HlsVideoPlan(video.StreamIndex, audio?.StreamIndex, Array.AsReadOnly(segments.ToArray()));
         }
 
-        private static string BuildSegmentArguments(
-            Uri sourceUrl,
-            double startSeconds,
-            double durationSeconds,
-            HlsRenditionProfile.EncoderPlan encoder)
+        internal async Task<byte[]> TranscodeSegmentAsync(
+            IRandomAccessByteSource input, HlsVideoPlan plan, int segmentIndex, HlsRendition rendition, CancellationToken cancellationToken)
         {
-            string ss = startSeconds.ToString("F3", CultureInfo.InvariantCulture);
-            string t = durationSeconds.ToString("F3", CultureInfo.InvariantCulture);
-            string offset = startSeconds.ToString("F3", CultureInfo.InvariantCulture);
-
-            return
-                "-hide_banner -loglevel error -nostdin " +
-                "-fflags +genpts " +
-                $"-ss {ss} -i \"{sourceUrl}\" -t {t} " +
-                encoder.CombinedArgs + " " +
-                $"-output_ts_offset {offset} " +
-                "-muxdelay 0 -muxpreload 0 " +
-                "-f mpegts pipe:1";
-        }
-
-        private async Task RunFfmpegAsync(
-            string arguments,
-            Stream destination,
-            CancellationToken cancellationToken)
-        {
-            ProcessStartInfo startInfo = new ProcessStartInfo
+            HlsRenditionProfile.EncoderPlan profile = HlsRenditionProfile.Plan(rendition);
+            MediaTimeRange interval = plan.Segments[segmentIndex];
+            H264EncoderFactory encoder = new(new H264EncoderOptions
             {
-                FileName = FfmpegBinary.GetFfmpegPath(),
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardInput = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
-
-            using Process process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-            {
-                throw new InvalidOperationException("Failed to start ffmpeg for video transcoding.");
-            }
-
-            Task<string> stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
-
-            try
-            {
-                await using Stream stdout = process.StandardOutput.BaseStream;
-                await stdout.CopyToAsync(destination, PipeBufferSize, cancellationToken).ConfigureAwait(false);
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-                string stderr = await ReadStderrAsync(stderrTask).ConfigureAwait(false);
-                if (process.ExitCode != 0)
+                Quantizer = profile.Quantizer,
+                EntropyCoding = H264EntropyCoding.Cabac,
+            });
+            List<MediaTrackRequest> tracks =
+            [
+                new VideoEncodingRequest(plan.VideoStreamIndex, 0, encoder, new VideoPreparationOptions
                 {
-                    throw new InvalidOperationException(
-                        $"Video transcoding failed (exitCode={process.ExitCode}). stderr: {stderr}");
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                TryKill(process);
-                logger.LogDebug("Transcode cancelled by caller.");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                TryKill(process);
-                string stderr = await ReadStderrAsync(stderrTask).ConfigureAwait(false);
-                logger.LogWarning(ex, "ffmpeg pipeline failed. stderr: {Stderr}", stderr);
-                throw;
-            }
-        }
-
-        private static async Task<string> ReadStderrAsync(Task<string> stderrTask)
-        {
-            try
-            {
-                return await stderrTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        private static void TryKill(Process process)
-        {
-            try
-            {
-                if (!process.HasExited)
+                    MaximumWidth = profile.MaximumWidth,
+                    OutputPixelFormat = VideoPixelFormat.Yuv420P8,
+                    RgbConversion = new(),
+                }, outputTimeBase: interval.Start.TimeBase, intervalAlignment: VideoIntervalAlignment.CompleteFrames)
                 {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch
+                    OverlapPreparation = Environment.ProcessorCount > 1,
+                },
+            ];
+            if (plan.AudioStreamIndex is int audioIndex)
             {
+                tracks.Add(new AudioEncodingRequest(audioIndex, 1, new AacEncoderFactory(new AacEncoderOptions
+                {
+                    BitRate = profile.AudioBitRate,
+                }), channels: 2));
             }
+
+            MediaBufferAllocator allocator = new(BufferBudgetBytes);
+            using HlsSegmentBuffer output = new();
+            await Engine.ProcessAsync(input, output, "mpegts", tracks, allocator,
+                new MediaProcessingOptions { Selection = interval }, cancellationToken);
+            return output.ToArray();
+        }
+
+        private static void RequireDecoder<TFrame>(EncodedStreamInfo stream, IEnumerable<IDecoderFactory<TFrame>> decoders)
+            where TFrame : class, IDisposable
+        {
+            if (!decoders.Any(decoder => decoder.CodecId == stream.CodecId && decoder.GetUnsupportedReason(stream) is null))
+            {
+                throw new NotSupportedException($"The codec '{stream.CodecId}' is not supported for streaming.");
+            }
+        }
+
+        private static MediaEngine BuildEngine()
+        {
+            MediaEngineBuilder builder = new MediaEngineBuilder()
+                .AddContainer(new AviReaderFactory())
+                .AddContainer(new MatroskaReaderFactory())
+                .AddContainer(new Mp4ReaderFactory(new Mp4ReadOptions { TimestampMode = Mp4TimestampMode.LinearMovie }))
+                .AddContainerWriter(new MpegTsWriterFactory());
+
+            foreach (IVideoDecoderFactory decoder in VideoDecoders)
+            {
+                builder.AddVideoDecoder(decoder);
+            }
+
+            foreach (IAudioDecoderFactory decoder in AudioDecoders)
+            {
+                builder.AddAudioDecoder(decoder);
+            }
+
+            return builder.Build();
         }
     }
 }

@@ -2,6 +2,7 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Server.Services;
+using Mediana.Core.Timing;
 using NUnit.Framework;
 using System.Globalization;
 
@@ -9,32 +10,17 @@ namespace Cotton.Server.IntegrationTests
 {
     public class HlsManifestBuilderTests
     {
-        [TestCase(0.0, 0, 0.0)]
-        [TestCase(-5.0, 0, 0.0)]
-        [TestCase(double.NaN, 0, 0.0)]
-        [TestCase(double.PositiveInfinity, 0, 0.0)]
-        [TestCase(3.0, 1, 3.0)]
-        [TestCase(6.0, 1, 6.0)]
-        [TestCase(12.0, 2, 6.0)]
-        [TestCase(13.5, 3, 1.5)]
-        [TestCase(3601.25, 601, 1.25)]
-        public void Plan_UsesFixedSegmentBoundaries(double duration, int expectedSegments, double expectedLast)
-        {
-            HlsManifestBuilder.HlsManifestPlan plan = HlsManifestBuilder.Plan(duration);
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(plan.SegmentCount, Is.EqualTo(expectedSegments));
-                Assert.That(plan.LastSegmentSeconds, Is.EqualTo(expectedLast).Within(1e-3));
-            });
-        }
-
         [Test]
         public void Build_ProducesVodPlaylistWithSegmentsInOrder()
         {
-            string manifest = HlsManifestBuilder.Build(
-                durationSeconds: 13.5,
-                segmentUrlFactory: i => $"/api/v1/files/abc/hls/seg-{i}.ts?token=T");
+            TimeBase clock = new(1, 1000);
+            MediaTimeRange[] segments =
+            [
+                new(new(0, clock), new(6006, clock)),
+                new(new(6006, clock), new(12012, clock)),
+                new(new(12012, clock), new(13500, clock)),
+            ];
+            string manifest = HlsManifestBuilder.Build(segments, i => $"/api/v1/files/abc/hls/seg-{i}.ts?token=T");
 
             string[] lines = manifest.Split('\n');
             List<double> extinfDurations = new List<double>();
@@ -57,9 +43,9 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(manifest, Does.Contain("#EXT-X-VERSION:4"));
                 Assert.That(manifest, Does.Contain("#EXT-X-INDEPENDENT-SEGMENTS"));
                 Assert.That(manifest, Does.Contain("#EXT-X-PLAYLIST-TYPE:VOD"));
-                Assert.That(manifest, Does.Contain("#EXT-X-TARGETDURATION:6"));
+                Assert.That(manifest, Does.Contain("#EXT-X-TARGETDURATION:7"));
                 Assert.That(manifest, Does.EndWith("#EXT-X-ENDLIST\n"));
-                Assert.That(extinfDurations, Is.EqualTo(new[] { 6.0, 6.0, 1.5 }).Within(1e-3));
+                Assert.That(extinfDurations, Is.EqualTo(new[] { 6.006, 6.006, 1.488 }).Within(1e-3));
                 Assert.That(urls, Is.EqualTo(new[]
                 {
                     "/api/v1/files/abc/hls/seg-0.ts?token=T",
@@ -70,29 +56,6 @@ namespace Cotton.Server.IntegrationTests
         }
 
         [Test]
-        public void Build_ZeroDuration_EmitsValidEmptyVodPlaylist()
-        {
-            string manifest = HlsManifestBuilder.Build(0.0, _ => "unused");
-
-            Assert.Multiple(() =>
-            {
-                Assert.That(manifest, Does.StartWith("#EXTM3U\n"));
-                Assert.That(manifest, Does.Contain("#EXT-X-PLAYLIST-TYPE:VOD"));
-                Assert.That(manifest, Does.EndWith("#EXT-X-ENDLIST\n"));
-                Assert.That(manifest, Does.Not.Contain("#EXTINF"));
-            });
-        }
-
-        [TestCase(0, 0.0)]
-        [TestCase(1, 6.0)]
-        [TestCase(47, 282.0)]
-        [TestCase(-1, 0.0)]
-        public void StartTimeOf_MapsIndexToSegmentBoundary(int segmentIndex, double expected)
-        {
-            Assert.That(HlsManifestBuilder.StartTimeOf(segmentIndex), Is.EqualTo(expected).Within(1e-6));
-        }
-
-        [Test]
         public void BuildMaster_EmitsStreamInfoEntriesInDeclaredOrder()
         {
             HlsManifestBuilder.HlsVariant[] variants = new[]
@@ -100,16 +63,10 @@ namespace Cotton.Server.IntegrationTests
                 new HlsManifestBuilder.HlsVariant(
                     Name: "Source",
                     BandwidthBitsPerSecond: 8_000_000,
-                    Width: 1920,
-                    Height: 1080,
-                    Codecs: "avc1.640029,mp4a.40.2",
                     PlaylistUrl: "playlist.m3u8?quality=source"),
                 new HlsManifestBuilder.HlsVariant(
                     Name: "720p",
                     BandwidthBitsPerSecond: 1_500_000,
-                    Width: 1280,
-                    Height: 720,
-                    Codecs: "avc1.640029,mp4a.40.2",
                     PlaylistUrl: "playlist.m3u8?quality=medium"),
             };
 
@@ -125,11 +82,8 @@ namespace Cotton.Server.IntegrationTests
                 Assert.That(master, Does.Contain("#EXT-X-INDEPENDENT-SEGMENTS"));
                 Assert.That(streamInfos, Has.Count.EqualTo(2));
                 Assert.That(streamInfos[0], Does.Contain("BANDWIDTH=8000000"));
-                Assert.That(streamInfos[0], Does.Contain("RESOLUTION=1920x1080"));
-                Assert.That(streamInfos[0], Does.Contain("CODECS=\"avc1.640029,mp4a.40.2\""));
                 Assert.That(streamInfos[0], Does.Contain("NAME=\"Source\""));
                 Assert.That(streamInfos[1], Does.Contain("BANDWIDTH=1500000"));
-                Assert.That(streamInfos[1], Does.Contain("RESOLUTION=1280x720"));
                 Assert.That(urls, Is.EqualTo(new[]
                 {
                     "playlist.m3u8?quality=source",

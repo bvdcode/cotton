@@ -155,7 +155,14 @@ namespace Cotton.Server.IntegrationTests
             using HttpResponseMessage segment = await _client.GetAsync(segmentUrl);
             segment.EnsureSuccessStatusCode();
             Assert.That(segment.Content.Headers.ContentType!.MediaType, Is.EqualTo("video/mp2t"));
-            Assert.That(await segment.Content.ReadAsByteArrayAsync(), Is.Not.Empty);
+            byte[] segmentBytes = await segment.Content.ReadAsByteArrayAsync();
+            Assert.That(segmentBytes, Is.Not.Empty);
+            Assert.That(segmentBytes[0], Is.EqualTo(0x47));
+            Assert.That(segmentBytes.Length % 188, Is.Zero);
+            Assert.That(await _client.GetByteArrayAsync(segmentUrl), Is.EqualTo(segmentBytes));
+            using HttpResponseMessage pastEnd = await _client.GetAsync(
+                segmentUrl.Replace("/seg-0.ts", "/seg-1.ts", StringComparison.Ordinal));
+            Assert.That(pastEnd.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             Assert.That(await _client.GetByteArrayAsync(link), Is.EqualTo(content));
             Assert.That(await DbContext.DownloadTokens.CountAsync(), Is.Zero);
         }
