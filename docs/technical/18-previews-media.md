@@ -6,7 +6,7 @@ Previews and media playback are derived views of stored file content. Failure to
 
 The recurring preview job selects eligible manifests that do not have a current preview result. It skips empty files and active uploads, opens the file through the normal storage pipeline, chooses a generator by content type, and stores the resulting WebP bytes as content-addressed data. A maintenance job clears previously stored preview data for the empty-content manifest using its indexed content hash.
 
-Image, document, vector, sticker, and 3D preview generators use managed .NET libraries. Audio and video generators use FFmpeg/ffprobe. The official container includes the required media binaries; other deployments must provide them.
+Image, document, vector, sticker, 3D, audio and video preview generators use managed .NET libraries. Audio and video metadata extraction uses ffprobe.
 
 | Source | Processing path |
 | --- | --- |
@@ -21,7 +21,7 @@ Image, document, vector, sticker, and 3D preview generators use managed .NET lib
 | Telegram TGS | Mediana.Images.Tgs renders a static poster, then ImageSharp encodes it. |
 | STL, OBJ, 3MF | Mediana.Models.Mesh renders geometry on the CPU; 3MF can use an embedded thumbnail. |
 | Plain text | Mediana.Drawing draws text with its bundled fonts; ImageSharp encodes it. |
-| Audio and video | FFmpeg/ffprobe extracts artwork, frames, and media information; Mediana.Drawing draws audio waveforms when no artwork is available. |
+| Audio and video | Mediana reads artwork, extracts video frames and decodes audio for waveforms. ImageSharp encodes preview images as WebP. |
 
 PDF previews render the first page with managed Mediana.Documents.Pdf and encode it through ImageSharp. PowerPoint previews render the selected first slide directly through Mediana.Documents.Presentation; other slides are not rendered, and no intermediate PDF is produced. Word previews render directly through Mediana.Documents.Word. Invalid input and features explicitly rejected by the readers fail preview generation. PDF uses generator version `3`, Word uses version `4`, and PowerPoint uses version `5`. PDF text extraction uses Mediana.Documents.Pdf; neither path requires PDFium or Docnet.
 
@@ -55,7 +55,7 @@ Failed attempts use a fingerprint of the registered generators to retry after th
 
 An unsupported or corrupt individual file records a preview-generation failure and the job continues. Process cancellation, storage unavailability, and unexpected infrastructure errors remain real failures and are logged accordingly.
 
-`ffmpeg` and `ffprobe` exit status, timeout, cancellation, and startup errors are handled separately. A generic catch must not convert an infrastructure outage into a permanent "unsupported file" result.
+`ffprobe` exit status, timeout, cancellation, and startup errors are handled separately. A generic catch must not convert an infrastructure outage into a permanent "unsupported file" result.
 
 Temporary files used by generators that require filesystem paths are removed in `finally`. RAW generation creates a bounded temporary copy to scan and decode embedded images. Other plaintext media is streamed from encrypted storage rather than materialized as one complete temp file.
 
@@ -83,7 +83,7 @@ Preview and avatar hashes are durable liveness references for garbage collection
 
 ## Seekable media source
 
-Media tools often seek to metadata near the end of a file and may issue concurrent range reads. Cotton exposes the chunked source through a loopback range server backed by the seekable concatenated stream.
+Mediana reads previews and HLS directly from the seekable concatenated stream. For ffprobe, Cotton exposes that stream through a loopback range server.
 
 The source stream is seekable only when the manifest supplies total size and individual chunk lengths. Access to the shared underlying position is serialized for each seek-and-read operation, while writing the response to the media process occurs outside that critical section. This permits concurrent range connections without corrupting source position or holding a lock during slow consumer writes.
 
@@ -91,7 +91,7 @@ Shutdown drains active handlers for a bounded time, cancels the accept loop, and
 
 ## External binaries
 
-Administrators may provide explicit executable paths through `COTTON_FFMPEG_PATH` and `COTTON_FFPROBE_PATH`. Otherwise the runtime resolves `ffmpeg` and `ffprobe` on `PATH`. The official container installs them as system packages; Cotton does not download binaries at runtime. An explicit invalid path is an error; it is not silently replaced with a different binary.
+Administrators may set `COTTON_FFPROBE_PATH` to specify the executable. The runtime otherwise resolves `ffprobe` on `PATH`. The official container installs ffprobe through the FFmpeg system package; Cotton does not download binaries at runtime. An explicit invalid path is an error; it is not silently replaced with a different binary.
 
 Every external process has a bounded lifetime or request cancellation, captures diagnostic output, and kills the process tree on timeout or cancellation.
 

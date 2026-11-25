@@ -1,27 +1,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using Cotton.Previews;
 using Mediana;
-using Mediana.Codecs;
 using Mediana.Codecs.Aac;
-using Mediana.Codecs.Ac3;
-using Mediana.Codecs.Av1;
-using Mediana.Codecs.Dts;
-using Mediana.Codecs.Flac;
 using Mediana.Codecs.H264;
-using Mediana.Codecs.Hevc;
-using Mediana.Codecs.Jpeg;
-using Mediana.Codecs.Mp3;
-using Mediana.Codecs.Mpeg4Visual;
-using Mediana.Codecs.Opus;
-using Mediana.Codecs.Pcm;
-using Mediana.Codecs.ProRes;
-using Mediana.Codecs.Vorbis;
-using Mediana.Codecs.Vp8;
-using Mediana.Codecs.Vp9;
-using Mediana.Containers.Avi;
-using Mediana.Containers.Matroska;
-using Mediana.Containers.Mp4;
 using Mediana.Containers.MpegTs;
 using Mediana.Core;
 using Mediana.Core.Memory;
@@ -40,21 +23,9 @@ namespace Cotton.Server.Services
         private const int BufferBudgetBytes = 256 * 1024 * 1024;
         private static readonly MediaDuration TargetDuration = new(HlsManifestBuilder.SegmentDurationSeconds, new TimeBase(1, 1));
 
-        private static readonly IVideoDecoderFactory[] VideoDecoders =
-        [
-            new H264DecoderFactory(), new HevcDecoderFactory(), new Mpeg4DecoderFactory(),
-            new MjpegDecoderFactory(), new Vp8DecoderFactory(), new Vp9DecoderFactory(),
-            new Av1DecoderFactory(), new ProResDecoderFactory(),
-        ];
-
-        private static readonly IAudioDecoderFactory[] AudioDecoders =
-        [
-            new AacDecoderFactory(), new PcmDecoderFactory(), new Mp3DecoderFactory(),
-            new OpusDecoderFactory(), new VorbisDecoderFactory(), new FlacDecoderFactory(),
-            new Ac3DecoderFactory(), new Eac3DecoderFactory(), new DtsDecoderFactory(),
-        ];
-
-        private static readonly MediaEngine Engine = BuildEngine();
+        private static readonly MediaEngine Engine = MediaDecoderRegistry.CreateBuilder()
+            .AddContainerWriter(new MpegTsWriterFactory())
+            .Build();
 
         internal async Task<HlsVideoPlan> PlanAsync(IRandomAccessByteSource input, CancellationToken cancellationToken)
         {
@@ -64,11 +35,11 @@ namespace Cotton.Server.Services
 
             EncodedStreamInfo video = container.Streams.FirstOrDefault(stream => stream.Kind == MediaKind.Video)
                 ?? throw new NotSupportedException("The container has no video track.");
-            RequireDecoder(video, VideoDecoders);
+            RequireDecoder(video);
             EncodedStreamInfo? audio = container.Streams.FirstOrDefault(stream => stream.Kind == MediaKind.Audio);
             if (audio is not null)
             {
-                RequireDecoder(audio, AudioDecoders);
+                RequireDecoder(audio);
             }
 
             using VideoSegmentPlan segments = container.PlanVideoSegments(video.StreamIndex, TargetDuration, allocator, cancellationToken);
@@ -112,34 +83,12 @@ namespace Cotton.Server.Services
             return output.ToArray();
         }
 
-        private static void RequireDecoder<TFrame>(EncodedStreamInfo stream, IEnumerable<IDecoderFactory<TFrame>> decoders)
-            where TFrame : class, IDisposable
+        private static void RequireDecoder(EncodedStreamInfo stream)
         {
-            if (!decoders.Any(decoder => decoder.CodecId == stream.CodecId && decoder.GetUnsupportedReason(stream) is null))
+            if (!MediaDecoderRegistry.SupportsDecoding(stream))
             {
                 throw new NotSupportedException($"The codec '{stream.CodecId}' is not supported for streaming.");
             }
-        }
-
-        private static MediaEngine BuildEngine()
-        {
-            MediaEngineBuilder builder = new MediaEngineBuilder()
-                .AddContainer(new AviReaderFactory())
-                .AddContainer(new MatroskaReaderFactory())
-                .AddContainer(new Mp4ReaderFactory(new Mp4ReadOptions { TimestampMode = Mp4TimestampMode.LinearMovie }))
-                .AddContainerWriter(new MpegTsWriterFactory());
-
-            foreach (IVideoDecoderFactory decoder in VideoDecoders)
-            {
-                builder.AddVideoDecoder(decoder);
-            }
-
-            foreach (IAudioDecoderFactory decoder in AudioDecoders)
-            {
-                builder.AddAudioDecoder(decoder);
-            }
-
-            return builder.Build();
         }
     }
 }

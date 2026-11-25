@@ -24,26 +24,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Mediana" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Aac" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Ac3" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Av1" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Dts" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Flac" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.H264" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Hevc" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Mp3" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Mpeg4Visual" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Opus" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Pcm" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.ProRes" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Vorbis" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Vp8" Version="0.1.43" />
-		<PackageReference Include="Mediana.Codecs.Vp9" Version="0.1.43" />
-		<PackageReference Include="Mediana.Containers.Avi" Version="0.1.43" />
-		<PackageReference Include="Mediana.Containers.Matroska" Version="0.1.43" />
-		<PackageReference Include="Mediana.Containers.Mp4" Version="0.1.43" />
-		<PackageReference Include="Mediana.Containers.MpegTs" Version="0.1.43" />
+		<PackageReference Include="Mediana.Containers.MpegTs" Version="0.1.44" />
 		<PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
 		<Folder Include="wwwroot\" />
 		<PackageReference Include="EasyExtensions.Clients" Version="4.0.1" />

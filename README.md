@@ -107,7 +107,7 @@ These rendering paths run without a separate renderer service, display server, o
 - **Lower memory use, measured.** In the published 200 MP HEIC comparison, Heic.NET peaked at **906 MB versus 1683 MB** for libheif/libde265: **46% less whole-process memory**, including the runtime. [Results and method](https://github.com/bvdcode/Heic.NET/blob/3eefb9ffa8c81b13ba6daef37851916fa19c409f/docs/benchmark.md#cross-decoder-results).
 - **Speed from purpose-built code.** Render.NET.Mesh completed the published Spot, Mug, and Robot 512 px preview runs in **509, 527, and 978 ms**, versus **641, 671, and 1235 ms** for F3D with Xvfb. Those full-process measurements include startup, rendering, and PNG output; the renderers produce different images, and the report includes workloads where F3D wins. [Results and method](https://github.com/bvdcode/Render.NET/blob/187f0db9c9a1e3ff272b263fe939b8a62ab05023/docs/benchmarks.md).
 
-Audio/video processing uses FFmpeg/ffprobe; database backup and restore use PostgreSQL client tools. Both ship in the official image. See [Deployment and Operations](docs/technical/27-deployment-operations.md#managed-libraries-and-system-dependencies).
+Mediana handles audio and video previews and HLS. The official image includes ffprobe for media metadata and PostgreSQL client tools for database backup and restore. See [Deployment and Operations](docs/technical/27-deployment-operations.md#managed-libraries-and-system-dependencies).
 
 ---
 
@@ -350,7 +350,7 @@ Writes flow through the storage pipeline **compression → crypto → backend** 
 - License: MIT (see [LICENSE](LICENSE)).
 - The "Cotton" name and marks are reserved; forks should use distinct names/marks.
 
-FFmpeg is shipped as a third-party utility for audio/video processing.
+The official image includes the FFmpeg system package for its ffprobe metadata reader.
 
 ---
 

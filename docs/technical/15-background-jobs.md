@@ -34,7 +34,7 @@ All delays receive Quartz cancellation. Stopping the process therefore cancels p
 
 Preview, metadata, and complete-hash jobs skip or defer a file while its upload is still active. They process independent items in bounded batches and isolate item-level failures so one unsupported or corrupt file does not stop the whole pass.
 
-An `ffmpeg` or `ffprobe` failure is classified from the actual process result. Expected unsupported-media failures are recorded for that item; cancellation and infrastructure failures are not swallowed as ordinary media misses.
+An `ffprobe` failure is classified from the actual process result. Expected unsupported-media failures are recorded for that item; cancellation and infrastructure failures are not swallowed as ordinary media misses.
 
 ## Correctness rules
 
