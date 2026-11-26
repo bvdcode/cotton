@@ -1,63 +1,53 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
-using Cotton.Previews.Http;
-using System.Diagnostics;
-
 namespace Cotton.Previews.Tests
 {
     public class MultiStreamMetadataTests
     {
         [Test]
-        public async Task TryGetMediaMetadataAsync_VideoWithTwoAudioTracks_PreservesEveryTrack()
+        public async Task ReadAsync_VideoWithTwoAudioTracks_PreservesEveryTrack()
         {
-            await FfmpegBinary.EnsureAvailableAsync();
-            string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"metadata-tracks-{Guid.NewGuid():N}.mkv");
-            try
-            {
-                ProcessStartInfo startInfo = new()
-                {
-                    FileName = FfmpegBinary.GetFfmpegPath(),
-                    UseShellExecute = false,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                };
-                string[] arguments =
-                [
-                    "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=32x24:r=2",
-                    "-f", "lavfi", "-i", "anullsrc=r=8000:cl=mono", "-t", "0.5",
-                    "-map", "0:v", "-map", "1:a", "-map", "1:a", "-c:v", "ffv1", "-c:a", "pcm_s16le",
-                    "-metadata:s:a:0", "language=eng", "-metadata:s:a:1", "language=fra",
-                    "-metadata", "location=+32.7-117.1/", "-metadata", "custom_label=Full metadata", "-y", path,
-                ];
-                foreach (string argument in arguments)
-                {
-                    startInfo.ArgumentList.Add(argument);
-                }
-                using Process process = new() { StartInfo = startInfo };
-                Assert.That(process.Start(), Is.True);
-                Task<string> errorTask = process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                Assert.That(process.ExitCode, Is.Zero, await errorTask);
+            await using FileStream stream = OpenFixture("multiple-tracks.mkv");
+            MediaMetadataInfo metadata = await MediaMetadataReader.ReadAsync(stream, CancellationToken.None);
 
-                await using FileStream stream = File.OpenRead(path);
-                await using RangeStreamServer server = new(stream);
-                MediaMetadataInfo metadata = (await FfmpegBinary.TryGetMediaMetadataAsync(server.Url))!;
-
-                Assert.Multiple(() =>
-                {
-                    Assert.That(metadata.Properties["media.streams.0.codec_name"], Is.EqualTo("ffv1"));
-                    Assert.That(metadata.Properties["media.streams.1.tags.language"], Is.EqualTo("eng"));
-                    Assert.That(metadata.Properties["media.streams.2.tags.language"], Is.EqualTo("fra"));
-                    Assert.That(metadata.Properties["media.streams.2.sample_rate"], Is.EqualTo("8000"));
-                    Assert.That(metadata.Tags, Does.Not.ContainKey("custom_label"));
-                    Assert.That(metadata.Tags["location"], Is.EqualTo("+32.7-117.1/"));
-                });
-            }
-            finally
+            Assert.Multiple(() =>
             {
-                File.Delete(path);
-            }
+                Assert.That(metadata.Properties.GetValueOrDefault("media.streams.0.codec_name"), Is.EqualTo("h264"));
+                Assert.That(metadata.Properties.GetValueOrDefault("media.streams.1.tags.language"), Is.EqualTo("eng"));
+                Assert.That(metadata.Properties.GetValueOrDefault("media.streams.2.tags.language"), Is.EqualTo("fra"));
+                Assert.That(metadata.Properties.GetValueOrDefault("media.streams.2.sample_rate"), Is.EqualTo("8000"));
+                Assert.That(metadata.Tags, Does.Not.ContainKey("custom_label"));
+                Assert.That(stream.CanRead, Is.True);
+            });
         }
+
+        [TestCase("mulaw.wav", "pcm_mulaw")]
+        [TestCase("ms-adpcm.wav", "adpcm_ms")]
+        public async Task ReadAsync_CompressedWave_ReadsHeaderMetadata(string fixture, string codec)
+        {
+            await using FileStream stream = OpenFixture(fixture);
+            MediaMetadataInfo metadata = await MediaMetadataReader.ReadAsync(stream, CancellationToken.None);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(metadata.AudioCodec, Is.EqualTo(codec));
+                Assert.That(metadata.Properties["media.streams.0.sample_rate"], Is.EqualTo("8000"));
+                Assert.That(metadata.Properties["media.streams.0.channels"], Is.EqualTo("1"));
+                Assert.That(metadata.DurationSeconds, Is.EqualTo(0.25));
+            });
+        }
+
+        [Test]
+        public async Task ReadAsync_Mp4DisplayMatrix_PreservesRotationDirection()
+        {
+            await using FileStream stream = OpenFixture("rotated-video.mp4");
+            MediaMetadataInfo metadata = await MediaMetadataReader.ReadAsync(stream, CancellationToken.None);
+
+            Assert.That(metadata.Properties.GetValueOrDefault("media.streams.0.side_data_list.0.rotation"), Is.EqualTo("90"));
+        }
+
+        private static FileStream OpenFixture(string name) =>
+            File.OpenRead(Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "Media", name));
     }
 }

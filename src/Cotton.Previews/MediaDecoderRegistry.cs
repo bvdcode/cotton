@@ -87,6 +87,28 @@ namespace Cotton.Previews
             return builder;
         }
 
+        internal static MediaEngine CreateMetadataEngine()
+        {
+            MediaEngineBuilder builder = CreateBuilder()
+                .AddStreamMetadataReader(new PcmStreamMetadataReader())
+                .AddStreamMetadataReader(new AiffPcmStreamMetadataReader())
+                .AddStreamMetadataReader(new FlacStreamMetadataReader())
+                .AddStreamMetadataReader(new AlacStreamMetadataReader())
+                .AddStreamMetadataReader(new DtsStreamMetadataReader())
+                .AddStreamMetadataReader(new ProResStreamMetadataReader())
+                .AddStreamMetadataReader(new Mp3StreamMetadataReader())
+                .AddStreamMetadataReader(new AacStreamMetadataReader())
+                .AddStreamMetadataReader(new Ac3StreamMetadataReader())
+                .AddStreamMetadataReader(new Eac3StreamMetadataReader())
+                .AddStreamMetadataReader(new H264StreamMetadataReader());
+
+            foreach (WaveCompressedAudioCodec codec in WaveCodecs)
+            {
+                builder.AddStreamMetadataReader(codec);
+            }
+            return builder.Build();
+        }
+
         public static bool SupportsDecoding(EncodedStreamInfo stream) => stream.Kind switch
         {
             MediaKind.Video => Supports(stream, VideoDecoders),

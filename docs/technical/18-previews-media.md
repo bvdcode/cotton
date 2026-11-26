@@ -6,7 +6,7 @@ Previews and media playback are derived views of stored file content. Failure to
 
 The recurring preview job selects eligible manifests that do not have a current preview result. It skips empty files and active uploads, opens the file through the normal storage pipeline, chooses a generator by content type, and stores the resulting WebP bytes as content-addressed data. A maintenance job clears previously stored preview data for the empty-content manifest using its indexed content hash.
 
-Image, document, vector, sticker, 3D, audio and video preview generators use managed .NET libraries. Audio and video metadata extraction uses ffprobe.
+Image, document, vector, sticker, 3D, audio and video preview generators use managed .NET libraries. Mediana also reads audio and video metadata.
 
 | Source | Processing path |
 | --- | --- |
@@ -55,7 +55,7 @@ Failed attempts use a fingerprint of the registered generators to retry after th
 
 An unsupported or corrupt individual file records a preview-generation failure and the job continues. Process cancellation, storage unavailability, and unexpected infrastructure errors remain real failures and are logged accordingly.
 
-`ffprobe` exit status, timeout, cancellation, and startup errors are handled separately. A generic catch must not convert an infrastructure outage into a permanent "unsupported file" result.
+Metadata extraction distinguishes unsupported media and timeouts from request cancellation and storage errors.
 
 Temporary files used by generators that require filesystem paths are removed in `finally`. RAW generation creates a bounded temporary copy to scan and decode embedded images. Other plaintext media is streamed from encrypted storage rather than materialized as one complete temp file.
 
@@ -67,7 +67,7 @@ Image extraction retains a selected set of useful fields: dimensions, format, ca
 
 Selected tag values preserve numeric precision and rational numerators and denominators. Text values longer than 1,024 characters are omitted. Strings containing a zero byte use JSON string escaping with `.encoding = "json"`, because PostgreSQL text cannot store zero bytes. Periods and tildes within source key segments are escaped as `~1` and `~0` respectively; zero bytes use `~2`. Image input is copied asynchronously to a temporary file that is deleted when extraction ends; the synchronous metadata parser reads that local copy. If formatting a selected tag's description fails, its value and the other tags remain available and the failure is logged.
 
-Audio and video extraction requests an explicit ffprobe field list: duration, container and codecs, dimensions, frame rate, rotation, pixel/color information, audio sample rate/channels, bitrate, language, dates, location, and selected title/artist/album/track/disc/genre tags. Examples include `media.format.tags.location`, `media.streams.0.codec_name` and `media.streams.1.tags.language`. Programs, chapters, arbitrary tags, and unrelated side data are excluded. The summary keys used by audio playback remain available. Probe output is bounded to 4 MiB; exceeding the limit fails extraction rather than storing a truncated result. Unavailable probes and infrastructure errors do not record the current extraction version.
+Audio and video extraction retains available fields from Mediana container and stream metadata: duration, container and codecs, dimensions, frame rate, rotation, pixel/color information, audio sample rate/channels, bitrate, language, dates, location, and selected title/artist/album/track/disc/genre tags. Examples include `media.format.tags.location`, `media.streams.0.codec_name` and `media.streams.1.tags.language`. Programs, chapters, arbitrary tags, and unrelated side data are excluded. The summary keys used by audio playback remain available. Selected metadata tags are bounded to 4 MiB in total; exceeding the limit fails extraction rather than storing a truncated result. Unavailable probes and infrastructure errors do not record the current extraction version.
 
 Supported metadata depends on the source format and the reader's understanding of it. Extraction keeps the selected fields that are present; it does not preserve the complete source metadata tree.
 
@@ -83,17 +83,7 @@ Preview and avatar hashes are durable liveness references for garbage collection
 
 ## Seekable media source
 
-Mediana reads previews and HLS directly from the seekable concatenated stream. For ffprobe, Cotton exposes that stream through a loopback range server.
-
-The source stream is seekable only when the manifest supplies total size and individual chunk lengths. Access to the shared underlying position is serialized for each seek-and-read operation, while writing the response to the media process occurs outside that critical section. This permits concurrent range connections without corrupting source position or holding a lock during slow consumer writes.
-
-Shutdown drains active handlers for a bounded time, cancels the accept loop, and disposes the listener.
-
-## External binaries
-
-Administrators may set `COTTON_FFPROBE_PATH` to specify the executable. The runtime otherwise resolves `ffprobe` on `PATH`. The official container installs ffprobe through the FFmpeg system package; Cotton does not download binaries at runtime. An explicit invalid path is an error; it is not silently replaced with a different binary.
-
-Every external process has a bounded lifetime or request cancellation, captures diagnostic output, and kills the process tree on timeout or cancellation.
+Mediana reads container metadata and media packets directly from the seekable concatenated stream backed by encrypted storage. The stream is seekable when the manifest supplies the total size and individual chunk lengths.
 
 ## HLS playback
 

@@ -7,20 +7,18 @@ Cotton runs as one ASP.NET Core application serving the API, SignalR hub, and bu
 - a supported container runtime or .NET runtime;
 - PostgreSQL reachable from the application;
 - a persistent `/app/files` volume for local storage;
-- `pg_dump` and `pg_restore` compatible with the database server;
-- `ffprobe` for audio and video metadata.
+- `pg_dump` and `pg_restore` compatible with the database server.
 
-The official container listens on port `8080` and includes PostgreSQL 18 client tools, ffprobe from the FFmpeg system package, and `gosu` for dropping privileges to the configured runtime user.
+The official container listens on port `8080` and includes PostgreSQL 18 client tools and `gosu` for dropping privileges to the configured runtime user.
 
 ## Managed libraries and system dependencies
 
-The published server's third-party NuGet dependency graph contains no native runtime binaries. ImageSharp handles raster processing and WebP encoding; Mediana handles HEIC/HEIF, PDF, Word, PowerPoint, SVG, TGS, and 3D rendering, plus XLS/XLSX worksheet rendering, audio and video preview generation, and HLS; Mediana extracts PDF, DOCX, PPTX and XLSX text; EasyExtensions.Passkeys verifies WebAuthn responses. These paths require no renderer service, display server, GPU, LibreOffice, PDFium, Skia, or libsodium installation.
+The published server's third-party NuGet dependency graph contains no native runtime binaries. ImageSharp handles raster processing and WebP encoding; Mediana handles HEIC/HEIF, PDF, Word, PowerPoint, SVG, TGS, and 3D rendering, plus XLS/XLSX worksheet rendering, audio and video previews, media metadata and HLS; Mediana extracts PDF, DOCX, PPTX and XLSX text; EasyExtensions.Passkeys verifies WebAuthn responses. These paths require no renderer service, display server, GPU, LibreOffice, PDFium, Skia, or libsodium installation.
 
 The remaining operating-system integrations have distinct roles:
 
 | Dependency | Role |
 | --- | --- |
-| `ffprobe` | Audio and video metadata extraction. |
 | `pg_dump` / `pg_restore` | Database backup and restore. |
 | `gosu` | Container entrypoint switches to the configured runtime user. |
 | Linux `libc` | Process hardening requests non-dumpable state. |

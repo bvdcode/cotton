@@ -34,7 +34,7 @@ HEIC decoding, PDF and Office thumbnails, SVG/TGS rendering, 3D thumbnails, and 
 
 These paths do not load separately shipped libheif, PDFium, Skia, or libsodium binaries, or launch an external model renderer. Removing that stack removes its native parser and interop attack surface and its binary-loading and replacement paths. Operators have no separate renderer binaries, display server, or graphics-driver stack to install or patch for these previews.
 
-Managed libraries still process untrusted input inside the application process. Input limits, cancellation, bounded concurrency, package updates, and a restricted runtime identity remain necessary; sharing a process is not an isolation boundary. ffprobe remains an external tool for media metadata, PostgreSQL tools handle backups, and runtime cryptography uses platform providers. Protect the application, runtime, tools, and deployment files against unauthorized replacement.
+Managed libraries still process untrusted input inside the application process. Input limits, cancellation, bounded concurrency, package updates, and a restricted runtime identity remain necessary; sharing a process is not an isolation boundary. PostgreSQL tools handle backups, and runtime cryptography uses platform providers. Protect the application, runtime, tools, and deployment files against unauthorized replacement.
 
 See [Previews and Media Processing](18-previews-media.md), [Passkeys and OIDC](14-passkeys-oidc.md), and [Deployment and Operations](27-deployment-operations.md#managed-libraries-and-system-dependencies).
 

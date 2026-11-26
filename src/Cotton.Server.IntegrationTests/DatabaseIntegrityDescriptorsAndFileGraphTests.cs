@@ -214,7 +214,7 @@ namespace Cotton.Server.IntegrationTests
                 ComputedContentHash = [1, 2, 3],
                 ContentType = "text/plain",
                 SizeBytes = 3,
-                PreviewGenerationError = "ffmpeg failed before the runtime image was fixed",
+                PreviewGenerationError = "Media decoder rejected the source",
                 PreviewGeneratorVersion = 1
             };
             byte[] mac = protector.Sign(manifest, descriptor);

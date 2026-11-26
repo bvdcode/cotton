@@ -2,7 +2,6 @@
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
 using Cotton.Previews;
-using Cotton.Previews.Http;
 using System.Globalization;
 
 namespace Cotton.Server.Services.FileMetadata
@@ -31,34 +30,23 @@ namespace Cotton.Server.Services.FileMetadata
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
 
-            if (!stream.CanSeek)
-            {
-                throw new InvalidOperationException("Media metadata extraction requires a seekable stream.");
-            }
-
-            stream.Position = 0;
-
-            await using RangeStreamServer server = new(stream, _logger);
-            MediaMetadataInfo? metadata;
+            using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            MediaMetadataInfo metadata;
             try
             {
-                metadata = await FfmpegBinary.TryGetMediaMetadataAsync(
-                    server.Url,
-                    timeout: TimeSpan.FromSeconds(30),
-                    cancellationToken: cancellationToken);
+                metadata = await MediaMetadataReader.ReadAsync(stream, timeout.Token);
             }
-            catch (FfprobeOutputLimitExceededException ex)
+            catch (Exception ex) when (ex is NotSupportedException or InvalidDataException or EndOfStreamException
+                or MediaMetadataLimitExceededException)
             {
-                throw new FileMetadataUnavailableException("ffprobe did not produce bounded media metadata.", ex);
+                _logger.LogDebug("The media metadata reader rejected the input ({ErrorType}).", ex.GetType().Name);
+                throw new FileMetadataUnavailableException(ex.Message, ex);
             }
-            catch (MediaMetadataLimitExceededException ex)
+            catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested)
             {
-                throw new FileMetadataUnavailableException("ffprobe produced media metadata above the configured limits.", ex);
-            }
-
-            if (metadata is null)
-            {
-                throw new FileMetadataUnavailableException("ffprobe did not produce valid media metadata.");
+                _logger.LogDebug("Media metadata extraction timed out.");
+                throw new FileMetadataUnavailableException("Media metadata extraction timed out.", ex);
             }
 
             Dictionary<string, string> result = new(metadata.Properties, StringComparer.Ordinal);
@@ -120,7 +108,14 @@ namespace Cotton.Server.Services.FileMetadata
         {
             if (!string.IsNullOrWhiteSpace(value))
             {
-                target[key] = value.Trim();
+                string text = value.Trim();
+            if (text.Contains('\0'))
+            {
+                target[key] = System.Text.Json.JsonSerializer.Serialize(text);
+                target[$"{key}.encoding"] = "json";
+                return;
+            }
+            target[key] = text;
             }
         }
     }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using System.Text;
+
 namespace Cotton.Server.IntegrationTests.Helpers
 {
     public static class PreviewFixtures
@@ -120,62 +122,45 @@ namespace Cotton.Server.IntegrationTests.Helpers
             string? artist = null,
             string? album = null)
         {
-            await FfmpegBinary.EnsureAvailableAsync();
-            ProcessStartInfo startInfo = new()
+            string path = Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", "audio.mp3");
+            byte[] audio = await File.ReadAllBytesAsync(path);
+            using MemoryStream frames = new();
+            WriteTextFrame(frames, "TIT2", title);
+            WriteTextFrame(frames, "TPE1", artist);
+            WriteTextFrame(frames, "TALB", album);
+            if (frames.Length == 0)
             {
-                FileName = FfmpegBinary.GetFfmpegPath(),
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-            string[] commonArguments =
-            [
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-f",
-                "lavfi",
-                "-i",
-                "anullsrc=r=8000:cl=mono",
-                "-t",
-                "0.1"
-            ];
-            foreach (string argument in commonArguments)
-            {
-                startInfo.ArgumentList.Add(argument);
+                return audio;
             }
 
-            AddMetadataArgument(startInfo, "title", title);
-            AddMetadataArgument(startInfo, "artist", artist);
-            AddMetadataArgument(startInfo, "album", album);
-            startInfo.ArgumentList.Add("-f");
-            startInfo.ArgumentList.Add("mp3");
-            startInfo.ArgumentList.Add("pipe:1");
-
-            using Process process = new() { StartInfo = startInfo };
-            Assert.That(process.Start(), Is.True);
-            using MemoryStream output = new();
-            Task copyTask = process.StandardOutput.BaseStream.CopyToAsync(output);
-            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
-            await Task.WhenAll(copyTask, process.WaitForExitAsync());
-            string stderr = await stderrTask;
-            Assert.That(process.ExitCode, Is.EqualTo(0), stderr);
-            return output.ToArray();
+            using MemoryStream file = new();
+            file.Write("ID3"u8);
+            file.Write([4, 0, 0]);
+            WriteId3Size(file, (int)frames.Length);
+            file.Write(frames.GetBuffer().AsSpan(0, (int)frames.Length));
+            file.Write(audio);
+            return file.ToArray();
         }
 
-        public static void AddMetadataArgument(
-            ProcessStartInfo startInfo,
-            string key,
-            string? value)
+        private static void WriteTextFrame(Stream frames, string identifier, string? value)
         {
             if (value is null)
             {
                 return;
             }
+            byte[] text = Encoding.UTF8.GetBytes(value);
+            frames.Write(Encoding.ASCII.GetBytes(identifier));
+            WriteId3Size(frames, text.Length + 1);
+            frames.Write([0, 0, 3]);
+            frames.Write(text);
+        }
 
-            startInfo.ArgumentList.Add("-metadata");
-            startInfo.ArgumentList.Add($"{key}={value}");
+        private static void WriteId3Size(Stream stream, int size)
+        {
+            for (int shift = 21; shift >= 0; shift -= 7)
+            {
+                stream.WriteByte((byte)((size >> shift) & 0x7f));
+            }
         }
 
         public static byte[] CreateSinglePagePdfBytes(string text)

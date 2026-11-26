@@ -45,7 +45,7 @@ npm run lint
 npm run i18n:check
 ```
 
-Audio, video, image, HEIC, PDF, Office, SVG, TGS, and 3D preview tests use managed libraries. Media metadata tests use ffprobe and generate fixtures with FFmpeg. They require no external renderer, display server, or GPU. Passkey verification tests use EasyExtensions.Passkeys and stored COSE public-key fixtures.
+Audio, video, image, HEIC, PDF, Office, SVG, TGS, and 3D preview tests use managed libraries. Media metadata tests use stored fixtures. They require no external renderer, display server, or GPU. Passkey verification tests use EasyExtensions.Passkeys and stored COSE public-key fixtures.
 
 ## Build and packaging boundaries
 
@@ -53,7 +53,7 @@ Audio, video, image, HEIC, PDF, Office, SVG, TGS, and 3D preview tests use manag
 - Database migrations are produced and owned by the database project but applied by the server startup path.
 - The shared SDK is packaged separately from the application image.
 - Benchmark and diagnostic projects are not part of the production runtime.
-- The published server's third-party NuGet dependencies contain no native runtime binaries. ffprobe and PostgreSQL client tools are installed separately in the runtime image; see [Deployment and Operations](27-deployment-operations.md).
+- The published server's third-party NuGet dependencies contain no native runtime binaries. PostgreSQL client tools are installed separately in the runtime image; see [Deployment and Operations](27-deployment-operations.md).
 - Test projects may use real PostgreSQL and external storage endpoints; their prerequisites must be explicit.
 
 ## Continuous integration expectations

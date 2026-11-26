@@ -121,12 +121,6 @@ jobs:
           /usr/lib/postgresql/18/bin/pg_dump --version
           /usr/lib/postgresql/18/bin/pg_restore --version
 
-      - name: Install preview rendering dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
-          ffmpeg -version
-
       - name: Run backend tests
         run: dotnet test src/Cotton.sln --configuration Release --no-restore --logger "console;verbosity=normal" --logger trx --results-directory TestResults
 
