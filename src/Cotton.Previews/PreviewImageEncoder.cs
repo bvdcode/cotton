@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 // Copyright (c) 2025–2026 Vadim Belov <https://belov.us>
 
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
 
 namespace Cotton.Previews
@@ -16,6 +17,12 @@ namespace Cotton.Previews
 
         public const int LargePreviewQuality = 85;
 
+        internal static Task SaveAsync(Image image, Stream destination, int size, CancellationToken cancellationToken = default)
+        {
+            image.Metadata.IccProfile = null;
+            return image.SaveAsWebpAsync(destination, Create(size), cancellationToken);
+        }
+
         /// <summary>
         /// Builds the WebP encoder for a preview of the given target size.
         /// </summary>
@@ -27,7 +34,7 @@ namespace Cotton.Previews
         /// shared links with text but no image; lossy is also far smaller for photographic
         /// and thumbnail content.
         /// </remarks>
-        public static WebpEncoder Create(int size)
+        private static WebpEncoder Create(int size)
         {
             int mid = (PreviewGeneratorProvider.DefaultSmallPreviewSize
                 + PreviewGeneratorProvider.DefaultLargePreviewSize) / 2;
@@ -36,6 +43,7 @@ namespace Cotton.Previews
             {
                 Quality = quality,
                 FileFormat = WebpFileFormatType.Lossy,
+                SkipMetadata = true,
             };
         }
     }

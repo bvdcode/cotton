@@ -7,7 +7,7 @@ namespace Cotton.Previews
     {
         public string Id => "video";
 
-        public int Version => 5;
+        public int Version => 6;
 
         public int Priority => 0;
 

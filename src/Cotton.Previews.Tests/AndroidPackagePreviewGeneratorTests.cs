@@ -21,7 +21,7 @@ namespace Cotton.Previews.Tests
         [Test]
         public void Version_ForcesReprocessingAfterDeclaredIconFallbackChange()
         {
-            Assert.That(_generator.Version, Is.EqualTo(5));
+            Assert.That(_generator.Version, Is.EqualTo(6));
         }
 
         [Test]

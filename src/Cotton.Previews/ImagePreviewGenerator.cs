@@ -12,7 +12,7 @@ namespace Cotton.Previews
     {
         public string Id => "image";
 
-        public int Version => 3;
+        public int Version => 4;
 
         public int Priority => 0;
 
@@ -21,14 +21,14 @@ namespace Cotton.Previews
 
         public async Task<byte[]> GeneratePreviewWebPAsync(Stream stream, int size)
         {
-            DecoderOptions options = new DecoderOptions();
+            DecoderOptions options = CreateDecoderOptions();
             if (stream.CanSeek)
             {
                 stream.Position = 0;
                 ImageInfo info = await Image.IdentifyAsync(stream).ConfigureAwait(false);
                 if (info.Width > size || info.Height > size)
                 {
-                    options = new DecoderOptions { TargetSize = new Size(size, size) };
+                    options = CreateDecoderOptions(new Size(size, size));
                 }
                 stream.Position = 0;
             }
@@ -39,6 +39,12 @@ namespace Cotton.Previews
             image.Mutate(x => x.AutoOrient());
             return await EncodeMaxResizedWebpAsync(image, size);
         }
+
+        internal static DecoderOptions CreateDecoderOptions(Size? targetSize = null) => new()
+        {
+            TargetSize = targetSize,
+            ColorProfileHandling = ColorProfileHandling.Convert,
+        };
 
         public static async Task<byte[]> EncodeMaxResizedWebpAsync(Image image, int size)
         {
@@ -52,7 +58,7 @@ namespace Cotton.Previews
             }
 
             using MemoryStream outputStream = new MemoryStream();
-            await image.SaveAsWebpAsync(outputStream, PreviewImageEncoder.Create(size));
+            await PreviewImageEncoder.SaveAsync(image, outputStream, size);
             return outputStream.ToArray();
         }
     }

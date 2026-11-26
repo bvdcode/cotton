@@ -3,6 +3,7 @@
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SixLabors.ImageSharp.Metadata.Profiles.Xmp;
 using SixLabors.ImageSharp.PixelFormats;
 using System.IO.Compression;
 using System.Text;
@@ -110,23 +111,29 @@ namespace Cotton.Previews.Tests
             });
         }
 
-        [TestCase((ushort)6)]
-        [TestCase((ushort)8)]
-        public async Task GeneratePreviewWebPAsync_Jpeg_AppliesExifOrientation(ushort orientation)
+        [TestCase((ushort)6, PreviewGeneratorProvider.DefaultSmallPreviewSize)]
+        [TestCase((ushort)8, PreviewGeneratorProvider.DefaultLargePreviewSize)]
+        public async Task GeneratePreviewWebPAsync_Jpeg_AppliesOrientationAndStripsMetadata(ushort orientation, int size)
         {
             using Image<Rgba32> source = new Image<Rgba32>(800, 400);
             source.Metadata.ExifProfile = new ExifProfile();
             source.Metadata.ExifProfile.SetValue(ExifTag.Orientation, orientation);
+            source.Metadata.ExifProfile.SetValue(ExifTag.GPSLatitude, [new Rational(12), new Rational(34), new Rational(56)]);
+            source.Metadata.XmpProfile = new XmpProfile("<x:xmpmeta xmlns:x='adobe:ns:meta/'/>"u8.ToArray());
             using MemoryStream stream = new MemoryStream();
             await source.SaveAsJpegAsync(stream);
 
-            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size: 200);
+            byte[] preview = await _generator.GeneratePreviewWebPAsync(stream, size);
             using Image<Rgba32> image = Image.Load<Rgba32>(preview);
 
+            int expectedHeight = Math.Min(size, source.Width);
             Assert.Multiple(() =>
             {
-                Assert.That(image.Width, Is.EqualTo(100));
-                Assert.That(image.Height, Is.EqualTo(200));
+                Assert.That(image.Width, Is.EqualTo(expectedHeight / 2));
+                Assert.That(image.Height, Is.EqualTo(expectedHeight));
+                Assert.That(image.Metadata.ExifProfile, Is.Null);
+                Assert.That(image.Metadata.XmpProfile, Is.Null);
+                Assert.That(image.Metadata.IccProfile, Is.Null);
             });
         }
 

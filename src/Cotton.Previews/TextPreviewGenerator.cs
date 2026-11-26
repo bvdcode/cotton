@@ -94,7 +94,7 @@ namespace Cotton.Previews
             using Image<ImagePixel> output = Image.WrapMemory<ImagePixel>(pixels.Pixels, size, size);
 
             using MemoryStream ms = new MemoryStream();
-            await output.SaveAsWebpAsync(ms, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
+            await PreviewImageEncoder.SaveAsync(output, ms, size).ConfigureAwait(false);
             return ms.ToArray();
         }
 

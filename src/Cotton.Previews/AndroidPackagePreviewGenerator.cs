@@ -19,7 +19,7 @@ namespace Cotton.Previews
         private const long MaxResourceTableBytes = 32L * 1024 * 1024;
         private const int MaxNestedDepth = 1;
 
-        public int Version => 5;
+        public int Version => 6;
 
         public int Priority => 0;
 
@@ -287,7 +287,7 @@ namespace Cotton.Previews
 
         private static async Task<byte[]> RenderIconPreviewAsync(byte[] iconBytes, int size)
         {
-            using Image<Rgba32> image = Image.Load<Rgba32>(iconBytes);
+            using Image<Rgba32> image = Image.Load<Rgba32>(ImagePreviewGenerator.CreateDecoderOptions(), iconBytes);
             image.Mutate(x => x.AutoOrient());
 
             if (image.Width > size || image.Height > size)
@@ -301,7 +301,7 @@ namespace Cotton.Previews
             }
 
             using MemoryStream output = new MemoryStream();
-            await image.SaveAsWebpAsync(output, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
+            await PreviewImageEncoder.SaveAsync(image, output, size).ConfigureAwait(false);
             return output.ToArray();
         }
 
@@ -327,7 +327,7 @@ namespace Cotton.Previews
             }));
 
             using MemoryStream stream = new MemoryStream();
-            await output.SaveAsWebpAsync(stream, PreviewImageEncoder.Create(size)).ConfigureAwait(false);
+            await PreviewImageEncoder.SaveAsync(output, stream, size).ConfigureAwait(false);
             return stream.ToArray();
         }
 

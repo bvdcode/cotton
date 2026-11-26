@@ -17,7 +17,7 @@ namespace Cotton.Previews.Tests
         {
             AudioPreviewGenerator generator = new AudioPreviewGenerator();
 
-            Assert.That(generator.Version, Is.EqualTo(6));
+            Assert.That(generator.Version, Is.EqualTo(7));
         }
 
         [Test]

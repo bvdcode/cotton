@@ -19,7 +19,7 @@ namespace Cotton.Previews
 
         public string Id { get; }
 
-        public int Version => 12;
+        public int Version => _modelExtension == ".3mf" ? 13 : 12;
 
         public int Priority => 0;
 

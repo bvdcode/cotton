@@ -7,7 +7,7 @@ namespace Cotton.Previews
     {
         public string Id => "audio";
 
-        public int Version => 6;
+        public int Version => 7;
 
         public int Priority => 0;
 

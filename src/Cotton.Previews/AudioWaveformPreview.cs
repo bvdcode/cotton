@@ -26,7 +26,7 @@ namespace Cotton.Previews
             WaveformPreviewRenderer.Draw(pixels, amplitudes);
             using Image<ImagePixel> image = Image.WrapMemory<ImagePixel>(pixels.Pixels, size, size);
             using MemoryStream output = new();
-            await image.SaveAsWebpAsync(output, PreviewImageEncoder.Create(size), cancellationToken).ConfigureAwait(false);
+            await PreviewImageEncoder.SaveAsync(image, output, size, cancellationToken).ConfigureAwait(false);
             return output.ToArray();
         }
 

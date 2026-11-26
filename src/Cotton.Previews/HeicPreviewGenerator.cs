@@ -28,7 +28,7 @@ namespace Cotton.Previews
             new TiffImageFormatDetector(),
         ];
 
-        public int Version => 6;
+        public int Version => 7;
 
         public int Priority => 0;
 

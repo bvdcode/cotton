@@ -24,7 +24,7 @@ namespace Cotton.Previews
 
         public string Id => "raw";
 
-        public int Version => 1;
+        public int Version => 2;
 
         public int Priority => 0;
 
@@ -54,7 +54,7 @@ namespace Cotton.Previews
                 await using FileStream jpegStream = new(temporaryFile, FileMode.Open, FileAccess.Read, FileShare.Read,
                     ScanBufferBytes, FileOptions.Asynchronous | FileOptions.RandomAccess);
                 jpegStream.Position = offset;
-                DecoderOptions decodeOptions = new() { TargetSize = new Size(size, size) };
+                DecoderOptions decodeOptions = ImagePreviewGenerator.CreateDecoderOptions(new Size(size, size));
                 using Image<Rgba32> image = await Image.LoadAsync<Rgba32>(decodeOptions, jpegStream);
 
                 ushort? orientation = ReadOrientation(temporaryFile);

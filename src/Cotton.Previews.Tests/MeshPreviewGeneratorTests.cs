@@ -17,7 +17,7 @@ namespace Cotton.Previews.Tests
             {
                 Assert.That(new MeshPreviewGenerator().Version, Is.EqualTo(12));
                 Assert.That(MeshPreviewGenerator.CreateObjGenerator().Version, Is.EqualTo(12));
-                Assert.That(MeshPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(12));
+                Assert.That(MeshPreviewGenerator.CreateThreeMfGenerator().Version, Is.EqualTo(13));
             }
         }
 

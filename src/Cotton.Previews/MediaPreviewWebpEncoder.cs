@@ -29,7 +29,7 @@ namespace Cotton.Previews
             });
 
             long start = destination.Position;
-            await image.SaveAsWebpAsync(destination, PreviewImageEncoder.Create(size), cancellationToken).ConfigureAwait(false);
+            await PreviewImageEncoder.SaveAsync(image, destination, size, cancellationToken).ConfigureAwait(false);
             return destination.Position - start;
         }
     }
