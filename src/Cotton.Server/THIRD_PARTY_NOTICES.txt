@@ -1,10 +1,10 @@
 Third-party notices
 
-Managed drawing, document text extraction, PDF, Office, HEIC, SVG, Telegram sticker and 3D previews
+Managed drawing, document text extraction, PDF, Office, HEIC, RAW, SVG, Telegram sticker and 3D previews
 Mediana.Documents.Pdf, Mediana.Documents.Word, Mediana.Documents.Presentation,
-Mediana.Documents.Xls, Mediana.Documents.Xlsx, Mediana.Images.Heif,
+Mediana.Documents.Xls, Mediana.Documents.Xlsx, Mediana.Images.Heif, Mediana.Images.Metadata,
 Mediana.Drawing, Mediana.Images.Svg, Mediana.Images.Tgs, Mediana.Models.Mesh
-and the Mediana audio/video codecs and container modules, including dependencies, 0.1.44
+and the Mediana audio/video codecs and container modules, including dependencies, 0.1.50
 Source: https://github.com/bvdcode/Mediana
 License text: Licenses/Mediana-LICENSE.txt
 Bundled font provenance: Licenses/Mediana.Drawing-FONT-NOTICES.txt
@@ -14,7 +14,7 @@ under the SIL Open Font License 1.1: Licenses/NotoSansSymbols2-OFL.txt.
 The document, vector and worksheet renderers use these embedded fonts.
 
 Word emoji artwork
-Mediana.Drawing.Emoji.Fluent 0.1.44
+Mediana.Drawing.Emoji.Fluent 0.1.50
 Microsoft Fluent Emoji Flat artwork, Copyright (c) Microsoft Corporation
 Source: https://github.com/microsoft/fluentui-emoji
 License: MIT

@@ -24,7 +24,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Mediana.Containers.MpegTs" Version="0.1.44" />
+		<PackageReference Include="Mediana.Containers.MpegTs" Version="0.1.50" />
 		<PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
 		<Folder Include="wwwroot\" />
 		<PackageReference Include="EasyExtensions.Clients" Version="4.0.1" />
