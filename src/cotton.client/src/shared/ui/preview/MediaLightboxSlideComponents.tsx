@@ -1,10 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import type { Slide } from "yet-another-react-lightbox";
-import type {
-  SlideHlsVideo,
-  SlideWithTitle,
-} from "@shared/types/mediaLightbox";
+import type { SlideWithTitle } from "@shared/types/mediaLightbox";
 import {
   HLS_VIDEO_SLIDE_TYPE,
   isSlideWithTitle,
@@ -36,21 +33,28 @@ export const HlsVideoLightboxSlide = ({
   setActiveVideoElementForFile,
   slide,
 }: HlsVideoLightboxSlideProps) => {
-  if (slide.type !== HLS_VIDEO_SLIDE_TYPE || !isSlideWithTitle(slide)) {
+  const fileId = isSlideWithTitle(slide) ? slide.fileId : null;
+  const handleVideoElementChange = React.useCallback(
+    (element: HTMLVideoElement | null) => {
+      if (fileId !== null) {
+        setActiveVideoElementForFile(fileId, element);
+      }
+    },
+    [fileId, setActiveVideoElementForFile],
+  );
+
+  if (slide.type !== HLS_VIDEO_SLIDE_TYPE || fileId === null) {
     return undefined;
   }
 
-  const hlsSlide: SlideHlsVideo & SlideWithTitle = slide;
   return (
     <HlsVideoSlide
-      src={hlsSlide.src}
-      poster={hlsSlide.poster}
-      width={hlsSlide.width}
-      height={hlsSlide.height}
-      active={offset === 0 && hlsSlide.fileId === currentItemId}
-      onVideoElementChange={(element) =>
-        setActiveVideoElementForFile(hlsSlide.fileId, element)
-      }
+      src={slide.src}
+      poster={slide.poster}
+      width={slide.width}
+      height={slide.height}
+      active={offset === 0 && fileId === currentItemId}
+      onVideoElementChange={handleVideoElementChange}
       noticeText={noticeText}
       errorText={errorText}
     />
